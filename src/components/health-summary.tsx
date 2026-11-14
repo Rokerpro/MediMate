@@ -5,6 +5,7 @@ import type { HealthLog, Profile } from "@/lib/validations";
 import { getHealthLogs, getProfile } from "@/lib/api-client";
 import { TREND_DAYS, logsInWindow, recurringSymptoms, summaryFigures } from "@/lib/health/trends";
 import { HealthTrends } from "@/components/health-trends";
+import { RecentAssistantConversations } from "@/components/recent-assistant-conversations";
 
 type LoadState =
   | { status: "loading" }
@@ -190,6 +191,8 @@ export function HealthSummary() {
           </div>
         )}
       </Section>
+
+      <RecentAssistantConversations />
 
       <Section title="Notes for the appointment">
         <p className="text-sm text-slate-600">Questions or points the patient wants to raise:</p>

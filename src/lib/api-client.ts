@@ -1,4 +1,6 @@
 import {
+  assessmentHistoryQuerySchema,
+  assessmentHistoryResponseSchema,
   apiErrorResponseSchema,
   chatRequestSchema,
   chatResponseSchema,
@@ -20,6 +22,7 @@ import {
   type ReminderUpdateRequest,
   type ChatRequest,
   type ChatResponse,
+  type AssessmentHistoryResponse,
   type HealthLogCreateRequest,
   type HealthLogCreateResponse,
   type HealthLogListResponse,
@@ -136,6 +139,18 @@ export async function listHealthLogs(limit?: number): Promise<HealthLogListRespo
 
 export async function getHealthLogs(limit?: number): Promise<HealthLogListResponse> {
   return listHealthLogs(limit);
+}
+
+export async function getPastAssessments(limit = 5): Promise<AssessmentHistoryResponse> {
+  const query = assessmentHistoryQuerySchema.parse({ limit });
+  const params = new URLSearchParams({ limit: String(query.limit) });
+
+  return requestJson(
+    `/api/assistant/sessions?${params.toString()}`,
+    { method: "GET" },
+    assessmentHistoryResponseSchema,
+    200,
+  );
 }
 
 export async function createHealthLog(

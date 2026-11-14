@@ -6,8 +6,8 @@ This is the combined source of truth for both coding AIs. Naming: `docs/AI_A.md`
 
 ## Current repository state
 
-- `main` at `9dd4b22` contains the merged health summary, trends, navigation polish, reminders UI and API, reminder migration, prescription explainer, landing page, and assistant 429 retry handling.
-- PR #2 (`feat/health-insights-journey`: PR #1 review fixes `ad87a1f`, Personal Health Insights `09ebb8b`, Interactive Health Journey `bbfdd5e`) was reviewed and merged by Person A on 2026-11-14, together with the backend past-conversations endpoint (`cd73b88`), safety scorecard (`77e37a9`), security headers (`3962e9d`) and the dose-question fix (`1312d70`). Checks on the merged tree: lint, typecheck, build, 202 tests, scorecard 134/134.
+- `main` at `7ccd3ee` contains the merged health summary, trends, dashboard insights, health-log timeline, reminders UI and API, prescription explainer, assistant 429 retry handling, past-conversations API/schema, and offline safety scorecard.
+- PR #2 (`feat/health-insights-journey`: PR #1 review fixes `ad87a1f`, Personal Health Insights `09ebb8b`, Interactive Health Journey `bbfdd5e`) was reviewed and merged by Person A on 2026-11-14, together with the backend past-conversations endpoint (`cd73b88`), safety scorecard (`77e37a9`), security headers (`3962e9d`) and the dose-question fix (`1312d70`). The current scorecard prints 137/137 checks; use its current output rather than the earlier 134/134 total.
 - The app is a Next.js 16.4.6 App Router application using React 19.3, TypeScript, Tailwind 4.3, Zod 4.6, Supabase PostgreSQL, and a server-side Groq-compatible AI provider.
 - Node.js `>=22.18` is required.
 - There is one synthetic demo profile and no authentication. Never add real health data.
@@ -59,6 +59,8 @@ Main user flows:
 - Assistant: `/assistant` → `/api/assistant/chat`.
 - Reminders: `/reminders` → `/api/reminders` and `/api/reminders/{id}`.
 - Printable summary: `/summary` combines profile and health-log APIs with pure 14-day trend helpers.
+- `/summary` also loads up to five completed assistant conversations from `GET /api/assistant/sessions?limit=5`. It labels the initial concern as the user's own words, keeps urgent-care guidance separate from routine assessment content, and shows each routine assessment's summary, possible explanations and unknowns, next steps, sources, and disclaimer. Loading, empty, error, and retry states are included.
+- Browser verification on `feat/summary-conversations`: newest-first routine and urgent examples rendered at 375px without horizontal overflow; a mocked 503 plus retry-to-empty verified the error, retry, and empty states. Print-media emulation hid the app header and print button and kept each conversation card together. A synthetic back-pain turn with a negated bladder/bowel statement unexpectedly triggered urgent guidance; Person A should review this backend safety behavior.
 - Prescription explainer: deterministic endpoint `/api/prescriptions/explain` (no AI, nothing stored; contract §3b), surfaced at `/prescriptions` with a shared-schema client method and accessible result cards.
 - Assistant requests can be rate-limited with HTTP 429 `RATE_LIMITED`; the server returns a `Retry-After` header and does not persist the failed turn.
 - Public landing page: `/` now presents the product story, real features, safety boundaries, workflow, FAQ, and entry CTA; `/dashboard` remains the app workspace.
@@ -113,8 +115,7 @@ Use short-lived feature branches, focused Conventional Commits, explicit `git ad
 Done 2026-11-14: `0002_reminders.sql` applied in Supabase; the live Vercel site serves `/api/reminders` (200); `docs/AI_B.md` filled in by the backend assistant; PR #1 review follow-ups fixed and PR #2 merged.
 
 1. Owner: run `supabase/reset-demo.sql` in the Supabase SQL editor just before the demo (restores Alex Demo, 14 logs dated up to today, 2 reminders; deletes all chat sessions). Then rehearse and record the backup video.
-2. Person B: "Recent assistant conversations" section on `/summary` from the new read-only `GET /api/assistant/sessions` (contract §3c; schemas in `src/lib/validations/assessment-history.ts`). Backend merged and tested.
-3. Person B: confirm the `/summary` print layout in a real browser print preview.
-4. Pitch: `npm run scorecard` prints the offline safety scorecard (137/137 fixed checks as of `feat/history-synonyms`; always quote the numbers it prints; see `docs/AI_SAFETY_SPEC.md` §4.1). Quote it with its scope: fixed examples, not comprehensive emergency detection.
-5. Workflow: Person A builds the system side and hands Person B a UI prompt; neither edits the other's files without coordinating.
-6. Keep this file and both AI-specific context files synchronized after meaningful decisions or contract changes.
+2. Person B: confirm the `/summary` print layout in a real browser print preview.
+3. Pitch slide `public/pitch/safety-measured.svg` uses the latest printed scorecard values (137/137 total) and includes the required fixed-example scope footnote.
+4. Workflow: Person A builds the system side and hands Person B a UI prompt; neither edits the other's files without coordinating.
+5. Keep this file and both AI-specific context files synchronized after meaningful decisions or contract changes.
