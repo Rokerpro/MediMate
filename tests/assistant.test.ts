@@ -5,7 +5,12 @@ import { describe, it } from "node:test";
 
 import { MAX_FOLLOW_UP_ROUNDS, runAssistantTurn } from "../src/lib/ai/assistant.ts";
 import { mockProvider } from "../src/lib/ai/mock-provider.ts";
-import { findBannedWording, parseModelOutput } from "../src/lib/ai/output.ts";
+import {
+  findBannedWording,
+  findUnsourcedSelfCare,
+  parseModelOutput,
+  tidyAssistantMessage,
+} from "../src/lib/ai/output.ts";
 import { buildUserContent } from "../src/lib/ai/prompts.ts";
 import { AiUnavailableError, type LlmProvider, type ModelRequest } from "../src/lib/ai/types.ts";
 import { extractTerms, selectRelevantLogs } from "../src/lib/health/retrieve-history.ts";
@@ -153,6 +158,61 @@ describe("model output validation", () => {
     const followUp = JSON.stringify({ status: "follow_up", assistantMessage: "Q", followUpQuestions: ["When?"], assessment: null });
     assert.equal(parseModelOutput(followUp, { mustAssess: false }).ok, true);
     assert.equal(parseModelOutput(followUp, { mustAssess: true }).ok, false);
+  });
+});
+
+describe("assistant reply clean-up", () => {
+  it("removes a stray section label left at the end of the reply (seen in live output)", () => {
+    const raw = "You reported dull lower back pain for the past 2 days.\n\nPossible explanations:";
+    assert.equal(tidyAssistantMessage(raw), "You reported dull lower back pain for the past 2 days.");
+  });
+
+  it("removes markdown-style labels but keeps sentences that mention next steps", () => {
+    assert.equal(tidyAssistantMessage("**Next steps**\nThanks for the details."), "Thanks for the details.");
+    const sentence = "Next steps are shown alongside this message.";
+    assert.equal(tidyAssistantMessage(sentence), sentence);
+  });
+
+  it("parseModelOutput returns the tidied message, and rejects a reply that is only a label", () => {
+    const withLabel = JSON.parse(validAssessment([])) as Record<string, unknown>;
+    withLabel.assistantMessage = "Thanks, here is an educational summary.\nPossible explanations:";
+    const parsed = parseModelOutput(JSON.stringify(withLabel), { mustAssess: true });
+    assert.equal(parsed.ok && parsed.output.assistantMessage, "Thanks, here is an educational summary.");
+
+    withLabel.assistantMessage = "Possible explanations:";
+    assert.equal(parseModelOutput(JSON.stringify(withLabel), { mustAssess: true }).ok, false);
+  });
+});
+
+describe("self-care limited to the curated references", () => {
+  it("flags self-care that is not in the NHS excerpts (seen in live output)", () => {
+    assert.deepEqual(findUnsourcedSelfCare(["Apply low-level heat or a warm compress if it feels comfortable."]), [
+      "self-care advice that is not in the medical references",
+    ]);
+    assert.ok(findUnsourcedSelfCare(["Try some gentle stretches each morning."]).length > 0);
+  });
+
+  it("allows the NHS self-help advice, a symptom log and care-seeking steps", () => {
+    assert.deepEqual(
+      findUnsourcedSelfCare([
+        "Try to stay active and continue with your daily activities.",
+        "Drink plenty of water and keep a symptom log.",
+        "See a GP if it does not improve after a few weeks, or get urgent help if it suddenly gets worse.",
+      ]),
+      [],
+    );
+  });
+
+  it("flags a medicine suggestion unless it refers the user to a pharmacist or prescriber", () => {
+    assert.ok(findUnsourcedSelfCare(["You could take paracetamol."]).length > 0);
+    assert.deepEqual(findUnsourcedSelfCare(["Ask a pharmacist or your prescriber about your ibuprofen."]), []);
+  });
+
+  it("an assessment with unsourced self-care fails validation, so it gets one repair attempt", () => {
+    const out = JSON.parse(validAssessment([])) as { assessment: { nextSteps: string[] } };
+    out.assessment.nextSteps = ["Use an ice pack on the area."];
+    const parsed = parseModelOutput(JSON.stringify(out), { mustAssess: true });
+    assert.equal(parsed.ok, false);
   });
 });
 

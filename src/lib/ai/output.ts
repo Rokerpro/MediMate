@@ -94,6 +94,40 @@ export function findBannedWording(output: ModelOutput): string[] {
   return BANNED_PATTERNS.filter(({ pattern }) => pattern.test(joined)).map(({ label }) => label);
 }
 
+/**
+ * Self-care the curated NHS excerpts do not contain (AI_SAFETY_SPEC.md §4:
+ * no treatments). Checked in nextSteps only, so a summary can still repeat
+ * what the user reported doing.
+ */
+const UNSOURCED_SELF_CARE =
+  /\b(compress(es)?|heat|heating pad|hot water bottle|ice( pack)?|cold pack|stretch\w*|massag\w*|supplements?|vitamins?|ointments?|creams?|gels?|balms?|foam roll\w*|brace|acupuncture|chiropract\w*|yoga|pilates)\b/i;
+/** A medicine named in a next step is only allowed when the step sends the user to a professional. */
+const MEDICINE = /\b(painkillers?|pain relief|ibuprofen|paracetamol|acetaminophen|aspirin|naproxen|codeine|over[- ]the[- ]counter)\b/i;
+const PROFESSIONAL = /\b(pharmacist|prescriber|doctor|gp|clinician)\b/i;
+
+export function findUnsourcedSelfCare(nextSteps: readonly string[]): string[] {
+  const problems = new Set<string>();
+  for (const step of nextSteps) {
+    if (UNSOURCED_SELF_CARE.test(step)) problems.add("self-care advice that is not in the medical references");
+    if (MEDICINE.test(step) && !PROFESSIONAL.test(step)) problems.add("medicine advice without referring to a pharmacist or prescriber");
+  }
+  return [...problems];
+}
+
+/** Lines that are only a section label, e.g. "Possible explanations:" or "**Next steps**". */
+const LABEL_LINE =
+  /^[\s*#_-]*(possible explanations?|explanations?|next steps?|unknowns?|summary|assessment|follow[- ]up questions?|questions?|what you can do)[\s*_:-]*$/i;
+
+/** Removes stray section labels from the chat reply; the UI shows those sections separately. */
+export function tidyAssistantMessage(message: string): string {
+  return message
+    .split("\n")
+    .filter((line) => !LABEL_LINE.test(line))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /** Pulls the first {...} block, tolerating markdown fences around it. */
 function extractJson(raw: string): unknown {
   const start = raw.indexOf("{");
@@ -120,12 +154,15 @@ export function parseModelOutput(raw: string, { mustAssess }: { mustAssess: bool
     return { ok: false, problems };
   }
 
+  const output: ModelOutput = { ...parsed.data, assistantMessage: tidyAssistantMessage(parsed.data.assistantMessage) };
   const problems: string[] = [];
+  if (!output.assistantMessage) problems.push("assistantMessage was empty");
   if (mustAssess && parsed.data.status !== "assessment") problems.push('status must be "assessment" this turn');
-  const banned = findBannedWording(parsed.data);
+  const banned = findBannedWording(output);
   if (banned.length) problems.push(`it used disallowed wording (${banned.join(", ")})`);
+  if (output.assessment) problems.push(...findUnsourcedSelfCare(output.assessment.nextSteps));
 
-  return problems.length ? { ok: false, problems } : { ok: true, output: parsed.data };
+  return problems.length ? { ok: false, problems } : { ok: true, output };
 }
 
 /**
