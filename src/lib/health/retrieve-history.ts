@@ -7,6 +7,9 @@ import type { HealthLog } from "@/lib/validations";
 export const HISTORY_WINDOW_DAYS = 30;
 export const HISTORY_CANDIDATE_LIMIT = 60;
 export const MAX_RELEVANT_LOGS = 5;
+/** Routine measurements (sleep, fluids, activity, mood) offered as separate context. */
+export const RECENT_MEASUREMENT_DAYS = 7;
+export const MAX_RECENT_MEASUREMENT_LOGS = 7;
 
 // Words that carry no symptom meaning, plus generic severity/side modifiers that
 // would otherwise create false matches (e.g. "mild headache" vs "mild back discomfort").
@@ -70,16 +73,53 @@ export function selectRelevantLogs(
   return scored.sort((a, b) => b.loggedAt.localeCompare(a.loggedAt));
 }
 
+const hasMeasurements = (log: HealthLog): boolean =>
+  log.sleepDurationMinutes !== null ||
+  log.sleepQuality !== null ||
+  log.waterMl !== null ||
+  log.activityMinutes !== null ||
+  Boolean(log.mood);
+
+/**
+ * Logs from the last RECENT_MEASUREMENT_DAYS that record sleep, fluids, activity
+ * or mood, newest first, excluding logs already selected as symptom matches.
+ * Symptom keywords alone miss these (e.g. poor sleep logged on a no-symptom day).
+ */
+export function selectRecentMeasurementLogs(
+  logs: readonly HealthLog[],
+  excludeIds: ReadonlySet<string>,
+  now: number = Date.now(),
+): HealthLog[] {
+  const since = now - RECENT_MEASUREMENT_DAYS * 24 * 60 * 60 * 1000;
+  return logs
+    .filter((log) => !excludeIds.has(log.id) && Date.parse(log.loggedAt) >= since && hasMeasurements(log))
+    .sort((a, b) => b.loggedAt.localeCompare(a.loggedAt))
+    .slice(0, MAX_RECENT_MEASUREMENT_LOGS);
+}
+
+function formatSleep(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `sleep ${hours}h${rest ? ` ${rest}m` : ""}`;
+}
+
+/** Measurements only (no symptoms or notes), for the recent-measurements prompt section. */
+export function describeMeasurements(log: HealthLog): string {
+  const parts: string[] = [];
+  if (log.sleepDurationMinutes !== null) parts.push(formatSleep(log.sleepDurationMinutes));
+  if (log.sleepQuality !== null) parts.push(`sleep quality ${log.sleepQuality}/5`);
+  if (log.waterMl !== null) parts.push(`water ${log.waterMl} ml`);
+  if (log.activityMinutes !== null) parts.push(`activity ${log.activityMinutes} min`);
+  if (log.mood) parts.push(`mood: ${log.mood}`);
+  return parts.join("; ");
+}
+
 /** One-line factual description of a log for prompts and supporting history. */
 export function describeLog(log: HealthLog): string {
   const parts = [`symptoms: "${log.symptoms}"`];
   if (log.painLocation) parts.push(`pain location: ${log.painLocation}`);
   if (log.painLevel !== null) parts.push(`pain level ${log.painLevel}/10`);
-  if (log.sleepDurationMinutes !== null) {
-    const hours = Math.floor(log.sleepDurationMinutes / 60);
-    const minutes = log.sleepDurationMinutes % 60;
-    parts.push(`sleep ${hours}h${minutes ? ` ${minutes}m` : ""}`);
-  }
+  if (log.sleepDurationMinutes !== null) parts.push(formatSleep(log.sleepDurationMinutes));
   if (log.sleepQuality !== null) parts.push(`sleep quality ${log.sleepQuality}/5`);
   if (log.mood) parts.push(`mood: ${log.mood}`);
   if (log.activityMinutes !== null) parts.push(`activity ${log.activityMinutes} min`);

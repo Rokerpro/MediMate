@@ -3,7 +3,7 @@
 import type { ChatResponse, HealthLog, Profile } from "@/lib/validations";
 
 import { selectReferences, type CuratedReference } from "../health/references.ts";
-import { extractTerms, selectRelevantLogs } from "../health/retrieve-history.ts";
+import { extractTerms, selectRecentMeasurementLogs, selectRelevantLogs } from "../health/retrieve-history.ts";
 import type { SafetyEvaluation } from "../health/safety-rules.ts";
 import { parseModelOutput, toContractAssessment } from "./output.ts";
 import { SYSTEM_PROMPT, buildRepairInstruction, buildUserContent } from "./prompts.ts";
@@ -23,6 +23,8 @@ export type ChatTurnInput = {
   profile: Profile;
   /** Recent logs in the history window; relevance filtering happens here. */
   candidateLogs: readonly HealthLog[];
+  /** Clock for the recent-measurements window (tests pass a fixed value). */
+  now?: number;
 };
 
 export type ChatTurnDeps = {
@@ -56,6 +58,11 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
 
   const queryText = [input.message, ...priorUserTexts].join("\n");
   const relevantLogs = selectRelevantLogs(input.candidateLogs, queryText);
+  const recentMeasurementLogs = selectRecentMeasurementLogs(
+    input.candidateLogs,
+    new Set(relevantLogs.map((log) => log.id)),
+    input.now,
+  );
   const references = selectReferences(extractTerms(queryText), deps.references);
   const mustAssess = priorUserTexts.length >= MAX_FOLLOW_UP_ROUNDS;
   const hasReferences = references.length > 0;
@@ -66,6 +73,7 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
     priorUserMessageCount: priorUserTexts.length,
     profile: input.profile,
     relevantLogs,
+    recentMeasurementLogs,
     references,
     mustAssess,
     isRepair: false,
@@ -98,7 +106,7 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
     safety: safety.result,
     assessment:
       output.status === "assessment" && output.assessment
-        ? toContractAssessment(output.assessment, relevantLogs, references)
+        ? toContractAssessment(output.assessment, relevantLogs, references, recentMeasurementLogs)
         : null,
     safetyRuleId: null,
   };

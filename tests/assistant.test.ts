@@ -15,7 +15,12 @@ import {
 } from "../src/lib/ai/output.ts";
 import { buildUserContent } from "../src/lib/ai/prompts.ts";
 import { AiUnavailableError, type LlmProvider, type ModelRequest } from "../src/lib/ai/types.ts";
-import { extractTerms, selectRelevantLogs, stripNegatedPhrases } from "../src/lib/health/retrieve-history.ts";
+import {
+  extractTerms,
+  selectRecentMeasurementLogs,
+  selectRelevantLogs,
+  stripNegatedPhrases,
+} from "../src/lib/health/retrieve-history.ts";
 import { evaluateSafety, type SafetyRule } from "../src/lib/health/safety-rules.ts";
 import { ASSESSMENT_DISCLAIMER, chatResponseSchema } from "../src/lib/validations/assistant.ts";
 import type { HealthLog, Profile } from "../src/lib/validations/index.ts";
@@ -55,6 +60,8 @@ const BACK_1 = log("aaaaaaaa-0000-4000-8000-000000000001", "13", "Mild lower bac
 const BACK_2 = log("aaaaaaaa-0000-4000-8000-000000000002", "10", "Mild lower back discomfort", "Lower back");
 const NOTHING = log("aaaaaaaa-0000-4000-8000-000000000003", "12", "No specific symptom reported", null);
 const LOGS = [BACK_1, NOTHING, BACK_2];
+/** A clock where the fixture logs are older than the recent-measurement window. */
+const OUTSIDE_MEASUREMENT_WINDOW = Date.parse("2027-01-01T00:00:00.000Z");
 
 const noSafety = (texts: readonly string[]) => evaluateSafety(texts, []);
 
@@ -128,6 +135,66 @@ describe("history retrieval", () => {
   });
 });
 
+describe("recent daily measurements", () => {
+  const NOW = Date.parse("2026-11-14T12:00:00.000Z");
+  // Seen live: a headache query matched 0 logs although the logs record short sleep and low fluids.
+  const POOR_SLEEP: HealthLog = {
+    ...NOTHING,
+    id: "aaaaaaaa-0000-4000-8000-0000000000aa",
+    loggedAt: "2026-11-12T09:00:00.000Z",
+    sleepDurationMinutes: 360,
+    sleepQuality: 2,
+    mood: "tired",
+  };
+  const OLD: HealthLog = { ...POOR_SLEEP, id: "aaaaaaaa-0000-4000-8000-0000000000bb", loggedAt: "2026-11-01T09:00:00.000Z" };
+  const EMPTY: HealthLog = {
+    ...POOR_SLEEP,
+    id: "aaaaaaaa-0000-4000-8000-0000000000cc",
+    sleepDurationMinutes: null,
+    sleepQuality: null,
+    mood: null,
+    waterMl: null,
+    activityMinutes: null,
+  };
+
+  it("offers last-7-days measurement logs that symptom matching misses", () => {
+    const query = "Headache since this morning. I slept badly and haven't drunk much water.";
+    assert.deepEqual(selectRelevantLogs([POOR_SLEEP], query), []);
+    assert.deepEqual(selectRecentMeasurementLogs([POOR_SLEEP, OLD, EMPTY], new Set(), NOW), [POOR_SLEEP]);
+  });
+
+  it("does not repeat logs already selected as symptom matches", () => {
+    const back = { ...BACK_1, loggedAt: "2026-11-13T09:00:00.000Z" };
+    assert.deepEqual(selectRecentMeasurementLogs([back, POOR_SLEEP], new Set([back.id]), NOW), [POOR_SLEEP]);
+  });
+
+  it("puts measurements in their own section, without symptoms or notes", () => {
+    const content = buildUserContent({
+      currentMessage: "I have a headache.",
+      priorMessages: [],
+      priorUserMessageCount: 0,
+      profile,
+      relevantLogs: [],
+      recentMeasurementLogs: [{ ...POOR_SLEEP, symptoms: "neck swelling", notes: "private note" }],
+      references: [],
+      mustAssess: false,
+      isRepair: false,
+    });
+    const section = content.split("<RECENT_DAILY_MEASUREMENTS>")[1]?.split("</RECENT_DAILY_MEASUREMENTS>")[0] ?? "";
+    assert.match(section, /date=2026-11-12 sleep 6h; sleep quality 2\/5/);
+    assert.doesNotMatch(section, /neck swelling|private note/);
+  });
+
+  it("measurement logs the model cites become dated supporting history, and suppress the no-history note", () => {
+    const out = JSON.parse(validAssessment([POOR_SLEEP.id])) as {
+      assessment: NonNullable<Parameters<typeof toContractAssessment>[0]>;
+    };
+    const result = toContractAssessment(out.assessment, [], [], [POOR_SLEEP]);
+    assert.equal(result.possibleExplanations[0]?.supportingHistory[0]?.date, "2026-11-12");
+    assert.ok(!result.summary.includes(NO_HISTORY_NOTE));
+  });
+});
+
 describe("prompt context separation", () => {
   it("labels sections and strips injected section tags from user data", () => {
     const content = buildUserContent({
@@ -136,6 +203,7 @@ describe("prompt context separation", () => {
       priorUserMessageCount: 0,
       profile,
       relevantLogs: [],
+      recentMeasurementLogs: [],
       references: [],
       mustAssess: false,
       isRepair: false,
@@ -295,7 +363,7 @@ describe("runAssistantTurn", () => {
   it("cites only retrieved logs with their dates and always adds the fixed disclaimer", async () => {
     const provider = fakeProvider(validAssessment([BACK_1.id, NOTHING.id, "not-a-real-id"]));
     const turn = await runAssistantTurn(
-      { message: "My lower back hurts", priorMessages: [], profile, candidateLogs: LOGS },
+      { message: "My lower back hurts", priorMessages: [], profile, candidateLogs: LOGS, now: OUTSIDE_MEASUREMENT_WINDOW },
       { provider, evaluateSafety: noSafety },
     );
     assert.equal(turn.status, "assessment");
@@ -310,7 +378,7 @@ describe("runAssistantTurn", () => {
   it("sends no history to the model when none is relevant", async () => {
     const provider = fakeProvider(validAssessment([]));
     await runAssistantTurn(
-      { message: "I have a headache", priorMessages: [], profile, candidateLogs: LOGS },
+      { message: "I have a headache", priorMessages: [], profile, candidateLogs: LOGS, now: OUTSIDE_MEASUREMENT_WINDOW },
       { provider, evaluateSafety: noSafety },
     );
     assert.equal(provider.requests[0]!.context.relevantLogs.length, 0);
@@ -388,7 +456,7 @@ describe("runAssistantTurn", () => {
 
   it("mock provider: follow-up first, then a contract-valid assessment", async () => {
     const first = await runAssistantTurn(
-      { message: "My lower back hurts", priorMessages: [], profile, candidateLogs: LOGS },
+      { message: "My lower back hurts", priorMessages: [], profile, candidateLogs: LOGS, now: OUTSIDE_MEASUREMENT_WINDOW },
       { provider: mockProvider, evaluateSafety: noSafety },
     );
     assert.equal(first.status, "follow_up");

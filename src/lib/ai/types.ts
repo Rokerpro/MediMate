@@ -12,6 +12,8 @@ export type ModelContext = {
   priorUserMessageCount: number;
   profile: Profile;
   relevantLogs: readonly HealthLog[];
+  /** Last-7-days sleep/fluids/activity/mood logs not already in relevantLogs. */
+  recentMeasurementLogs: readonly HealthLog[];
   references: readonly CuratedReference[];
   /** True once enough follow-up rounds have happened; the model must assess. */
   mustAssess: boolean;

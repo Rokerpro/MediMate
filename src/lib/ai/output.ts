@@ -203,23 +203,26 @@ export function toContractAssessment(
   output: NonNullable<ModelOutput["assessment"]>,
   relevantLogs: readonly HealthLog[],
   sources: readonly Source[],
+  recentMeasurementLogs: readonly HealthLog[] = [],
 ): Assessment {
-  const logsById = new Map(relevantLogs.map((log) => [log.id, log]));
+  const logsById = new Map([...relevantLogs, ...recentMeasurementLogs].map((log) => [log.id, log]));
+  const possibleExplanations = output.possibleExplanations.map((explanation) => ({
+    title: explanation.title,
+    whyItMayBeRelevant: explanation.whyItMayBeRelevant,
+    supportingHistory: [...new Set(explanation.supportingLogIds)]
+      .map((id) => logsById.get(id))
+      .filter((log): log is HealthLog => log !== undefined)
+      .map((log) => ({ logId: log.id, date: logDate(log), observation: describeLog(log) })),
+    unknowns: explanation.unknowns,
+  }));
+  const citedAnyHistory = possibleExplanations.some((e) => e.supportingHistory.length > 0);
   const summary =
-    relevantLogs.length === 0 && !MENTIONS_NO_HISTORY.test(output.summary)
+    relevantLogs.length === 0 && !citedAnyHistory && !MENTIONS_NO_HISTORY.test(output.summary)
       ? `${output.summary} ${NO_HISTORY_NOTE}`
       : output.summary;
   return {
     summary,
-    possibleExplanations: output.possibleExplanations.map((explanation) => ({
-      title: explanation.title,
-      whyItMayBeRelevant: explanation.whyItMayBeRelevant,
-      supportingHistory: [...new Set(explanation.supportingLogIds)]
-        .map((id) => logsById.get(id))
-        .filter((log): log is HealthLog => log !== undefined)
-        .map((log) => ({ logId: log.id, date: logDate(log), observation: describeLog(log) })),
-      unknowns: explanation.unknowns,
-    })),
+    possibleExplanations,
     nextSteps: output.nextSteps,
     sources: sources.map(({ title, publisher, url }) => ({ title, publisher, url })),
     disclaimer: ASSESSMENT_DISCLAIMER,
