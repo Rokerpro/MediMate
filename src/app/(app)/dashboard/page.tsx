@@ -14,7 +14,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Link
           href="/profile"
-          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+          className="group flex h-full flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
         >
           <h2 className="text-lg font-semibold">Personal profile</h2>
           <p className="mt-2 text-sm text-slate-600">
@@ -23,7 +23,7 @@ export default function DashboardPage() {
         </Link>
         <Link
           href="/logs"
-          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+          className="group flex h-full flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
         >
           <h2 className="text-lg font-semibold">Daily health logs</h2>
           <p className="mt-2 text-sm text-slate-600">
@@ -32,7 +32,7 @@ export default function DashboardPage() {
         </Link>
         <Link
           href="/assistant"
-          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+          className="group flex h-full flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
         >
           <h2 className="text-lg font-semibold">Discuss a concern</h2>
           <p className="mt-2 text-sm text-slate-600">
