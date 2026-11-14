@@ -147,7 +147,7 @@ export function ProfileForm() {
         />
         <TextField
           id="gender"
-          label="Gender (optional)"
+          label="Gender"
           value={profile.gender ?? ""}
           error={fieldErrors.gender}
           onChange={(value) => updateField("gender", value || null)}
