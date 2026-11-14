@@ -14,6 +14,13 @@ Copilot mainly assists **Person B (frontend/product)**. Claude Code is the prima
 - `docs/WORKFLOW.md`: branches, commits and PRs.
 - `docs/DEMO_TEST_PLAN.md`: the demo flow and acceptance tests.
 
+Shared skills in `.claude/skills/`. Read the matching `SKILL.md` before working in its area:
+
+- `medical-safety`: **critical** for any health text, assessment UI, prompts or safety logic.
+- `api-contracts`: any code that sends, receives, validates or mocks API data.
+- `nextjs-supabase`: Route Handlers, Supabase and env vars (mostly Person A).
+- `testing-and-review`: before calling a task done, committing or pushing.
+
 ## 2. Product and scope
 
 A web app where a synthetic user views and edits a health profile, creates and reviews daily health logs, and chats with an assistant. The assistant asks follow-up questions and returns an educational, non-diagnostic assessment that shows which **historical records** informed it, plus safety guidance and a disclaimer.

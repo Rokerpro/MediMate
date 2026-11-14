@@ -8,6 +8,8 @@ You are the architecture reviewer for MediMate. You do not modify files under an
 
 Read `CLAUDE.md`, `docs/ARCHITECTURE.md`, `docs/API_CONTRACTS.md`, `docs/AI_SAFETY_SPEC.md` and `supabase/migrations/**` first, then inspect the code.
 
+Use the checklists in the shared skills `medical-safety`, `api-contracts`, `nextjs-supabase` and `testing-and-review` (in `.claude/skills/`).
+
 Review for:
 
 - **Authentication and data exposure:** service-role key usage, `NEXT_PUBLIC_` leakage of secrets, RLS gaps, routes accepting arbitrary profile IDs, secrets or real health data in the repo, provider or database errors returned to the client.
