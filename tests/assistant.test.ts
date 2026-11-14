@@ -8,6 +8,7 @@ import { mockProvider } from "../src/lib/ai/mock-provider.ts";
 import {
   findBannedWording,
   findUnsourcedSelfCare,
+  MEDICINE_NEXT_STEP,
   NO_HISTORY_NOTE,
   parseModelOutput,
   toContractAssessment,
@@ -258,6 +259,17 @@ describe("model output validation", () => {
     }
   });
 
+  it("rejects follow-up questions about medicine doses or frequency", () => {
+    const ask = (q: string) =>
+      parseModelOutput(JSON.stringify({ status: "follow_up", assistantMessage: "Thanks.", followUpQuestions: [q], assessment: null }), { mustAssess: false }).ok;
+    assert.equal(ask("How many milligrams of ibuprofen are you taking and how often?"), false);
+    assert.equal(ask("What dose of paracetamol did you take?"), false);
+    assert.equal(ask("How often do you take painkillers for it?"), false);
+    assert.equal(ask("How often does the pain come back?"), true);
+    assert.equal(ask("How much water did you drink yesterday?"), true);
+    assert.equal(ask("Did anything make the pain better or worse?"), true);
+  });
+
   it("requires an assessment once the follow-up limit is reached", () => {
     const followUp = JSON.stringify({ status: "follow_up", assistantMessage: "Q", followUpQuestions: ["When?"], assessment: null });
     assert.equal(parseModelOutput(followUp, { mustAssess: false }).ok, true);
@@ -377,6 +389,24 @@ describe("empty history is stated by the server", () => {
     const said = "You reported a sore knee. No relevant entries were found in your logs.";
     assert.equal(toContractAssessment(model(said), [], []).summary, said);
     assert.equal(toContractAssessment(model("You reported back pain."), [BACK_1], []).summary, "You reported back pain.");
+  });
+});
+
+describe("medicine questions are referred by the server", () => {
+  const model = (nextSteps: string[]) => {
+    const out = JSON.parse(validAssessment([])) as { assessment: NonNullable<Parameters<typeof toContractAssessment>[0]> };
+    return { ...out.assessment, nextSteps };
+  };
+
+  it("adds the pharmacist step when the user mentioned a medicine and the model did not refer them", () => {
+    const result = toContractAssessment(model(["See a GP if it gets worse."]), [], [], [], "Should I stop taking my ibuprofen?");
+    assert.deepEqual(result.nextSteps, ["See a GP if it gets worse.", MEDICINE_NEXT_STEP]);
+  });
+
+  it("does not add it twice or when no medicine was mentioned", () => {
+    const referred = ["Ask a pharmacist about your tablets."];
+    assert.deepEqual(toContractAssessment(model(referred), [], [], [], "my tablets").nextSteps, referred);
+    assert.deepEqual(toContractAssessment(model(["See a GP."]), [], [], [], "My back hurts.").nextSteps, ["See a GP."]);
   });
 });
 

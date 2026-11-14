@@ -58,7 +58,10 @@ Server-side output checks (`src/lib/ai/output.ts`, `parseModelOutput`) enforce t
 - causal claims about something the user recorded or reported (sitting, posture, sleep, fluids, activity, stress), e.g. "strain from prolonged sitting", "caused by poor sleep" (`makesCausalClaim`);
 - "matches / fits / aligns with a common/typical X" diagnostic framing;
 - comparisons with a "normal", "typical" or "recommended" amount, which no curated source supplies.
+- follow-up questions about how much of a medicine the user takes or how often (`DOSE_QUESTION`);
 - instructions to start, stop, skip or come off a medicine, unless the same sentence sends the user to a GP, pharmacist, prescriber, doctor or clinician (`changesMedication`).
+
+When the user mentioned a medicine and the model's next steps do not refer them to a pharmacist or prescriber, the server appends the fixed step `MEDICINE_NEXT_STEP` (like `NO_HISTORY_NOTE`, this does not depend on the model).
 
 On failure the model gets one repair attempt that quotes the exact offending phrases. The quotes go only to the model; server logs contain rule labels only, never health content. If the repair also fails, the user gets a 503 "assistant unavailable" message.
 

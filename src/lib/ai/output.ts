@@ -229,6 +229,10 @@ function extractJson(raw: string): unknown {
  * `problems` are labels without health content (safe to log). `quotes` are the
  * exact offending phrases, used only in the repair prompt and never logged.
  */
+/** Follow-up questions about medicine amounts or frequency (AI_SAFETY_SPEC.md §4: no dose discussion). */
+const DOSE_QUESTION =
+  /\b(mg|milligrams?|doses?|dosage|how (much|many|often)\b[^?]{0,60}\b(medicines?|medications?|tablets?|pills?|painkillers?|ibuprofen|paracetamol|acetaminophen|aspirin|naproxen|codeine))\b/i;
+
 export type ParseResult = { ok: true; output: ModelOutput } | { ok: false; problems: string[]; quotes: string[] };
 
 export function parseModelOutput(
@@ -256,6 +260,9 @@ export function parseModelOutput(
   if (mustAssess && parsed.data.status !== "assessment") problems.push('status must be "assessment" this turn');
   const banned = findBannedWording(output);
   if (banned.length) problems.push(`it used disallowed wording (${banned.join(", ")})`);
+  if (output.followUpQuestions.some((q) => DOSE_QUESTION.test(q))) {
+    problems.push("a follow-up question asked about a medicine dose or how often it is taken; leave medicine questions to a pharmacist or prescriber");
+  }
   if (makesCausalClaim(output)) {
     problems.push("it presented something the user recorded or reported as the cause; describe it as something recorded around the same time instead");
   }
@@ -279,11 +286,19 @@ export function parseModelOutput(
  * server retrieved (unknown IDs are dropped), sources only from the curated set,
  * and the disclaimer is always the fixed server text.
  */
+/** Added by the server when the user mentioned a medicine and the model did not refer them to a professional. */
+export const MEDICINE_NEXT_STEP =
+  "For any question about your medicines, including whether to keep taking them, ask a pharmacist or your prescriber.";
+const USER_MENTIONS_MEDICINE =
+  /\b(medications?|medicines?|meds|tablets?|pills?|prescriptions?|doses?|dosage|painkillers?|ibuprofen|paracetamol|acetaminophen|aspirin|naproxen|codeine)\b/i;
+const REFERS_TO_PHARMACIST = /\b(pharmacist|prescriber|prescribing)\b/i;
+
 export function toContractAssessment(
   output: NonNullable<ModelOutput["assessment"]>,
   relevantLogs: readonly HealthLog[],
   sources: readonly Source[],
   recentMeasurementLogs: readonly HealthLog[] = [],
+  userText = "",
 ): Assessment {
   const logsById = new Map([...relevantLogs, ...recentMeasurementLogs].map((log) => [log.id, log]));
   const possibleExplanations = output.possibleExplanations.map((explanation) => ({
@@ -303,7 +318,10 @@ export function toContractAssessment(
   return {
     summary,
     possibleExplanations,
-    nextSteps: output.nextSteps,
+    nextSteps:
+      USER_MENTIONS_MEDICINE.test(userText) && !output.nextSteps.some((step) => REFERS_TO_PHARMACIST.test(step))
+        ? [...output.nextSteps, MEDICINE_NEXT_STEP]
+        : output.nextSteps,
     sources: sources.map(({ title, publisher, url }) => ({ title, publisher, url })),
     disclaimer: ASSESSMENT_DISCLAIMER,
   };

@@ -106,7 +106,7 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
     safety: safety.result,
     assessment:
       output.status === "assessment" && output.assessment
-        ? toContractAssessment(output.assessment, relevantLogs, references, recentMeasurementLogs)
+        ? toContractAssessment(output.assessment, relevantLogs, references, recentMeasurementLogs, queryText)
         : null,
     safetyRuleId: null,
   };
