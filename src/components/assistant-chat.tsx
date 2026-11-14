@@ -276,24 +276,26 @@ function AssistantResult({ response }: { response: ChatResponse | null }) {
         </ul>
       </section>
 
-      <section aria-labelledby="sources-heading">
-        <h3 id="sources-heading" className="font-semibold">References</h3>
-        <ul className="mt-2 space-y-2 text-sm">
-          {assessment.sources.map((source) => (
-            <li key={source.url}>
-              <a
-                href={source.url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-blue-700 underline hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
-              >
-                {source.title}
-              </a>
-              <span className="text-slate-600"> — {source.publisher}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {assessment.sources.length > 0 && (
+        <section aria-labelledby="sources-heading">
+          <h3 id="sources-heading" className="font-semibold">References</h3>
+          <ul className="mt-2 space-y-2 text-sm">
+            {assessment.sources.map((source) => (
+              <li key={source.url}>
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-700 underline hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                >
+                  {source.title}
+                </a>
+                <span className="text-slate-600"> — {source.publisher}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <p className="border-t border-slate-200 pt-4 text-sm font-medium text-slate-700">
         {assessment.disclaimer}

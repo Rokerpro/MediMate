@@ -16,19 +16,15 @@ import {
   type ProfileResponse,
   type ProfileUpdateRequest,
 } from "@/lib/validations";
-import {
-  mockAiUnavailableError,
-  mockChatAssessmentResponse,
-  mockChatFollowUpResponse,
-  mockChatUrgentResponse,
-} from "@/lib/mocks/api-fixtures";
 
 const REQUEST_TIMEOUT_MS = 10_000;
+const CHAT_REQUEST_TIMEOUT_MS = 30_000;
 
 class ApiClientError extends Error {
   constructor(
     message: string,
     readonly retryable = false,
+    readonly status?: number,
   ) {
     super(message);
     this.name = "ApiClientError";
@@ -40,12 +36,13 @@ async function requestJson<T>(
   init: RequestInit,
   schema: { parse: (value: unknown) => T },
   expectedStatus: number,
+  timeoutMs = REQUEST_TIMEOUT_MS,
 ): Promise<T> {
   let response: Response;
   try {
     response = await fetch(input, {
       ...init,
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "TimeoutError") {
@@ -69,9 +66,17 @@ async function requestJson<T>(
   if (!response.ok) {
     const parsedError = apiErrorResponseSchema.safeParse(body);
     if (parsedError.success) {
-      throw new ApiClientError(parsedError.data.error.message, response.status >= 500);
+      throw new ApiClientError(
+        parsedError.data.error.message,
+        response.status >= 500,
+        response.status,
+      );
     }
-    throw new ApiClientError(`The request failed with status ${response.status}.`, response.status >= 500);
+    throw new ApiClientError(
+      `The request failed with status ${response.status}.`,
+      response.status >= 500,
+      response.status,
+    );
   }
 
   if (response.status !== expectedStatus) {
@@ -145,20 +150,22 @@ export async function createHealthLog(
 
 export async function sendAssistantMessage(input: ChatRequest): Promise<ChatResponse> {
   const validatedInput = chatRequestSchema.parse(input);
-  const normalizedMessage = validatedInput.message.toLowerCase();
-
-  if (normalizedMessage.includes("unavailable")) {
-    throw new Error(mockAiUnavailableError.error.message);
+  try {
+    return await requestJson(
+      "/api/assistant/chat",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validatedInput),
+      },
+      chatResponseSchema,
+      200,
+      CHAT_REQUEST_TIMEOUT_MS,
+    );
+  } catch (error) {
+    if (error instanceof ApiClientError && error.status === 404 && validatedInput.sessionId !== null) {
+      return sendAssistantMessage({ ...validatedInput, sessionId: null });
+    }
+    throw error;
   }
-
-  if (normalizedMessage.includes("urgent")) {
-    return chatResponseSchema.parse(mockChatUrgentResponse);
-  }
-
-  const response =
-    validatedInput.sessionId === null
-      ? mockChatFollowUpResponse
-      : mockChatAssessmentResponse;
-
-  return chatResponseSchema.parse(response);
 }
