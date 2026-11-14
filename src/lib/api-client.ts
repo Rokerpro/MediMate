@@ -31,6 +31,35 @@ import {
 
 const REQUEST_TIMEOUT_MS = 10_000;
 const CHAT_REQUEST_TIMEOUT_MS = 30_000;
+export const API_REQUEST_ACTIVITY_EVENT = "medimate:api-request-activity";
+
+let apiRequestSequence = 0;
+const activeApiRequests = new Set<string>();
+
+function dispatchApiRequestActivity(requestId: string, active: boolean) {
+  if (typeof window === "undefined") return;
+  if (active) activeApiRequests.add(requestId);
+  else activeApiRequests.delete(requestId);
+  window.dispatchEvent(
+    new CustomEvent(API_REQUEST_ACTIVITY_EVENT, {
+      detail: { requestId, active },
+    }),
+  );
+}
+
+export function getActiveApiRequestIds(): string[] {
+  return Array.from(activeApiRequests);
+}
+
+async function trackApiRequest<T>(request: () => Promise<T>): Promise<T> {
+  const requestId = String(++apiRequestSequence);
+  dispatchApiRequestActivity(requestId, true);
+  try {
+    return await request();
+  } finally {
+    dispatchApiRequestActivity(requestId, false);
+  }
+}
 
 export class ApiClientError extends Error {
   constructor(
@@ -49,6 +78,18 @@ async function requestJson<T>(
   schema: { parse: (value: unknown) => T },
   expectedStatus: number,
   timeoutMs = REQUEST_TIMEOUT_MS,
+): Promise<T> {
+  return trackApiRequest(() =>
+    requestJsonWithoutTracking(input, init, schema, expectedStatus, timeoutMs),
+  );
+}
+
+async function requestJsonWithoutTracking<T>(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  schema: { parse: (value: unknown) => T },
+  expectedStatus: number,
+  timeoutMs: number,
 ): Promise<T> {
   let response: Response;
   try {
@@ -228,39 +269,41 @@ export async function updateReminder(
 }
 
 export async function deleteReminder(id: string): Promise<void> {
-  let response: Response;
-  try {
-    response = await fetch(`/api/reminders/${encodeURIComponent(id)}`, {
-      method: "DELETE",
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-  } catch {
-    throw new ApiClientError("The server is unavailable. Please try again.", true);
-  }
+  return trackApiRequest(async () => {
+    let response: Response;
+    try {
+      response = await fetch(`/api/reminders/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch {
+      throw new ApiClientError("The server is unavailable. Please try again.", true);
+    }
 
-  if (response.status === 204) return;
+    if (response.status === 204) return;
 
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    throw new ApiClientError(
-      `The request failed with status ${response.status}.`,
-      response.status >= 500,
-      response.status,
-    );
-  }
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      throw new ApiClientError(
+        `The request failed with status ${response.status}.`,
+        response.status >= 500,
+        response.status,
+      );
+    }
 
-  if (!response.ok) {
-    const parsedError = apiErrorResponseSchema.safeParse(body);
-    throw new ApiClientError(
-      parsedError.success ? parsedError.data.error.message : `The request failed with status ${response.status}.`,
-      response.status >= 500,
-      response.status,
-    );
-  }
+    if (!response.ok) {
+      const parsedError = apiErrorResponseSchema.safeParse(body);
+      throw new ApiClientError(
+        parsedError.success ? parsedError.data.error.message : `The request failed with status ${response.status}.`,
+        response.status >= 500,
+        response.status,
+      );
+    }
 
-  throw new ApiClientError(`The server returned status ${response.status}. Please try again.`);
+    throw new ApiClientError(`The server returned status ${response.status}. Please try again.`);
+  });
 }
 
 export async function explainPrescription(

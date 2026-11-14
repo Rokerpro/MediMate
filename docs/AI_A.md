@@ -4,9 +4,9 @@ Last updated: 2026-11-14
 
 ## Role and current state
 
-This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, navigation polish, prescription explainer UI, and their frontend data-access methods are present in the working tree. The backend reminder and prescription contracts are on `main`; review and commit the current frontend work before merging.
+This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, prescription explainer UI, assistant popup, and their frontend data-access methods are integrated. The current branch is `feat/chatbot-popup`; it contains the assistant popup commit and the mobile navigation and route-preloader changes. The navigation/preloader work is not pushed.
 
-The current work is on `feat/health-insights-journey`, based on `main` at `9dd4b22`. The branch contains focused commits for PR #1 review fixes, Dashboard insights, and the interactive health-log timeline; it is not yet merged or deployed. Do not assume that a feature is deployed just because it is merged; verify the deployed app separately.
+PR #2 (`feat/health-insights-journey`) was merged into `main`. Do not assume that a feature is deployed just because it is merged; verify the deployed app separately.
 
 ## Product
 
@@ -91,10 +91,16 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 ### Shell and navigation
 
 - `AppShell` renders the global synthetic-data warning.
-- `PrimaryNavigation` uses `usePathname()` and `aria-current="page"` for active links.
+- `PrimaryNavigation` uses `usePathname()` and `aria-current="page"` for active links. On mobile, it replaces the horizontal link list with a full-screen hamburger overlay with Escape handling, focus containment, scroll locking, and a close control; desktop navigation remains unchanged.
 - Navigation currently includes Dashboard, Profile, Daily logs, Assistant, Reminders, and Summary.
 - Navigation also includes Prescriptions, which links to the deterministic abbreviation explainer.
 - Focus-visible rings and keyboard-operable controls are required.
+
+### Route preloader
+
+- `RoutePreloader` is mounted in the shared root layout and shows a branded full-screen transition for internal route changes, including browser back/forward navigation.
+- The preloader remains visible for at least one second and waits for in-flight frontend API requests to settle, with a 30-second failsafe.
+- API activity is tracked centrally in `src/lib/api-client.ts`; request methods and the bodyless reminder DELETE endpoint use the same tracking.
 
 ### API client
 
@@ -219,12 +225,11 @@ For `feat/health-insights-journey`, lint, typecheck, build, and all 188 tests pa
 
 For `feat/chatbot-popup`, lint, typecheck, all 204 tests, and the production build passed. Local browser checks verified the desktop split placement, the full-screen mobile dialog at 375px without horizontal overflow, focus return and scroll restoration on close, and that `/assistant` remains a dedicated full-page chat. A mocked SpeechRecognition verified both the unsupported-browser message and transcript insertion without automatic sending; real microphone permission/service behavior was not exercised.
 
+For the mobile navigation and route preloader, lint, typecheck, all 204 tests, and the production build passed. Browser checks verified the mobile menu fills a 375×812 viewport, supports Escape and its close button, restores focus and body scrolling, and has no horizontal overflow. Desktop links remain visible while the hamburger is hidden. Internal navigation displayed the preloader for at least one second and waited for the page API requests to settle; the synthetic-data notice remained visible.
+
 ## Pending work and coordination
 
-- Verify the merged `supabase/migrations/0002_reminders.sql` is applied in the deployed Supabase project before demo use.
-- Verify the deployed Vercel build contains `/reminders` and the merged API.
 - Keep `docs/AI_A.md`, `docs/AI_B.md`, and `docs/SHARED_CONTEXT.md` synchronized after meaningful architecture, contract, ownership, or deployment changes.
 - Do not create real reminders, logs, or health data in the shared demo database for testing.
-- Have Person A review and merge `feat/health-insights-journey`; then verify the merged build separately.
 - Confirm `/summary` print-specific layout in a real browser print preview.
 - Before starting a task, inspect `git status`, read all context files, and check whether the other AI has changed the files you need.
