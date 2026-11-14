@@ -168,7 +168,8 @@ Before declaring a milestone complete, report:
 ## 11. Git behavior
 
 - Never force-push, rewrite shared history, delete branches or run destructive Git commands unless explicitly instructed.
-- Do not commit automatically unless the developer asks; prepare focused changes and suggest a commit message.
+- **Commit often:** commit each small, working, checked step on the current feature branch (never directly on `main`) with a focused Conventional Commit message. Stage specific files; never `git add .`. Run lint/typecheck/tests relevant to the change before each commit.
+- **Push less often than you commit:** batch several commits and push at meaningful checkpoints — a finished task or vertical slice, before opening/updating a PR, before handing off to the other developer, or at least every 2–3 hours to match the integration cadence in `docs/WORKFLOW.md`. Never push broken builds or failing checks.
 - Use the branch and merge rules in `docs/WORKFLOW.md`.
 - Do not merge another developer's branch without checking its diff and test status.
 
