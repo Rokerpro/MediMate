@@ -167,7 +167,8 @@ describe("runAssistantTurn", () => {
     const history = turn.assessment!.possibleExplanations[0]!.supportingHistory;
     assert.deepEqual(history.map((h) => [h.logId, h.date]), [[BACK_1.id, "2026-11-13"]]);
     assert.equal(turn.assessment!.disclaimer, ASSESSMENT_DISCLAIMER);
-    assert.deepEqual(turn.assessment!.sources, []);
+    // Sources come only from the curated set: the NHS back-pain page for a back concern.
+    assert.deepEqual(turn.assessment!.sources.map((s) => s.url), ["https://www.nhs.uk/conditions/back-pain/"]);
     assert.equal(chatResponseSchema.safeParse(withSession(turn)).success, true);
   });
 
