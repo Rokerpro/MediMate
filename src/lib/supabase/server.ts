@@ -88,5 +88,7 @@ export async function supabaseRest(
     throw new SupabaseRequestError(response.status, code);
   }
 
-  return response.json();
+  // Writes without `returnRepresentation` come back with an empty body (201/204).
+  const text = await response.text();
+  return text.length === 0 ? null : (JSON.parse(text) as unknown);
 }

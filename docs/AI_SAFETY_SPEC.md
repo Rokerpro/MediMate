@@ -103,3 +103,51 @@ Do not use visual labels such as “diagnosed,” “disease detected,” “95%
 ## 9. Sources register
 
 Before demo, add the exact authoritative source URLs used for each implemented safety rule and medical-reference item. Do not invent or leave placeholder source URLs in the deployed assessment.
+
+Sources approved by Person A on 2026-11-14 and checked (fetched and quoted) the same day. Both are UK NHS pages; the escalation message tells users to call their **local** emergency number rather than the UK-specific 999/111.
+
+| Source | URL | Page last reviewed | Used for |
+|---|---|---|---|
+| NHS — Back pain | https://www.nhs.uk/conditions/back-pain/ | 2026-03-05 | Safety rules `back-*`; reference `nhs-back-pain` |
+| NHS — Headaches | https://www.nhs.uk/conditions/headaches/ | 2024-04-17 | Safety rules `headache-*`; reference `nhs-headaches` |
+
+### 9.1 Implemented safety rules (`src/lib/health/safety-rules.ts`)
+
+Each rule implements one item from the page's **"Call 999 or go to A&E if"** list, and fires only when the conversation also mentions the matching symptom (back pain or headache). A triggered rule returns `status: "urgent"`, and the LLM is not called.
+
+| Rule id | NHS item (quoted) |
+|---|---|
+| `back-both-legs` | "pain, tingling, weakness or numbness in both legs" |
+| `back-saddle-numbness` | "a loss of feeling around your genitals or anus" |
+| `back-bladder-bowel` | "changes in your bladder or bowels, such as difficulty peeing, or peeing or pooing yourself" |
+| `back-sexual-function` | "changes in how your penis or vagina feels during sex, not being able to get or keep an erection, or not being able to orgasm" |
+| `back-chest-pain` | "chest pain" |
+| `back-serious-accident` | "it started after a serious accident, such as a car accident" |
+| `headache-seizure` | "has had a seizure (fit)" |
+| `headache-numbness-weakness` | "has numbness or weakness in the body or face" |
+| `headache-sudden-severe` | "it started suddenly and is extremely painful" |
+| `headache-head-injury` | "has had a head injury within the last 3 months" |
+| `headache-speech-balance-memory` | "are finding it difficult to speak, balance, walk or remember things" |
+| `headache-drowsy-confused` | "are drowsy or confused" |
+| `headache-vision-loss` | "has loss of vision" |
+| `headache-non-fading-rash` | "has a rash that does not fade when a glass is rolled over it" |
+| `headache-fever-stiff-neck-light` | "has a very high temperature, a stiff neck, or bright lights are bothering you" |
+
+Each rule has positive, negative (negated) and ambiguous test cases in `tests/safety-rules.test.ts`.
+
+**Known limitations:**
+
+- Matching is keyword-based with simple negation handling ("no", "not", "without" in the same clause). Unusual wording can be missed, and these rules are **not** comprehensive emergency detection.
+- `headache-head-injury` does not check the "within the last 3 months" time limit; any mentioned head injury escalates (errs towards escalation).
+- `headache-drowsy-confused` matches any non-negated "confused", which can over-escalate.
+- The pages' "urgent GP appointment / 111" items are not implemented yet.
+- Once a rule fires in a session, later turns in that session also return `urgent`.
+
+### 9.2 Curated medical references (`src/lib/health/references.ts`)
+
+| Reference id | Source | Excerpt |
+|---|---|---|
+| `nhs-back-pain` | NHS — Back pain | Verbatim sentences on how common back pain is, staying active, and when to see a GP |
+| `nhs-headaches` | NHS — Headaches | Verbatim sentences on common causes, water and relaxation, and when to see a GP |
+
+Medication advice from these pages is deliberately excluded from the excerpts, because the assistant must not give medication guidance.
