@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { ChatResponse } from "@/lib/validations";
-import { sendAssistantMessage } from "@/lib/api-client";
+import { ApiClientError, sendAssistantMessage } from "@/lib/api-client";
 
 type ChatMessage = {
   id: string;
@@ -23,17 +23,22 @@ export function AssistantChat() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  async function submitMessage(message = input) {
+  async function submitMessage(
+    message = input,
+    options: { appendUserMessage?: boolean } = {},
+  ) {
     const trimmedMessage = message.trim();
     if (!trimmedMessage || loading) return;
 
     setInput("");
     setErrorMessage(null);
     setLastSubmittedMessage(trimmedMessage);
-    setMessages((current) => [
-      ...current,
-      { id: makeMessageId(), role: "user", content: trimmedMessage },
-    ]);
+    if (options.appendUserMessage !== false) {
+      setMessages((current) => [
+        ...current,
+        { id: makeMessageId(), role: "user", content: trimmedMessage },
+      ]);
+    }
     setLoading(true);
 
     try {
@@ -45,6 +50,9 @@ export function AssistantChat() {
         { id: makeMessageId(), role: "assistant", content: response.assistantMessage },
       ]);
     } catch (error) {
+      if (error instanceof ApiClientError && error.status === 404) {
+        setLastSubmittedMessage(null);
+      }
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -66,7 +74,11 @@ export function AssistantChat() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]">
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+      <div className="lg:col-start-2 lg:row-start-1">
+        <AssistantResult response={latestResponse} />
+      </div>
+
+      <section className="lg:col-start-1 lg:row-start-1 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold">Conversation</h2>
@@ -126,7 +138,7 @@ export function AssistantChat() {
                 <button
                   key={question}
                   type="button"
-                  onClick={() => void submitMessage(question)}
+                  onClick={() => setInput(question)}
                   disabled={loading}
                   className="rounded-full border border-blue-300 bg-white px-3 py-2 text-left text-sm text-blue-950 hover:bg-blue-100 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 >
@@ -143,7 +155,9 @@ export function AssistantChat() {
             {lastSubmittedMessage && (
               <button
                 type="button"
-                onClick={() => void submitMessage(lastSubmittedMessage)}
+                onClick={() =>
+                  void submitMessage(lastSubmittedMessage, { appendUserMessage: false })
+                }
                 disabled={loading}
                 className="mt-3 rounded-md bg-red-800 px-3 py-2 text-sm font-semibold text-white hover:bg-red-900 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-red-600"
               >
@@ -185,8 +199,6 @@ export function AssistantChat() {
           </div>
         </form>
       </section>
-
-      <AssistantResult response={latestResponse} />
     </div>
   );
 }
@@ -276,24 +288,26 @@ function AssistantResult({ response }: { response: ChatResponse | null }) {
         </ul>
       </section>
 
-      <section aria-labelledby="sources-heading">
-        <h3 id="sources-heading" className="font-semibold">References</h3>
-        <ul className="mt-2 space-y-2 text-sm">
-          {assessment.sources.map((source) => (
-            <li key={source.url}>
-              <a
-                href={source.url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-blue-700 underline hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
-              >
-                {source.title}
-              </a>
-              <span className="text-slate-600"> — {source.publisher}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {assessment.sources.length > 0 && (
+        <section aria-labelledby="sources-heading">
+          <h3 id="sources-heading" className="font-semibold">References</h3>
+          <ul className="mt-2 space-y-2 text-sm">
+            {assessment.sources.map((source) => (
+              <li key={source.url}>
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-700 underline hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                >
+                  {source.title}
+                </a>
+                <span className="text-slate-600"> — {source.publisher}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <p className="border-t border-slate-200 pt-4 text-sm font-medium text-slate-700">
         {assessment.disclaimer}

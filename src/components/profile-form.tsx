@@ -8,6 +8,7 @@ import {
 import { getProfile, updateProfile } from "@/lib/api-client";
 
 type FieldErrors = Record<string, string>;
+type ProfileDraft = Omit<Profile, "age"> & { age: number | null };
 
 function getFieldErrors(error: { issues: Array<{ path: PropertyKey[]; message: string }> }) {
   return error.issues.reduce<FieldErrors>((errors, issue) => {
@@ -27,7 +28,7 @@ function parseList(value: string) {
 }
 
 export function ProfileForm() {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<ProfileDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -64,7 +65,7 @@ export function ProfileForm() {
     };
   }, []);
 
-  function updateField<K extends keyof Profile>(field: K, value: Profile[K]) {
+  function updateField<K extends keyof ProfileDraft>(field: K, value: ProfileDraft[K]) {
     setProfile((current) => (current ? { ...current, [field]: value } : current));
     setFieldErrors((current) => ({ ...current, [field]: "" }));
     setSuccessMessage(null);
@@ -142,13 +143,14 @@ export function ProfileForm() {
           label="Age"
           value={profile.age}
           error={fieldErrors.age}
-          onChange={(value) => updateField("age", value ?? 0)}
+          onChange={(value) => updateField("age", value)}
         />
-        <TextField
+        <SelectField
           id="gender"
-          label="Gender (optional)"
+          label="Gender"
           value={profile.gender ?? ""}
           error={fieldErrors.gender}
+          options={["Male", "Female", "Other"]}
           onChange={(value) => updateField("gender", value || null)}
         />
         <NumberField
@@ -237,6 +239,46 @@ function TextField({
         aria-describedby={error ? `${id}-error` : undefined}
         className={fieldClass(error)}
       />
+      {error && <p id={`${id}-error`} className="mt-1 text-sm text-red-700">{error}</p>}
+    </div>
+  );
+}
+
+function SelectField({
+  id,
+  label,
+  value,
+  options,
+  error,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  options: string[];
+  error?: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium text-slate-800">
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `${id}-error` : undefined}
+        className={fieldClass(error)}
+      >
+        <option value="">Select an option</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
       {error && <p id={`${id}-error`} className="mt-1 text-sm text-red-700">{error}</p>}
     </div>
   );
