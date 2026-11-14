@@ -41,6 +41,21 @@ function makeMessageId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function microphonePermissionMessage(error: unknown) {
+  if (error instanceof DOMException) {
+    if (error.name === "NotAllowedError" || error.name === "SecurityError") {
+      return "Microphone access was denied. Allow it in your browser settings, then try again or type your message.";
+    }
+    if (error.name === "NotFoundError") {
+      return "No microphone was found. Connect a microphone or type your message instead.";
+    }
+    if (error.name === "NotReadableError") {
+      return "The microphone is busy or unavailable. Check it and try again or type your message.";
+    }
+  }
+  return "Microphone permission could not be requested. You can type your message instead.";
+}
+
 export function AssistantChat({
   variant = "page",
   active = true,
@@ -57,13 +72,19 @@ export function AssistantChat({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryAvailable, setRetryAvailable] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [requestingMicrophone, setRequestingMicrophone] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<string | null>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const voiceRequestSequenceRef = useRef(0);
+  const microphoneRequestPendingRef = useRef(false);
   const messageInputId = variant === "popup" ? "assistant-popup-message" : "assistant-message";
 
   useEffect(() => {
-    if (!active && isListening) recognitionRef.current?.stop();
+    if (active) return;
+
+    voiceRequestSequenceRef.current += 1;
+    if (isListening) recognitionRef.current?.stop();
   }, [active, isListening]);
 
   async function submitMessage(
@@ -125,11 +146,13 @@ export function AssistantChat({
     requestAnimationFrame(() => messageInputRef.current?.focus());
   }
 
-  function toggleVoiceInput() {
+  async function toggleVoiceInput() {
     if (isListening) {
       recognitionRef.current?.stop();
       return;
     }
+
+    if (microphoneRequestPendingRef.current) return;
 
     const speechWindow = window as SpeechRecognitionWindow;
     const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
@@ -137,6 +160,32 @@ export function AssistantChat({
       setVoiceStatus("Voice input is not supported in this browser. You can type your message instead.");
       return;
     }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setVoiceStatus(
+        "Microphone access is unavailable here. Use HTTPS or localhost, or type your message instead.",
+      );
+      return;
+    }
+
+    const requestId = ++voiceRequestSequenceRef.current;
+    microphoneRequestPendingRef.current = true;
+    setRequestingMicrophone(true);
+    setVoiceStatus("Requesting microphone permission…");
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (error) {
+      setVoiceStatus(microphonePermissionMessage(error));
+      return;
+    } finally {
+      microphoneRequestPendingRef.current = false;
+      setRequestingMicrophone(false);
+    }
+    stream.getTracks().forEach((track) => track.stop());
+
+    if (requestId !== voiceRequestSequenceRef.current || !active) return;
 
     const recognition = new Recognition();
     let hasTranscript = false;
@@ -342,35 +391,102 @@ export function AssistantChat({
               <p className="text-xs text-slate-500">Do not enter real health information.</p>
               <button
                 type="button"
-                onClick={toggleVoiceInput}
-                disabled={loading}
-                aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                onClick={() => void toggleVoiceInput()}
+                disabled={loading || requestingMicrophone}
+                aria-label={
+                  requestingMicrophone
+                    ? "Requesting microphone permission"
+                    : isListening
+                      ? "Stop voice input"
+                      : "Start voice input"
+                }
                 aria-pressed={isListening}
-                className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                title={
+                  requestingMicrophone
+                    ? "Requesting microphone permission"
+                    : isListening
+                      ? "Stop voice input"
+                      : "Start voice input"
+                }
+                className={`inline-flex shrink-0 items-center justify-center rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
+                  popup ? "h-10 w-10" : "min-h-10 gap-2 px-3 py-2 text-sm font-medium"
+                }`}
               >
                 {isListening ? (
-                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className={popup ? "h-5 w-5" : "h-4 w-4"}
+                    fill="currentColor"
+                  >
                     <rect x="7" y="7" width="10" height="10" rx="1" />
                   </svg>
                 ) : (
-                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none">
-                    <rect x="9" y="3" width="6" height="12" rx="3" stroke="currentColor" strokeWidth="1.7" />
-                    <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className={popup ? "h-5 w-5" : "h-4 w-4"}
+                    fill="none"
+                  >
+                    <rect
+                      x="9"
+                      y="3"
+                      width="6"
+                      height="12"
+                      rx="3"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                    />
+                    <path
+                      d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                    />
                   </svg>
                 )}
-                {isListening ? "Stop" : "Speak"}
+                {!popup && (isListening ? "Stop" : "Speak")}
               </button>
             </div>
             <button
               type="submit"
+              aria-label={loading ? "Sending message" : "Send message"}
+              title={loading ? "Sending message" : "Send message"}
               disabled={
                 loading ||
                 input.trim().length === 0 ||
                 (retryAvailable && lastSubmittedMessage === input.trim())
               }
-              className="ml-auto min-h-10 rounded-md bg-blue-700 px-4 py-2.5 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className={`ml-auto inline-flex items-center justify-center rounded-md bg-blue-700 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
+                popup ? "h-10 w-10 shrink-0" : "min-h-10 px-4 py-2.5"
+              }`}
             >
-              {loading ? "Sending…" : "Send message"}
+              {popup ? (
+                <>
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className="h-5 w-5"
+                    fill="none"
+                  >
+                    <path
+                      d="m22 2-7 20-4-9-9-4Z"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M22 2 11 13"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span className="sr-only">{loading ? "Sending…" : "Send message"}</span>
+                </>
+              ) : (
+                loading ? "Sending…" : "Send message"
+              )}
             </button>
           </div>
           {voiceStatus && (

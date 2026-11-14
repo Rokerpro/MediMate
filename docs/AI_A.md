@@ -4,7 +4,7 @@ Last updated: 2026-11-14
 
 ## Role and current state
 
-This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, prescription explainer UI, assistant popup, and their frontend data-access methods are integrated. The current branch is `feat/chatbot-popup`; it contains the assistant popup commit and the mobile navigation and route-preloader changes. The navigation/preloader work is not pushed.
+This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, prescription explainer UI, assistant popup, and their frontend data-access methods are integrated. `main` includes the mobile navigation, route preloader, and assistant popup merged in PR #3. The current working branch is `fix/assistant-popup-controls`, based on `feb2db0`, with follow-up popup refinements in progress.
 
 PR #2 (`feat/health-insights-journey`) was merged into `main`. Do not assume that a feature is deployed just because it is merged; verify the deployed app separately.
 
@@ -145,9 +145,9 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 ### Responsive assistant popup and voice input
 
 - `src/components/assistant-chat-popup.tsx` adds a floating launcher throughout the public landing page and app shell, except `/assistant`, where the dedicated full-page chat remains unobstructed.
-- Desktop uses a bottom-right launcher and bottom-left chat panel. On narrow screens the panel fills the viewport, animates in/out, locks background scrolling, traps keyboard focus, and has an explicit SVG close control.
+- Desktop uses a bottom-right launcher with a panel right-aligned above it. On narrow screens the panel fills the viewport, animates in/out, locks background scrolling, traps keyboard focus, and has an explicit SVG close control.
 - The popup renders the existing `AssistantChat` component and uses the existing chat API, response rendering, retry behavior, and safety guidance; it does not introduce another chat implementation.
-- `AssistantChat` offers optional browser speech-to-text. Recognition is feature-detected when used; unsupported browsers and permission/start errors get a text-entry fallback. Recognized words are appended to the composer and are never sent automatically. The UI tells users their browser handles recognition and reminds them not to enter real health information.
+- `AssistantChat` offers optional browser speech-to-text. On activation, supported browsers first request microphone permission with `getUserMedia({ audio: true })`; the permission stream is stopped immediately before recognition starts. Closing the popup cancels a pending recognition start. Unsupported browsers and permission/start errors get a text-entry fallback. Recognized words are appended to the composer and are never sent automatically. The popup uses icon-only Speak and Send controls with accessible names; the dedicated assistant page retains text labels.
 - Urgent guidance is prioritized above the popup conversation. The launcher and panel are hidden in print.
 
 ### Printable summary
@@ -223,7 +223,9 @@ The temporary test reminder was confirmed absent from the API list afterward. Th
 
 For `feat/health-insights-journey`, lint, typecheck, build, and all 188 tests passed. Browser checks at a 375px configured viewport found no horizontal overflow on `/dashboard`, `/logs`, or `/summary`; the dashboard showed both charts and linked stat tiles, and the timeline showed Today then Yesterday with the expected pain/sleep formatting and a summary link. The `/summary` page showed its synthetic-data notice, charts, and history table. Print CSS could not be verified in the browser harness because `page.emulateMedia({ media: "print" })` left `matchMedia("print").matches` false; use a real browser print preview before confirming print-specific behavior.
 
-For `feat/chatbot-popup`, lint, typecheck, all 204 tests, and the production build passed. Local browser checks verified the desktop split placement, the full-screen mobile dialog at 375px without horizontal overflow, focus return and scroll restoration on close, and that `/assistant` remains a dedicated full-page chat. A mocked SpeechRecognition verified both the unsupported-browser message and transcript insertion without automatic sending; real microphone permission/service behavior was not exercised.
+For `feat/chatbot-popup`, lint, typecheck, all 204 tests, and the production build passed. Local browser checks verified the full-screen mobile dialog at 375px without horizontal overflow, focus return and scroll restoration on close, and that `/assistant` remains a dedicated full-page chat. A mocked SpeechRecognition verified unsupported-browser feedback and transcript insertion without automatic sending.
+
+On `fix/assistant-popup-controls`, browser checks verified that the desktop panel aligns with and opens above its launcher, the popup Speak and Send controls are icon-only with accessible names, and the dedicated `/assistant` page retains text labels. Mocked `getUserMedia` verified the `{ audio: true }` permission request, track release before recognition, clear denial messaging, and cancellation when the popup closes during a pending request. A real operating-system microphone prompt and speech-recognition service were not available in the browser harness.
 
 For the mobile navigation and route preloader, lint, typecheck, all 204 tests, and the production build passed. Browser checks verified the mobile menu fills a 375×812 viewport, supports Escape and its close button, restores focus and body scrolling, and has no horizontal overflow. Desktop links remain visible while the hamburger is hidden. Internal navigation displayed the preloader for at least one second and waited for the page API requests to settle; the synthetic-data notice remained visible.
 

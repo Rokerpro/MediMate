@@ -111,7 +111,7 @@ export function AssistantChatPopup() {
         aria-hidden={!isOpen}
         inert={!isOpen}
         onKeyDown={handlePanelKeyDown}
-        className={`fixed inset-0 z-[80] flex flex-col overflow-hidden bg-white shadow-2xl transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none md:inset-auto md:bottom-6 md:left-6 md:h-[min(42rem,calc(100vh-3rem))] md:w-[26rem] md:rounded-2xl md:border md:border-slate-200 print:hidden ${
+        className={`fixed inset-0 z-[80] flex flex-col overflow-hidden bg-white shadow-2xl transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none md:inset-auto md:bottom-24 md:left-auto md:right-5 md:h-[min(42rem,calc(100vh-7rem))] md:w-[26rem] md:origin-bottom-right md:rounded-2xl md:border md:border-slate-200 print:hidden ${
           isOpen
             ? "translate-y-0 opacity-100"
             : "pointer-events-none translate-y-full opacity-0 md:translate-y-4 md:scale-95"
