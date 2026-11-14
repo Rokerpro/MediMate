@@ -105,9 +105,26 @@ function bannedSearchText(output: ModelOutput): string {
   return strings.join("\n");
 }
 
+/**
+ * Starting, stopping or pausing a medicine (AI_SAFETY_SPEC.md §4). Allowed only
+ * in a sentence that sends the user to a professional, e.g. "Ask your GP before
+ * stopping any medicine".
+ */
+const MEDICATION_CHANGE =
+  /\b(stop|stopping|start|starting|quit|quitting|skip|skipping|pause|pausing|come off|coming off|cut down on|discontinu\w*)\s+(taking\s+|using\s+)?(your\s+|the\s+|any\s+|this\s+|that\s+|a\s+)?(\w+\s+)?(medications?|medicines?|tablets?|pills?|prescriptions?|painkillers?|antidepressants?|inhalers?)\b/i;
+const MEDICATION_CHANGE_LABEL = "a medication start/stop instruction";
+
+function changesMedication(text: string): boolean {
+  return text
+    .split(/(?<=[.!?\n])\s*/)
+    .some((sentence) => MEDICATION_CHANGE.test(sentence) && !PROFESSIONAL.test(sentence));
+}
+
 export function findBannedWording(output: ModelOutput): string[] {
   const joined = bannedSearchText(output);
-  return BANNED_PATTERNS.filter(({ pattern }) => pattern.test(joined)).map(({ label }) => label);
+  const found = BANNED_PATTERNS.filter(({ pattern }) => pattern.test(joined)).map(({ label }) => label);
+  if (changesMedication(joined)) found.push(MEDICATION_CHANGE_LABEL);
+  return found;
 }
 
 /** The exact offending phrases, for the repair prompt only (never logged). */

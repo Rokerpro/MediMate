@@ -237,6 +237,27 @@ describe("model output validation", () => {
     assert.ok(found.includes("a raw record id in text"));
   });
 
+  it("rejects medication start/stop instructions unless they refer the user to a professional", () => {
+    const out = JSON.parse(validAssessment([])) as Parameters<typeof findBannedWording>[0];
+    for (const step of [
+      "Stop taking your medication until the pain settles.",
+      "Consider starting a painkiller each morning.",
+      "Skip your tablets for a day.",
+      "You could come off your antidepressants.",
+    ]) {
+      out.assessment!.nextSteps = [step];
+      assert.ok(findBannedWording(out).includes("a medication start/stop instruction"), step);
+    }
+    for (const step of [
+      "Talk to your GP before stopping or starting any medicine.",
+      "Ask a pharmacist if you are unsure about your tablets.",
+      "Start a daily log of when the pain happens.",
+    ]) {
+      out.assessment!.nextSteps = [step];
+      assert.deepEqual(findBannedWording(out), [], step);
+    }
+  });
+
   it("requires an assessment once the follow-up limit is reached", () => {
     const followUp = JSON.stringify({ status: "follow_up", assistantMessage: "Q", followUpQuestions: ["When?"], assessment: null });
     assert.equal(parseModelOutput(followUp, { mustAssess: false }).ok, true);

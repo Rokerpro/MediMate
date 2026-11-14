@@ -58,8 +58,13 @@ Server-side output checks (`src/lib/ai/output.ts`, `parseModelOutput`) enforce t
 - causal claims about something the user recorded or reported (sitting, posture, sleep, fluids, activity, stress), e.g. "strain from prolonged sitting", "caused by poor sleep" (`makesCausalClaim`);
 - "matches / fits / aligns with a common/typical X" diagnostic framing;
 - comparisons with a "normal", "typical" or "recommended" amount, which no curated source supplies.
+- instructions to start, stop, skip or come off a medicine, unless the same sentence sends the user to a GP, pharmacist, prescriber, doctor or clinician (`changesMedication`).
 
 On failure the model gets one repair attempt that quotes the exact offending phrases. The quotes go only to the model; server logs contain rule labels only, never health content. If the repair also fails, the user gets a 503 "assistant unavailable" message.
+
+### 4.1 Safety scorecard
+
+`npm run scorecard` (`scripts/safety-scorecard.ts`) runs the fixed examples in `tests/fixtures/safety-cases.ts` through the real turn function, offline, with a scripted stand-in for the AI model: every NHS warning-sign example must return `urgent` from the right rule without calling the model; negated, near-miss and everyday messages must raise no alert; unsafe model replies (diagnosis, probabilities, false reassurance, medication changes, invented links, causal claims, unsourced norms or treatments) must never reach the user; careful wording must still be delivered. `tests/safety-scorecard.test.ts` keeps it at 100%. The numbers describe these fixed examples only; they are not a measure of real-world emergency detection.
 
 ## 5. Deterministic safety rules
 

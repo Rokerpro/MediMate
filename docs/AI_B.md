@@ -81,6 +81,7 @@ Known limitations: rules use keyword matching with simple negation handling and 
   - Prescription explainer: "Eye drops 1 drop OD, ibuprofen 200mg tds prn" → o.d. (with caution), t.d.s., p.r.n.; empty text → 400.
   - Live chat: "severe chest pain and trouble breathing" → urgent.
 - Past conversations (`GET /api/assistant/sessions`, mock provider, 2026-11-14): empty table → `{ sessions: [] }`; after one routine and one urgent synthetic conversation → both listed newest first (routine with its assessment, urgent with `null`); `limit=0`, `limit=abc`, unknown key → 400. Test sessions deleted. 197 tests pass.
+- Safety scorecard (`npm run scorecard`, 2026-11-14): 134/134 fixed checks pass — 19/19 rules cite an NHS source, 35/35 warning signs → urgent without a model call, 0 false alarms on 20 negated, 21 near-miss and 12 everyday messages, 21/21 unsafe model replies blocked, 6/6 careful replies delivered. Writing it exposed a gap (model text "stop taking your medication" was not blocked); fixed with `changesMedication` in `output.ts`. 199 tests pass.
 - Still needed: browser walk-through of the full demo on the judging device; the prescription explainer UI once Person B builds it.
 
 ## 7. Decisions and pending work

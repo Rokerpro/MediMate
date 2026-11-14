@@ -62,6 +62,7 @@ Before a demo, run `supabase/reset-demo.sql` to restore the synthetic data (logs
 npm run lint
 npm run typecheck
 npm test        # rule, retrieval, prompt and output tests (node:test)
+npm run scorecard  # offline safety scorecard: fixed warning-sign, false-alarm and unsafe-output examples
 npm run build
 ```
 
