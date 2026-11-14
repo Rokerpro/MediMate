@@ -14,6 +14,7 @@ Live demo: https://medi-mate-mauve.vercel.app
 - **Daily health log:** record symptoms, pain, sleep, water, activity and mood, and review them on a timeline.
 - **Assistant conversation:** describe a concern; the assistant asks a few follow-up questions when information is missing, then gives an educational assessment.
 - **Uses your history:** the assessment shows which dated log entries it used, keeps them separate from medical-reference information, and says plainly when no related history was found.
+- **Reminders, summary and prescription explainer:** user-written in-app reminders, a printable summary for a clinician, and plain-language meanings of common prescription abbreviations (no dose advice).
 - **Safety first:** warning signs from NHS emergency lists are checked by fixed rules *before* the AI is called. If one matches, the user gets urgent care guidance and the AI is not used.
 
 ## How an answer is produced
@@ -66,11 +67,17 @@ npm run build
 
 ## Demo script (3–5 minutes)
 
-1. **Dashboard → Daily logs:** introduce Alex (synthetic) and the timeline of back discomfort and sleep.
+Before the demo: run `supabase/reset-demo.sql` in the Supabase SQL editor.
+
+1. **Landing page (`/`) → Enter MediMate → Dashboard → Daily logs:** introduce Alex (synthetic) and the timeline of back discomfort and sleep.
 2. **Assistant:** "My lower back has been hurting since yesterday." The assistant asks follow-up questions.
 3. Answer: "It started after sitting at my desk most of the day. About 4 out of 10, a dull ache that gets better when I walk around. No numbness."
 4. Show the assessment: dated history entries, unknowns, next steps, the NHS source and the disclaimer.
 5. **Start over**, then: "My lower back hurts and I have numbness in both legs." The urgent NHS guidance appears without calling the AI.
+6. **Summary:** the printable patient-provided summary with pain and sleep charts ("Download / print PDF").
+7. Optional: **Reminders** (user-written, confirm before saving) and **Prescriptions** ("Eye drops 1 drop OD, ibuprofen 200mg tds prn" → plain meanings, the eye caution and the Patient.info source).
+
+If the AI provider is down or rate-limited during judging, the safety, history, summary, reminders and prescription features still work; the assistant shows a clear "temporarily unavailable" message with Retry.
 
 ## Limitations
 
