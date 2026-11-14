@@ -89,7 +89,7 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
     parsed = parseModelOutput(
       await deps.provider.complete({
         system: SYSTEM_PROMPT,
-        user: user + buildRepairInstruction(parsed.problems),
+        user: user + buildRepairInstruction(parsed.problems, parsed.quotes),
         context: { ...context, isRepair: true },
       }),
       { mustAssess, hasReferences },

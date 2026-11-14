@@ -53,6 +53,14 @@ The model must:
 - Include the disclaimer with every completed assessment.
 - Use only source URLs supplied by the retrieval layer; never invent citations.
 
+Server-side output checks (`src/lib/ai/output.ts`, `parseModelOutput`) enforce these. Besides schema, diagnosis wording, percentages, dose changes, URLs, unsourced self-care and unreferenced condition names, they reject:
+
+- causal claims about something the user recorded or reported (sitting, posture, sleep, fluids, activity, stress), e.g. "strain from prolonged sitting", "caused by poor sleep" (`makesCausalClaim`);
+- "matches / fits / aligns with a common/typical X" diagnostic framing;
+- comparisons with a "normal", "typical" or "recommended" amount, which no curated source supplies.
+
+On failure the model gets one repair attempt that quotes the exact offending phrases. The quotes go only to the model; server logs contain rule labels only, never health content. If the repair also fails, the user gets a 503 "assistant unavailable" message.
+
 ## 5. Deterministic safety rules
 
 The project team must select a small, relevant set of warning-sign rules from authoritative medical guidance before implementation. Record the source URL and date reviewed for every rule in this document or a linked rules file.

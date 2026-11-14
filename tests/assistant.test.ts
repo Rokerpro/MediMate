@@ -13,7 +13,7 @@ import {
   toContractAssessment,
   tidyAssistantMessage,
 } from "../src/lib/ai/output.ts";
-import { buildUserContent } from "../src/lib/ai/prompts.ts";
+import { buildRepairInstruction, buildUserContent } from "../src/lib/ai/prompts.ts";
 import { AiUnavailableError, type LlmProvider, type ModelRequest } from "../src/lib/ai/types.ts";
 import {
   extractTerms,
@@ -477,5 +477,116 @@ describe("runAssistantTurn", () => {
     assert.equal(second.status, "assessment");
     assert.equal(chatResponseSchema.safeParse(withSession(second)).success, true);
     assert.equal(second.assessment!.possibleExplanations[0]!.supportingHistory.length, 2);
+  });
+});
+
+describe("causal claims about recorded factors", () => {
+  const base = {
+    status: "assessment" as const,
+    assistantMessage: "Thanks for the details.",
+    followUpQuestions: [],
+    assessment: {
+      summary: "You reported a dull lower back ache after a day of sitting.",
+      possibleExplanations: [
+        {
+          title: "Back discomfort noticed after long periods of sitting",
+          whyItMayBeRelevant: "Your logs recorded long sitting on the same days as similar discomfort.",
+          supportingLogIds: [],
+          unknowns: ["How long each sitting period lasted"],
+        },
+      ],
+      nextSteps: ["Speak to a GP if it does not improve."],
+    },
+  };
+  const withTitle = (title: string, why = base.assessment.possibleExplanations[0]!.whyItMayBeRelevant) =>
+    JSON.stringify({ ...base, assessment: { ...base.assessment, possibleExplanations: [{ ...base.assessment.possibleExplanations[0]!, title, whyItMayBeRelevant: why }] } });
+
+  it("accepts associations described as recorded together", () => {
+    assert.equal(parseModelOutput(JSON.stringify(base), { mustAssess: true }).ok, true);
+  });
+
+  for (const title of [
+    "Muscle strain or overuse from prolonged sitting",
+    "Discomfort caused by long periods of sitting",
+    "Headache due to poor sleep",
+    "Pain because of your posture",
+    "Tiredness resulting from not enough sleep",
+    "Sitting may be causing the discomfort",
+  ]) {
+    it(`rejects "${title}"`, () => {
+      const result = parseModelOutput(withTitle(title), { mustAssess: true });
+      assert.equal(result.ok, false);
+      if (!result.ok) assert.ok(result.problems.some((p) => p.includes("as the cause")));
+    });
+  }
+
+  it("does not flag ordinary wording", () => {
+    for (const title of ["Discomfort that eases when walking away from your desk", "Pain after waking from sleep", "Back discomfort and activity levels recorded"]) {
+      assert.equal(parseModelOutput(withTitle(title), { mustAssess: true }).ok, true, title);
+    }
+  });
+});
+
+describe("diagnostic framing", () => {
+  it('rejects "matches common <condition>" wording', () => {
+    const raw = JSON.stringify({
+      status: "assessment",
+      assistantMessage: "Thanks.",
+      followUpQuestions: [],
+      assessment: {
+        summary: "You reported a dull ache.",
+        possibleExplanations: [{ title: "Back discomfort", whyItMayBeRelevant: "The pattern matches common mechanical back strain.", supportingLogIds: [], unknowns: ["Duration"] }],
+        nextSteps: ["Speak to a GP if it does not improve."],
+      },
+    });
+    const result = parseModelOutput(raw, { mustAssess: true });
+    assert.equal(result.ok, false);
+  });
+});
+
+describe("unsourced comparisons and framing", () => {
+  const raw = (why: string) => JSON.stringify({
+    status: "assessment",
+    assistantMessage: "Thanks.",
+    followUpQuestions: [],
+    assessment: {
+      summary: "You reported a dull headache.",
+      possibleExplanations: [{ title: "Headache and recorded fluids", whyItMayBeRelevant: why, supportingLogIds: [], unknowns: ["Duration"] }],
+      nextSteps: ["Speak to a GP if it does not improve."],
+    },
+  });
+  for (const why of [
+    "Your water intake was 1400 ml, which may be lower than typical daily needs.",
+    "Sleep of 6 hours is below the recommended amount.",
+    "Some days are below typical recommendations for fluids.",
+    "Your description aligns with common low-back strain.",
+  ]) {
+    it(`rejects: ${why}`, () => assert.equal(parseModelOutput(raw(why), { mustAssess: true }).ok, false));
+  }
+  it("allows sourced general wording", () => {
+    assert.equal(parseModelOutput(raw("Your log recorded 1400 ml of water that day; the NHS lists not drinking enough fluids among common causes of headaches."), { mustAssess: true }).ok, true);
+  });
+});
+
+describe("repair quotes", () => {
+  it("returns the exact offending phrase for the repair prompt", () => {
+    const raw = JSON.stringify({
+      status: "assessment",
+      assistantMessage: "Thanks.",
+      followUpQuestions: [],
+      assessment: {
+        summary: "You reported a dull ache.",
+        possibleExplanations: [{ title: "Strain from prolonged sitting", whyItMayBeRelevant: "This is consistent with a strain.", supportingLogIds: [], unknowns: ["Duration"] }],
+        nextSteps: ["Speak to a GP if it does not improve."],
+      },
+    });
+    const result = parseModelOutput(raw, { mustAssess: true });
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.ok(result.quotes.includes("consistent with"));
+      assert.ok(result.quotes.includes("from prolonged sitting"));
+      assert.ok(!result.problems.join(" ").includes("sitting"), "problems stay free of health content");
+      assert.match(buildRepairInstruction(result.problems, result.quotes), /"from prolonged sitting"/);
+    }
   });
 });

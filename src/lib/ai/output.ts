@@ -60,6 +60,14 @@ const BANNED_PATTERNS: readonly { pattern: RegExp; label: string }[] = [
     pattern: /\b(common|classic|usual) (pattern|presentation|picture|sign)s? (for|of)\b/i,
     label: '"common pattern for"-style diagnostic framing',
   },
+  {
+    pattern: /\b(match(es|ed|ing)?|fits?|resembles?|aligns? with|in line with)\s+(a |an |the )?(common|typical|classic|usual)\b/i,
+    label: '"matches common X"-style diagnostic framing',
+  },
+  {
+    pattern: /\b(lower|less|below|higher|more|above|under|over)\s+(than\s+)?(the\s+)?(typical|recommended|normal|usual|average|healthy|ideal)\s+(daily\s+)?(needs?|intake|amounts?|levels?|ranges?|targets?|recommendations?|guidelines?)\b/i,
+    label: "a comparison with a normal or recommended amount (no source supplies one)",
+  },
   { pattern: /\bnothing to worry about\b/i, label: '"nothing to worry about"' },
   { pattern: /\byou are (safe|fine)\b/i, label: '"you are safe/fine"' },
   { pattern: /\brul(e|es|ed|ing) out\b/i, label: '"rule out"' },
@@ -78,7 +86,7 @@ function collectStrings(value: unknown, out: string[]): void {
   else if (value && typeof value === "object") Object.values(value).forEach((item) => collectStrings(item, out));
 }
 
-export function findBannedWording(output: ModelOutput): string[] {
+function bannedSearchText(output: ModelOutput): string {
   const strings: string[] = [];
   collectStrings(
     {
@@ -94,8 +102,24 @@ export function findBannedWording(output: ModelOutput): string[] {
     },
     strings,
   );
-  const joined = strings.join("\n");
+  return strings.join("\n");
+}
+
+export function findBannedWording(output: ModelOutput): string[] {
+  const joined = bannedSearchText(output);
   return BANNED_PATTERNS.filter(({ pattern }) => pattern.test(joined)).map(({ label }) => label);
+}
+
+/** The exact offending phrases, for the repair prompt only (never logged). */
+function quoteMatches(texts: readonly string[], patterns: readonly RegExp[]): string[] {
+  const quotes = new Set<string>();
+  for (const text of texts) {
+    for (const pattern of patterns) {
+      const match = pattern.exec(text);
+      if (match) quotes.add(match[0].slice(0, 80));
+    }
+  }
+  return [...quotes];
 }
 
 /**
@@ -144,6 +168,33 @@ export function namesConditionWithoutReference(assessment: NonNullable<ModelOutp
   return texts.some((text) => NAMED_CONDITION.test(text));
 }
 
+/**
+ * Causal claims about the user's own recorded or reported factors (CLAUDE.md §7:
+ * correlation is not causation). "Back discomfort was logged on days with long
+ * sitting" is fine; "strain from prolonged sitting" or "caused by poor sleep" is not.
+ */
+const FACTOR = String.raw`(sitting|posture|sleep|inactivity|activity|exercise|dehydration|water|fluids?|hydration|stress|screen time)`;
+const CAUSAL_CLAIM: readonly RegExp[] = [
+  new RegExp(String.raw`\b(caused by|due to|because of|as a result of|result(s|ed|ing)? from|triggered by|brought on by)\s+(\w+\s+){0,3}?${FACTOR}\b`, "i"),
+  new RegExp(String.raw`\bfrom (prolonged|long|extended|lots of|too much|too little|lack of|poor|not enough|excessive|reduced|low)\s+(\w+\s+){0,2}?${FACTOR}\b`, "i"),
+  new RegExp(String.raw`\b${FACTOR}\s+(is |was |may be |might be |could be |can be )?(caus\w*|trigger\w*|leading to|led to)\b`, "i"),
+];
+
+function causalSearchTexts(output: ModelOutput): string[] {
+  const texts = [output.assistantMessage];
+  if (output.assessment) {
+    texts.push(
+      output.assessment.summary,
+      ...output.assessment.possibleExplanations.flatMap((e) => [e.title, e.whyItMayBeRelevant]),
+    );
+  }
+  return texts;
+}
+
+export function makesCausalClaim(output: ModelOutput): boolean {
+  return causalSearchTexts(output).some((text) => CAUSAL_CLAIM.some((pattern) => pattern.test(text)));
+}
+
 /** Added by the server when retrieval found nothing, so honesty does not depend on the model. */
 export const NO_HISTORY_NOTE =
   "No related entries were found in your recent health logs, so this is based only on what you shared.";
@@ -157,7 +208,11 @@ function extractJson(raw: string): unknown {
   return JSON.parse(raw.slice(start, end + 1)) as unknown;
 }
 
-export type ParseResult = { ok: true; output: ModelOutput } | { ok: false; problems: string[] };
+/**
+ * `problems` are labels without health content (safe to log). `quotes` are the
+ * exact offending phrases, used only in the repair prompt and never logged.
+ */
+export type ParseResult = { ok: true; output: ModelOutput } | { ok: false; problems: string[]; quotes: string[] };
 
 export function parseModelOutput(
   raw: string,
@@ -167,7 +222,7 @@ export function parseModelOutput(
   try {
     json = extractJson(raw);
   } catch {
-    return { ok: false, problems: ["the reply was not valid JSON"] };
+    return { ok: false, problems: ["the reply was not valid JSON"], quotes: [] };
   }
 
   const parsed = modelOutputSchema.safeParse(json);
@@ -175,7 +230,7 @@ export function parseModelOutput(
     const problems = parsed.error.issues
       .slice(0, 4)
       .map((issue) => (issue.path.length ? `${issue.path.join(".")}: ${issue.message}` : issue.message));
-    return { ok: false, problems };
+    return { ok: false, problems, quotes: [] };
   }
 
   const output: ModelOutput = { ...parsed.data, assistantMessage: tidyAssistantMessage(parsed.data.assistantMessage) };
@@ -184,6 +239,9 @@ export function parseModelOutput(
   if (mustAssess && parsed.data.status !== "assessment") problems.push('status must be "assessment" this turn');
   const banned = findBannedWording(output);
   if (banned.length) problems.push(`it used disallowed wording (${banned.join(", ")})`);
+  if (makesCausalClaim(output)) {
+    problems.push("it presented something the user recorded or reported as the cause; describe it as something recorded around the same time instead");
+  }
   if (output.assessment) {
     problems.push(...findUnsourcedSelfCare(output.assessment.nextSteps));
     if (!hasReferences && namesConditionWithoutReference(output.assessment)) {
@@ -191,7 +249,12 @@ export function parseModelOutput(
     }
   }
 
-  return problems.length ? { ok: false, problems } : { ok: true, output };
+  if (!problems.length) return { ok: true, output };
+  const quotes = [
+    ...quoteMatches([bannedSearchText(output)], BANNED_PATTERNS.map(({ pattern }) => pattern)),
+    ...quoteMatches(causalSearchTexts(output), CAUSAL_CLAIM),
+  ];
+  return { ok: false, problems, quotes };
 }
 
 /**
