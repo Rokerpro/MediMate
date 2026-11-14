@@ -22,8 +22,10 @@ export type SafetyRule = {
 
 export const NHS_BACK_PAIN_URL = "https://www.nhs.uk/conditions/back-pain/";
 export const NHS_HEADACHES_URL = "https://www.nhs.uk/conditions/headaches/";
+export const NHS_CHEST_PAIN_URL = "https://www.nhs.uk/conditions/chest-pain/";
 const BACK_REVIEWED = "2026-03-05"; // "Page last reviewed: 05 March 2026"
 const HEADACHE_REVIEWED = "2024-04-17"; // "Page last reviewed: 17 April 2024"
+const CHEST_REVIEWED = "2023-08-08"; // "Page last reviewed: 08 August 2023"
 
 // ---------------------------------------------------------------------------
 // Matching helpers
@@ -55,30 +57,33 @@ function near(a: string, b: string): RegExp {
 }
 
 const BACK_CONTEXT = /\b(back|backache|spine|spinal|lumbar)\b/;
+const CHEST_CONTEXT =
+  /\b(chest pains?|pains? in (my |the )?chest|chest (hurts|is (hurting|sore))|chest discomfort|discomfort in (my |the )?chest)\b/;
 const HEADACHE_CONTEXT =
   /\b(headaches?|head ?aches?|migraines?|head pain|head (hurts|is (hurting|pounding|throbbing)))\b/;
 
-function rule(
-  id: string,
-  context: "back" | "headache",
-  nhsItem: string,
-  signs: readonly RegExp[],
-): SafetyRule {
-  const contextPattern = context === "back" ? BACK_CONTEXT : HEADACHE_CONTEXT;
-  const page = context === "back" ? "Back pain" : "Headaches";
-  const sourceUrl = context === "back" ? NHS_BACK_PAIN_URL : NHS_HEADACHES_URL;
+type RuleContext = "back" | "headache" | "chest";
+
+const CONTEXTS: Record<RuleContext, { pattern: RegExp; page: string; url: string; reviewed: string; noun: string }> = {
+  back: { pattern: BACK_CONTEXT, page: "Back pain", url: NHS_BACK_PAIN_URL, reviewed: BACK_REVIEWED, noun: "back pain" },
+  headache: { pattern: HEADACHE_CONTEXT, page: "Headaches", url: NHS_HEADACHES_URL, reviewed: HEADACHE_REVIEWED, noun: "headache" },
+  chest: { pattern: CHEST_CONTEXT, page: "Chest pain", url: NHS_CHEST_PAIN_URL, reviewed: CHEST_REVIEWED, noun: "chest pain" },
+};
+
+function rule(id: string, context: RuleContext, nhsItem: string, signs: readonly RegExp[]): SafetyRule {
+  const { pattern: contextPattern, page, url: sourceUrl, reviewed, noun } = CONTEXTS[context];
   return {
     id,
     // Every sign pattern must match, un-negated, alongside the symptom context.
     matches: (text) => contextPattern.test(text) && signs.every((sign) => hasUnnegated(text, sign)),
     message:
       `Some of what you described is listed by the NHS as a reason to get emergency help ` +
-      `(${context === "back" ? "back pain" : "headache"} with ${nhsItem}). ` +
+      `(${noun} with ${nhsItem}). ` +
       `Call your local emergency number or go to the nearest emergency department now. ` +
       `MediMate cannot assess emergencies and this is not a diagnosis. ` +
       `Source: NHS, "${page}" (${sourceUrl}).`,
     sourceUrl,
-    reviewedOn: context === "back" ? BACK_REVIEWED : HEADACHE_REVIEWED,
+    reviewedOn: reviewed,
   };
 }
 
@@ -162,6 +167,27 @@ export const SAFETY_RULES: readonly SafetyRule[] = [
   ]),
   rule("headache-fever-stiff-neck-light", "headache", "a very high temperature, a stiff neck, or bright lights bothering you", [
     /\b(very high|high) (temperature|fever)\b|\bstiff neck\b|\bneck (is |feels )?stiff\b|\blights? (are |is )?(bothering|hurting|hurts|hurt)\b|\bsensitiv\w* to (bright )?light\b/,
+  ]),
+
+  // -------------------------------------------------------------------------
+  // Rules — NHS "Chest pain": "Call 999 if: ..." (chest pain alone is not on the
+  // list: "Most chest pain is not a sign of anything serious"; GP if it comes and goes).
+
+  rule("chest-sudden-persistent", "chest", "sudden pain that does not go away", [
+    /\b(sudden\w*|all of a sudden|out of nowhere)\b/,
+    /\b(does ?n[o']t|did ?n[o']t|won'?t|will not|has ?n[o']t|have ?n[o']t|is ?n[o']t) (go|gone|going|went) away\b|\b(constant|persistent|still there)\b/,
+  ]),
+  rule("chest-squeezing-pressure", "chest", "pain that feels like squeezing or pressure, burning or indigestion", [
+    /\b(squeez\w*|pressure|burning|indigestion)\b/,
+  ]),
+  rule("chest-spreading", "chest", "pain that spreads to your arm, neck, jaw, stomach or back", [
+    near(
+      String.raw`\b(spread\w*|radiat\w*|going (down|into|to)|goes (down|into|to)|moving (down|into|to)|moves (down|into|to))\b`,
+      String.raw`\b(arms?|neck|jaw|stomach|back)\b`,
+    ),
+  ]),
+  rule("chest-with-symptoms", "chest", "feeling sweaty, sick, light-headed or short of breath", [
+    /\b(sweat\w*|clammy|sick|nause\w*|light[- ]?headed\w*|dizzy|faint|short of breath|shortness of breath|breathless\w*|out of breath|(trouble|difficulty|struggling|hard) breathing|can'?t (catch my )?breathe?)\b/,
   ]),
 ];
 

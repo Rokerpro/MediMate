@@ -110,10 +110,11 @@ Sources approved by Person A on 2026-11-14 and checked (fetched and quoted) the 
 |---|---|---|---|
 | NHS — Back pain | https://www.nhs.uk/conditions/back-pain/ | 2026-03-05 | Safety rules `back-*`; reference `nhs-back-pain` |
 | NHS — Headaches | https://www.nhs.uk/conditions/headaches/ | 2024-04-17 | Safety rules `headache-*`; reference `nhs-headaches` |
+| NHS — Chest pain | https://www.nhs.uk/conditions/chest-pain/ | 2023-08-08 (page says next review due 2026-08-08) | Safety rules `chest-*`; reference `nhs-chest-pain`. Fetched and quoted 2026-11-14; **pending Person A approval** |
 
 ### 9.1 Implemented safety rules (`src/lib/health/safety-rules.ts`)
 
-Each rule implements one item from the page's **"Call 999 or go to A&E if"** list, and fires only when the conversation also mentions the matching symptom (back pain or headache). A triggered rule returns `status: "urgent"`, and the LLM is not called.
+Each rule implements one item from the page's **"Call 999 or go to A&E if"** list (Chest pain page: **"Call 999 if"**), and fires only when the conversation also mentions the matching symptom (back pain, headache or chest pain). A triggered rule returns `status: "urgent"`, and the LLM is not called.
 
 | Rule id | NHS item (quoted) |
 |---|---|
@@ -132,6 +133,10 @@ Each rule implements one item from the page's **"Call 999 or go to A&E if"** lis
 | `headache-vision-loss` | "has loss of vision" |
 | `headache-non-fading-rash` | "has a rash that does not fade when a glass is rolled over it" |
 | `headache-fever-stiff-neck-light` | "has a very high temperature, a stiff neck, or bright lights are bothering you" |
+| `chest-sudden-persistent` | "you get sudden pain or discomfort in your chest that does not go away" |
+| `chest-squeezing-pressure` | "the pain can feel like squeezing or pressure inside your chest, burning or indigestion" |
+| `chest-spreading` | "you get pain that spreads to your left or right arm, or your neck, jaw, stomach or back" |
+| `chest-with-symptoms` | "you have chest pain and you feel sweaty, sick, light headed or short of breath" |
 
 Each rule has positive, negative (negated) and ambiguous test cases in `tests/safety-rules.test.ts`.
 
@@ -141,6 +146,7 @@ Each rule has positive, negative (negated) and ambiguous test cases in `tests/sa
 - `headache-head-injury` does not check the "within the last 3 months" time limit; any mentioned head injury escalates (errs towards escalation).
 - `headache-drowsy-confused` matches any non-negated "confused", which can over-escalate.
 - The pages' "urgent GP appointment / 111" items are not implemented yet.
+- Chest pain on its own does not trigger a rule (the NHS page lists it as "see a GP if it comes and goes"). `chest-squeezing-pressure` fires on "burning"/"indigestion" with chest pain because the NHS lists them, which can escalate heartburn-like descriptions.
 - Once a rule fires in a session, later turns in that session also return `urgent`.
 
 ### 9.2 Curated medical references (`src/lib/health/references.ts`)
@@ -149,5 +155,6 @@ Each rule has positive, negative (negated) and ambiguous test cases in `tests/sa
 |---|---|---|
 | `nhs-back-pain` | NHS — Back pain | Verbatim sentences on how common back pain is, staying active, and when to see a GP |
 | `nhs-headaches` | NHS — Headaches | Verbatim sentences on common causes, water and relaxation, and when to see a GP |
+| `nhs-chest-pain` | NHS — Chest pain | Verbatim sentences: most chest pain is not serious, get immediate help for a suspected heart attack, and when to see a GP |
 
 Medication advice from these pages is deliberately excluded from the excerpts, because the assistant must not give medication guidance.

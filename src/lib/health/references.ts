@@ -6,7 +6,7 @@
 // contains entries from this list. Never add placeholder or guessed URLs.
 import type { Source } from "@/lib/validations";
 
-import { NHS_BACK_PAIN_URL, NHS_HEADACHES_URL } from "./safety-rules.ts";
+import { NHS_BACK_PAIN_URL, NHS_CHEST_PAIN_URL, NHS_HEADACHES_URL } from "./safety-rules.ts";
 
 export type CuratedReference = Source & {
   id: string;
@@ -39,6 +39,17 @@ export const CURATED_REFERENCES: readonly CuratedReference[] = [
       'Common causes include: "stress", "bad posture", "not eating regular meals", "not drinking enough fluids (dehydration)". ' +
       'Self-help: "drink plenty of water", "try to relax – stress can make headaches worse". ' +
       'See a GP if: "you\'ve tried treating a headache yourself and it\'s not getting better or is getting worse", "you regularly get headaches".',
+  },
+  {
+    id: "nhs-chest-pain",
+    title: "Chest pain",
+    publisher: "NHS",
+    url: NHS_CHEST_PAIN_URL,
+    keywords: ["chest"],
+    excerpt:
+      'NHS: "Most chest pain is not a sign of anything serious but get medical advice just in case." ' +
+      '"Get immediate medical help if you think you\'re having a heart attack." ' +
+      'See a GP if: "you have chest pain that comes and goes", "you have chest pain that goes away quickly but you\'re still worried".',
   },
 ];
 

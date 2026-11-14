@@ -103,6 +103,34 @@ const CASES: Case[] = [
     negative: ["Headache, no stiff neck and no fever."],
     ambiguous: ["Headache and my neck is a little sore from my pillow."],
   },
+  {
+    ruleId: "chest-sudden-persistent",
+    positive: ["I had sudden chest pain an hour ago and it doesn't go away.", "Sudden pain in my chest that is constant."],
+    negative: ["My chest pain was not sudden, it built up slowly and is not constant."],
+    ambiguous: ["Chest pain that comes and goes when I cough.", "Sudden chest pain that went away after a minute."],
+  },
+  {
+    ruleId: "chest-squeezing-pressure",
+    positive: ["My chest pain feels like squeezing.", "Chest pain with a pressure feeling inside.", "Burning chest pain like indigestion."],
+    negative: ["Chest pain, but no pressure or squeezing."],
+    ambiguous: ["My chest is sore where I bumped it on the table."],
+  },
+  {
+    ruleId: "chest-spreading",
+    positive: ["I have chest pain that is spreading to my left arm.", "Chest pain and it radiates into my jaw."],
+    negative: ["Chest pain, it does not spread to my arm or jaw."],
+    ambiguous: ["Chest pain and my arm is tired from the gym."],
+  },
+  {
+    ruleId: "chest-with-symptoms",
+    positive: [
+      "I have severe chest pain and trouble breathing.",
+      "Chest pain and I feel sweaty and sick.",
+      "Chest pain and I'm light-headed.",
+    ],
+    negative: ["Chest pain, not short of breath, no sweating."],
+    ambiguous: ["Chest pain after laughing a lot today."],
+  },
 ];
 
 describe("safety rule register", () => {
@@ -113,7 +141,7 @@ describe("safety rule register", () => {
 
   it("every rule cites one of the recorded NHS sources and a review date", () => {
     for (const rule of SAFETY_RULES) {
-      assert.match(rule.sourceUrl, /^https:\/\/www\.nhs\.uk\/conditions\/(back-pain|headaches)\/$/);
+      assert.match(rule.sourceUrl, /^https:\/\/www\.nhs\.uk\/conditions\/(back-pain|headaches|chest-pain)\/$/);
       assert.match(rule.reviewedOn, /^\d{4}-\d{2}-\d{2}$/);
       assert.match(rule.message, /local emergency number/);
       assert.match(rule.message, /not a diagnosis/);
@@ -142,6 +170,14 @@ for (const c of CASES) {
 describe("evaluateSafety behaviour", () => {
   it("requires the symptom context (warning sign alone does not fire a back/headache rule)", () => {
     assert.equal(evaluateSafety(["I have numbness in both legs."]).result.triggered, false);
+  });
+
+  it("chest pain alone does not fire (NHS lists it as see a GP if it comes and goes)", () => {
+    assert.equal(evaluateSafety(["I have had some chest pain today."]).result.triggered, false);
+  });
+
+  it("chest pain with breathing trouble fires without any earlier back context (gap found in review)", () => {
+    assert.equal(evaluateSafety(["I have severe chest pain and trouble breathing."]).ruleId, "chest-with-symptoms");
   });
 
   it("combines earlier user messages in the session", () => {
