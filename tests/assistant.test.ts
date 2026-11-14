@@ -8,12 +8,14 @@ import { mockProvider } from "../src/lib/ai/mock-provider.ts";
 import {
   findBannedWording,
   findUnsourcedSelfCare,
+  NO_HISTORY_NOTE,
   parseModelOutput,
+  toContractAssessment,
   tidyAssistantMessage,
 } from "../src/lib/ai/output.ts";
 import { buildUserContent } from "../src/lib/ai/prompts.ts";
 import { AiUnavailableError, type LlmProvider, type ModelRequest } from "../src/lib/ai/types.ts";
-import { extractTerms, selectRelevantLogs } from "../src/lib/health/retrieve-history.ts";
+import { extractTerms, selectRelevantLogs, stripNegatedPhrases } from "../src/lib/health/retrieve-history.ts";
 import { evaluateSafety, type SafetyRule } from "../src/lib/health/safety-rules.ts";
 import { ASSESSMENT_DISCLAIMER, chatResponseSchema } from "../src/lib/validations/assistant.ts";
 import type { HealthLog, Profile } from "../src/lib/validations/index.ts";
@@ -105,6 +107,19 @@ describe("history retrieval", () => {
 
   it("returns nothing for an unrelated concern (no forced history)", () => {
     assert.deepEqual(selectRelevantLogs(LOGS, "I have a mild headache today"), []);
+  });
+
+  it("ignores symptoms the user negated (seen live: 'no swelling' matched a 'neck swelling' log)", () => {
+    const swelling: HealthLog = { ...NOTHING, id: "aaaaaaaa-0000-4000-8000-0000000000ee", symptoms: "Neck swelling" };
+    const query = "My left knee is sore. About 3 out of 10, worse on stairs, no swelling, no injury that I remember.";
+    assert.deepEqual(selectRelevantLogs([swelling], query), []);
+    assert.deepEqual(selectRelevantLogs([swelling], "My neck has some swelling today."), [swelling]);
+  });
+
+  it("negation stops at the end of the clause or at 'but'", () => {
+    assert.equal(stripNegatedPhrases("no fever, but my back hurts").includes("back hurts"), true);
+    assert.equal(stripNegatedPhrases("no numbness but back pain").includes("back pain"), true);
+    assert.equal(stripNegatedPhrases("without numbness in my legs").includes("legs"), false);
   });
 
   it("ignores stopwords and generic modifiers", () => {
@@ -213,6 +228,66 @@ describe("self-care limited to the curated references", () => {
     out.assessment.nextSteps = ["Use an ice pack on the area."];
     const parsed = parseModelOutput(JSON.stringify(out), { mustAssess: true });
     assert.equal(parsed.ok, false);
+  });
+});
+
+describe("topics without a curated reference", () => {
+  const withExplanation = (title: string, why: string) => {
+    const out = JSON.parse(validAssessment([])) as {
+      assessment: { possibleExplanations: { title: string; whyItMayBeRelevant: string }[] };
+    };
+    out.assessment.possibleExplanations[0] = { ...out.assessment.possibleExplanations[0], title, whyItMayBeRelevant: why };
+    return JSON.stringify(out);
+  };
+  // Seen in live output for a knee concern with no NHS reference.
+  const named = withExplanation(
+    "Patellofemoral pain syndrome (runner's knee)",
+    "Pain that is worse on stairs could be worth discussing with a clinician.",
+  );
+
+  it("rejects a named condition when no reference matched, so it gets one repair attempt", () => {
+    assert.equal(parseModelOutput(named, { mustAssess: true, hasReferences: false }).ok, false);
+    assert.equal(
+      parseModelOutput(withExplanation("Tendinitis", "Worth discussing."), { mustAssess: true, hasReferences: false }).ok,
+      false,
+    );
+  });
+
+  it("also catches nicknames and 'known as' naming (seen in live output after the first fix)", () => {
+    const nickname = withExplanation(
+      "Patellofemoral joint irritation (often called \u201crunner\u2019s knee\u201d)",
+      "Worth discussing with a clinician.",
+    );
+    assert.equal(parseModelOutput(nickname, { mustAssess: true, hasReferences: false }).ok, false);
+  });
+
+  it("allows general wording without a reference, and named conditions when a reference matched", () => {
+    const general = withExplanation("Strain or overuse", "Pain on stairs could be worth discussing with a clinician.");
+    assert.equal(parseModelOutput(general, { mustAssess: true, hasReferences: false }).ok, true);
+    assert.equal(parseModelOutput(named, { mustAssess: true, hasReferences: true }).ok, true);
+  });
+
+  it('bans "a common pattern for"-style framing everywhere', () => {
+    const framing = withExplanation("Strain or overuse", "Pain on stairs is a common pattern for knee strain.");
+    assert.equal(parseModelOutput(framing, { mustAssess: true, hasReferences: true }).ok, false);
+  });
+});
+
+describe("empty history is stated by the server", () => {
+  const model = (summary: string) => {
+    const out = JSON.parse(validAssessment([])) as { assessment: NonNullable<Parameters<typeof toContractAssessment>[0]> };
+    return { ...out.assessment, summary };
+  };
+
+  it("adds the no-history note when no logs were retrieved", () => {
+    const result = toContractAssessment(model("You reported a sore knee."), [], []);
+    assert.equal(result.summary, `You reported a sore knee. ${NO_HISTORY_NOTE}`);
+  });
+
+  it("does not repeat it when the model already said so, or when history was used", () => {
+    const said = "You reported a sore knee. No relevant entries were found in your logs.";
+    assert.equal(toContractAssessment(model(said), [], []).summary, said);
+    assert.equal(toContractAssessment(model("You reported back pain."), [BACK_1], []).summary, "You reported back pain.");
   });
 });
 

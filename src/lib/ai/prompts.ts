@@ -59,7 +59,9 @@ export function buildUserContent(context: ModelContext): string {
     ? context.references
         .map((r) => `- ${sanitize(r.title)} (${sanitize(r.publisher)}): ${sanitize(r.excerpt)}`)
         .join("\n")
-    : "No verified medical references are available for this topic. Rely only on general, cautious information.";
+    : "No verified medical references are available for this topic. Rely only on general, cautious information. " +
+      "Do not name any specific medical condition, syndrome or disease; describe each possibility in general terms " +
+      '(for example "strain or overuse") as something to discuss with a clinician.';
 
   const turnInstruction = context.mustAssess
     ? 'Enough follow-up questions have been asked. Return status "assessment" now.'

@@ -56,6 +56,10 @@ const BANNED_PATTERNS: readonly { pattern: RegExp; label: string }[] = [
     pattern: /\b(consistent with|indicative of|suggestive of|typical(ly)? (of|for)|(suggests|indicates|points to) (a|an))\b/i,
     label: '"consistent with"-style diagnostic framing',
   },
+  {
+    pattern: /\b(common|classic|usual) (pattern|presentation|picture|sign)s? (for|of)\b/i,
+    label: '"common pattern for"-style diagnostic framing',
+  },
   { pattern: /\bnothing to worry about\b/i, label: '"nothing to worry about"' },
   { pattern: /\byou are (safe|fine)\b/i, label: '"you are safe/fine"' },
   { pattern: /\brul(e|es|ed|ing) out\b/i, label: '"rule out"' },
@@ -128,6 +132,23 @@ export function tidyAssistantMessage(message: string): string {
     .trim();
 }
 
+/**
+ * Named conditions ("... syndrome", "... disease", "tendinitis"). Only allowed when
+ * a curated reference matched the topic; otherwise possibilities stay general.
+ */
+const NAMED_CONDITION =
+  /\b(syndromes?|diseases?|disorders?|[a-z]+itis)\b|\b((often|also|commonly|sometimes) (called|referred to as)|known as)\b|\b[a-z]+['’]s (knee|elbow|foot|disease)\b/i;
+
+export function namesConditionWithoutReference(assessment: NonNullable<ModelOutput["assessment"]>): boolean {
+  const texts = [assessment.summary, ...assessment.possibleExplanations.flatMap((e) => [e.title, e.whyItMayBeRelevant])];
+  return texts.some((text) => NAMED_CONDITION.test(text));
+}
+
+/** Added by the server when retrieval found nothing, so honesty does not depend on the model. */
+export const NO_HISTORY_NOTE =
+  "No related entries were found in your recent health logs, so this is based only on what you shared.";
+const MENTIONS_NO_HISTORY = /\bno (relevant|related|matching)\b[^.]{0,40}\b(history|logs?|records?|entries)\b/i;
+
 /** Pulls the first {...} block, tolerating markdown fences around it. */
 function extractJson(raw: string): unknown {
   const start = raw.indexOf("{");
@@ -138,7 +159,10 @@ function extractJson(raw: string): unknown {
 
 export type ParseResult = { ok: true; output: ModelOutput } | { ok: false; problems: string[] };
 
-export function parseModelOutput(raw: string, { mustAssess }: { mustAssess: boolean }): ParseResult {
+export function parseModelOutput(
+  raw: string,
+  { mustAssess, hasReferences = true }: { mustAssess: boolean; hasReferences?: boolean },
+): ParseResult {
   let json: unknown;
   try {
     json = extractJson(raw);
@@ -160,7 +184,12 @@ export function parseModelOutput(raw: string, { mustAssess }: { mustAssess: bool
   if (mustAssess && parsed.data.status !== "assessment") problems.push('status must be "assessment" this turn');
   const banned = findBannedWording(output);
   if (banned.length) problems.push(`it used disallowed wording (${banned.join(", ")})`);
-  if (output.assessment) problems.push(...findUnsourcedSelfCare(output.assessment.nextSteps));
+  if (output.assessment) {
+    problems.push(...findUnsourcedSelfCare(output.assessment.nextSteps));
+    if (!hasReferences && namesConditionWithoutReference(output.assessment)) {
+      problems.push("it named a specific condition although no medical reference covers this topic");
+    }
+  }
 
   return problems.length ? { ok: false, problems } : { ok: true, output };
 }
@@ -176,8 +205,12 @@ export function toContractAssessment(
   sources: readonly Source[],
 ): Assessment {
   const logsById = new Map(relevantLogs.map((log) => [log.id, log]));
+  const summary =
+    relevantLogs.length === 0 && !MENTIONS_NO_HISTORY.test(output.summary)
+      ? `${output.summary} ${NO_HISTORY_NOTE}`
+      : output.summary;
   return {
-    summary: output.summary,
+    summary,
     possibleExplanations: output.possibleExplanations.map((explanation) => ({
       title: explanation.title,
       whyItMayBeRelevant: explanation.whyItMayBeRelevant,

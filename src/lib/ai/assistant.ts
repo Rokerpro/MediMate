@@ -53,6 +53,7 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
   const relevantLogs = selectRelevantLogs(input.candidateLogs, queryText);
   const references = selectReferences(extractTerms(queryText), deps.references);
   const mustAssess = priorUserTexts.length >= MAX_FOLLOW_UP_ROUNDS;
+  const hasReferences = references.length > 0;
 
   const context: ModelContext = {
     currentMessage: input.message,
@@ -68,7 +69,7 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
 
   let parsed = parseModelOutput(
     await deps.provider.complete({ system: SYSTEM_PROMPT, user, context }),
-    { mustAssess },
+    { mustAssess, hasReferences },
   );
   if (!parsed.ok) {
     // One constrained repair attempt; malformed output is never shown.
@@ -78,7 +79,7 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
         user: user + buildRepairInstruction(parsed.problems),
         context: { ...context, isRepair: true },
       }),
-      { mustAssess },
+      { mustAssess, hasReferences },
     );
     // Problems are schema paths and rule labels only — no health content.
     if (!parsed.ok) throw new AiUnavailableError(`invalid model output after repair (${parsed.problems.join("; ")})`);

@@ -35,6 +35,14 @@ export function extractTerms(text: string): Set<string> {
 }
 
 /**
+ * Removes negated phrases ("no swelling", "without numbness") up to the end of the
+ * clause, so symptoms the user ruled out do not pull in history about them.
+ */
+export function stripNegatedPhrases(text: string): string {
+  return text.replace(/\b(no|not|without|never|denies)\b(?:(?!\b(?:but|and|although|however)\b)[^,.;!?\n])*/gi, " ");
+}
+
+/**
  * Returns up to `max` logs whose symptoms or pain location share a term with the
  * query, ranked by overlap then recency, and returned newest first. Logs with no
  * overlap are never included, so irrelevant history is not forced into answers.
@@ -44,7 +52,7 @@ export function selectRelevantLogs(
   queryText: string,
   max: number = MAX_RELEVANT_LOGS,
 ): HealthLog[] {
-  const queryTerms = extractTerms(queryText);
+  const queryTerms = extractTerms(stripNegatedPhrases(queryText));
   if (queryTerms.size === 0) return [];
 
   const scored = logs
