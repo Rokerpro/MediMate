@@ -4,7 +4,7 @@ Last updated: 2026-11-14
 
 ## Role and current state
 
-This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, prescription explainer UI, assistant popup, and their frontend data-access methods are integrated. `main` includes the mobile navigation, route preloader, and assistant popup merged in PR #3. The current working branch is `fix/assistant-popup-controls`, based on `feb2db0`, with follow-up popup refinements in progress.
+This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, prescription explainer UI, assistant popup, and their frontend data-access methods are integrated. `main` includes the mobile navigation, route preloader, and assistant popup merged in PR #3. The current working branch is `feat/assistant-experience`, based on `fix/assistant-popup-controls` at `9ac7866`; it rebuilds the popup and dedicated assistant page around shared browser-local conversation state.
 
 PR #2 (`feat/health-insights-journey`) was merged into `main`. Do not assume that a feature is deployed just because it is merged; verify the deployed app separately.
 
@@ -150,6 +150,14 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 - `AssistantChat` offers optional browser speech-to-text. On activation, supported browsers first request microphone permission with `getUserMedia({ audio: true })`; the permission stream is stopped immediately before recognition starts. Closing the popup cancels a pending recognition start. Unsupported browsers and permission/start errors get a text-entry fallback. Recognized words are appended to the composer and are never sent automatically. The popup uses icon-only Speak and Send controls with accessible names; the dedicated assistant page retains text labels.
 - Urgent guidance is prioritized above the popup conversation. The launcher and panel are hidden in print.
 
+### Shared assistant experience
+
+- `src/components/assistant-experience.tsx` provides conversation state, local persistence, theme, and chat actions to both the full-page assistant and popup. The app shell shares one provider instance between both modes; `/` mounts the provider for its own landing-page popup. Conversation state is persisted in this browser under `medimate-assistant-experience-v1`.
+- Users can create, search, switch, rename, and locally remove conversations. Saved conversations can continue through the existing synchronous chat API using their session IDs. Rename/removal are browser-local; removing a chat does not delete server records.
+- The UI includes light/dark theme selection, copy, local response feedback, loading/error/retry behavior, and basic safe Markdown for headings, lists, inline formatting, and fenced code. It does not provide syntax highlighting.
+- The existing API does not support streaming/cancellation, transcript retrieval or server-side session management, attachments, true edit/regenerate, or server-side feedback. No controls claim those capabilities. The sessions endpoint remains a read-only list of completed assessments and is not used as transcript storage.
+- Assessment cards continue to render the existing validated response fields. Urgent guidance remains prominent; routine output retains relevant history, sources, unknowns, next steps, and the disclaimer.
+
 ### Printable summary
 
 `src/components/health-summary.tsx`, `src/components/health-trends.tsx`, and `/summary`:
@@ -228,6 +236,8 @@ For `feat/chatbot-popup`, lint, typecheck, all 204 tests, and the production bui
 On `fix/assistant-popup-controls`, browser checks verified that the desktop panel aligns with and opens above its launcher, the popup Speak and Send controls are icon-only with accessible names, and the dedicated `/assistant` page retains text labels. Mocked `getUserMedia` verified the `{ audio: true }` permission request, track release before recognition, clear denial messaging, and cancellation when the popup closes during a pending request. A real operating-system microphone prompt and speech-recognition service were not available in the browser harness.
 
 For the mobile navigation and route preloader, lint, typecheck, all 204 tests, and the production build passed. Browser checks verified the mobile menu fills a 375×812 viewport, supports Escape and its close button, restores focus and body scrolling, and has no horizontal overflow. Desktop links remain visible while the hamburger is hidden. Internal navigation displayed the preloader for at least one second and waited for the page API requests to settle; the synthetic-data notice remained visible.
+
+For `feat/assistant-experience`, lint, typecheck, all 204 tests, and the production build pass. Browser checks verified mocked follow-up rendering, persistence across reloads, rename, popup/page conversation continuity, desktop launcher alignment, mobile popup sizing, and mocked microphone permission/recognition behavior. Streaming, server-side history management, attachment upload, server feedback, and syntax highlighting are not supported by the current API and are intentionally absent.
 
 ## Pending work and coordination
 
