@@ -130,11 +130,23 @@ describe("prompt context separation", () => {
 describe("model output validation", () => {
   it("rejects banned wording, probabilities and URLs", () => {
     const bad = JSON.parse(validAssessment([])) as Parameters<typeof findBannedWording>[0];
-    bad.assessment!.summary = "You were diagnosed with strain; 80% most likely. See https://x.test";
+    bad.assessment!.summary = "You were diagnosed with strain; 80% most likely, consistent with a sprain. See https://x.test";
+    assert.ok(findBannedWording({ ...bad, assessment: { ...bad.assessment!, summary: "This is typical for strain." } }).length > 0);
+    assert.ok(findBannedWording({ ...bad, assessment: { ...bad.assessment!, summary: "The pattern suggests a strain." } }).length > 0);
     const found = findBannedWording(bad);
-    for (const label of ['"diagnosed with"', "a percentage", '"most likely"', "a URL"]) {
+    for (const label of ['"diagnosed with"', "a percentage", '"most likely"', "a URL", '"consistent with"-style diagnostic framing']) {
       assert.ok(found.includes(label), label);
     }
+  });
+
+  it("rejects dose-change hints and raw record ids, but not ids in supportingLogIds", () => {
+    const out = JSON.parse(validAssessment(["aaaaaaaa-0000-4000-8000-000000000001"])) as Parameters<typeof findBannedWording>[0];
+    assert.deepEqual(findBannedWording(out), []);
+    out.assessment!.nextSteps = ["Ask whether a higher dose might help."];
+    out.assessment!.summary = "Your log aaaaaaaa-0000-4000-8000-000000000001 shows the dose may not be sufficient.";
+    const found = findBannedWording(out);
+    assert.ok(found.includes("a dose-change suggestion"));
+    assert.ok(found.includes("a raw record id in text"));
   });
 
   it("requires an assessment once the follow-up limit is reached", () => {

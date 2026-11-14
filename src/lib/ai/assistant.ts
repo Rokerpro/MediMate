@@ -9,8 +9,12 @@ import { parseModelOutput, toContractAssessment } from "./output.ts";
 import { SYSTEM_PROMPT, buildRepairInstruction, buildUserContent } from "./prompts.ts";
 import { AiUnavailableError, type ChatMessage, type LlmProvider, type ModelContext } from "./types.ts";
 
-/** After this many earlier user messages, the model must return an assessment. */
-export const MAX_FOLLOW_UP_ROUNDS = 3;
+/**
+ * After this many earlier user messages, the model must return an assessment.
+ * One round of up to 3 questions keeps the demo within the spec's target of
+ * about 3–4 questions before a preliminary summary (AI_SAFETY_SPEC.md §4).
+ */
+export const MAX_FOLLOW_UP_ROUNDS = 1;
 
 export type ChatTurnInput = {
   message: string;
@@ -76,7 +80,8 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
       }),
       { mustAssess },
     );
-    if (!parsed.ok) throw new AiUnavailableError("invalid model output after repair");
+    // Problems are schema paths and rule labels only — no health content.
+    if (!parsed.ok) throw new AiUnavailableError(`invalid model output after repair (${parsed.problems.join("; ")})`);
   }
 
   const { output } = parsed;

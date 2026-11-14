@@ -52,11 +52,20 @@ const BANNED_PATTERNS: readonly { pattern: RegExp; label: string }[] = [
   { pattern: /\bAI doctor\b/i, label: '"AI doctor"' },
   { pattern: /\bdiagnosed with\b/i, label: '"diagnosed with"' },
   { pattern: /\bmost likely\b/i, label: '"most likely"' },
+  {
+    pattern: /\b(consistent with|indicative of|suggestive of|typical(ly)? (of|for)|(suggests|indicates|points to) (a|an))\b/i,
+    label: '"consistent with"-style diagnostic framing',
+  },
   { pattern: /\bnothing to worry about\b/i, label: '"nothing to worry about"' },
   { pattern: /\byou are (safe|fine)\b/i, label: '"you are safe/fine"' },
   { pattern: /\brul(e|es|ed|ing) out\b/i, label: '"rule out"' },
   { pattern: /\bconfirm(s|ed)? (that )?you have\b/i, label: '"confirms you have"' },
   { pattern: /https?:\/\/|www\./i, label: "a URL" },
+  {
+    pattern: /\b(higher|increas\w*|doubl\w*|lower|reduc\w*|decreas\w*|adjust\w*|chang\w*)\s+(the\s+|your\s+|a\s+)?(dose|dosage)\b|\b(dose|dosage)\b[^.]{0,40}\b(sufficient|insufficient|enough|too (high|low))\b/i,
+    label: "a dose-change suggestion",
+  },
+  { pattern: /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i, label: "a raw record id in text" },
 ];
 
 function collectStrings(value: unknown, out: string[]): void {
@@ -67,7 +76,20 @@ function collectStrings(value: unknown, out: string[]): void {
 
 export function findBannedWording(output: ModelOutput): string[] {
   const strings: string[] = [];
-  collectStrings(output, strings);
+  collectStrings(
+    {
+      ...output,
+      assessment: output.assessment && {
+        ...output.assessment,
+        possibleExplanations: output.assessment.possibleExplanations.map((e) => ({
+          title: e.title,
+          whyItMayBeRelevant: e.whyItMayBeRelevant,
+          unknowns: e.unknowns,
+        })),
+      },
+    },
+    strings,
+  );
   const joined = strings.join("\n");
   return BANNED_PATTERNS.filter(({ pattern }) => pattern.test(joined)).map(({ label }) => label);
 }

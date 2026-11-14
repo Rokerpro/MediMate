@@ -1,49 +1,69 @@
 import "server-only";
 
-// GitHub Models provider (OpenAI-compatible chat completions).
-// Token: a GitHub fine-grained personal access token with the "Models: read"
-// permission, stored server-side only in GITHUB_MODELS_TOKEN.
+// Provider for any OpenAI-compatible chat-completions API (Groq, Gemini's
+// OpenAI layer, ...). The key stays server-side; provider error bodies are
+// never forwarded to the client.
 import { AiUnavailableError, type LlmProvider, type ModelRequest } from "./types";
 
-const ENDPOINT = "https://models.github.ai/inference/chat/completions";
-const DEFAULT_MODEL = "openai/gpt-4.1-mini";
 const REQUEST_TIMEOUT_MS = 25_000;
 
-export function createGitHubModelsProvider(token: string, model: string = DEFAULT_MODEL): LlmProvider {
-  return {
-    name: "github",
-    async complete({ system, user }: ModelRequest): Promise<string> {
-      let response: Response;
-      try {
-        response = await fetch(ENDPOINT, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: "system", content: system },
-              { role: "user", content: user },
-            ],
-            temperature: 0.2,
-            max_tokens: 1200,
-            response_format: { type: "json_object" },
-          }),
-          cache: "no-store",
-          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        });
-      } catch (error) {
-        const reason = error instanceof Error && error.name === "TimeoutError" ? "timeout" : "network error";
-        throw new AiUnavailableError(`github ${reason}`);
-      }
+export type OpenAiCompatibleConfig = {
+  name: string;
+  /** Base URL ending before `/chat/completions`, e.g. https://api.groq.com/openai/v1 */
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  /** Models to try, in order, when the previous one is rate-limited (HTTP 429). */
+  fallbackModels?: readonly string[];
+  /** Provider-specific body fields, e.g. { reasoning_effort: "low" }. */
+  extraBody?: Record<string, unknown>;
+};
 
-      if (!response.ok) {
-        // Never forward the provider's error body; keep only the status.
-        throw new AiUnavailableError(`github HTTP ${response.status}`);
+export function createOpenAiCompatibleProvider(config: OpenAiCompatibleConfig): LlmProvider {
+  const endpoint = `${config.baseUrl.replace(/\/+$/, "")}/chat/completions`;
+
+  async function call(model: string, system: string, user: string): Promise<Response> {
+    try {
+      return await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+          temperature: 0.2,
+          // Enough for an assessment plus short reasoning. Kept low because free
+          // tiers count reserved output tokens against tokens-per-minute limits.
+          max_tokens: 1200,
+          response_format: { type: "json_object" },
+          ...(model.startsWith("openai/gpt-oss") ? config.extraBody : undefined),
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch (error) {
+      const reason = error instanceof Error && error.name === "TimeoutError" ? "timeout" : "network error";
+      throw new AiUnavailableError(`${config.name} ${reason}`);
+    }
+  }
+
+  return {
+    name: config.name,
+    async complete({ system, user }: ModelRequest): Promise<string> {
+      const models = [config.model, ...(config.fallbackModels ?? [])];
+      let response: Response | undefined;
+      for (const model of models) {
+        response = await call(model, system, user);
+        if (response.status !== 429) break;
+      }
+      if (!response || !response.ok) {
+        // Keep only the status (e.g. 401 bad key, 429 rate limit).
+        throw new AiUnavailableError(`${config.name} HTTP ${response?.status ?? "none"}`);
       }
 
       const body: unknown = await response.json().catch(() => null);
@@ -52,7 +72,7 @@ export function createGitHubModelsProvider(token: string, model: string = DEFAUL
           ? (body.choices[0] as { message?: { content?: unknown } } | undefined)?.message?.content
           : undefined;
       if (typeof content !== "string" || content.length === 0) {
-        throw new AiUnavailableError("github response had no message content (check token and model)");
+        throw new AiUnavailableError(`${config.name} response had no message content`);
       }
       return content;
     },
