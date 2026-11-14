@@ -110,7 +110,7 @@ Sources approved by Person A on 2026-11-14 and checked (fetched and quoted) the 
 |---|---|---|---|
 | NHS — Back pain | https://www.nhs.uk/conditions/back-pain/ | 2026-03-05 | Safety rules `back-*`; reference `nhs-back-pain` |
 | NHS — Headaches | https://www.nhs.uk/conditions/headaches/ | 2024-04-17 | Safety rules `headache-*`; reference `nhs-headaches` |
-| NHS — Chest pain | https://www.nhs.uk/conditions/chest-pain/ | 2023-08-08 (page says next review due 2026-08-08) | Safety rules `chest-*`; reference `nhs-chest-pain`. Fetched and quoted 2026-11-14; **pending Person A approval** |
+| NHS — Chest pain | https://www.nhs.uk/conditions/chest-pain/ | 2023-08-08 (page says next review due 2026-08-08) | Safety rules `chest-*`; reference `nhs-chest-pain`. Fetched, quoted and approved by Person A on 2026-11-14 |
 
 ### 9.1 Implemented safety rules (`src/lib/health/safety-rules.ts`)
 
@@ -148,6 +148,7 @@ Each rule has positive, negative (negated) and ambiguous test cases in `tests/sa
 - The pages' "urgent GP appointment / 111" items are not implemented yet.
 - Chest pain on its own does not trigger a rule (the NHS page lists it as "see a GP if it comes and goes"). `chest-squeezing-pressure` fires on "burning"/"indigestion" with chest pain because the NHS lists them, which can escalate heartburn-like descriptions.
 - Once a rule fires in a session, later turns in that session also return `urgent`.
+- Topics with no curated reference (e.g. knee) still get possible explanations, so the dated history stays visible. A check rejects named conditions ("syndrome", "-itis", "often called", "known as") for those topics, but it cannot catch every specific term. Decision (Person A, 2026-11-14): keep this behaviour and keep the demo on back pain and headaches.
 
 ### 9.2 Curated medical references (`src/lib/health/references.ts`)
 
