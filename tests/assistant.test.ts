@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { MAX_FOLLOW_UP_ROUNDS, runAssistantTurn } from "../src/lib/ai/assistant.ts";
+import { MAX_FOLLOW_UP_ROUNDS, URGENT_ASSISTANT_MESSAGE, runAssistantTurn } from "../src/lib/ai/assistant.ts";
 import { mockProvider } from "../src/lib/ai/mock-provider.ts";
 import {
   findBannedWording,
@@ -360,6 +360,9 @@ describe("runAssistantTurn", () => {
     assert.equal(turn.status, "urgent");
     assert.equal(turn.safety.triggered, true);
     assert.equal(turn.assessment, null);
+    // The reviewed wording appears once (safety.message); the chat reply does not repeat it.
+    assert.equal(turn.assistantMessage, URGENT_ASSISTANT_MESSAGE);
+    assert.notEqual(turn.assistantMessage, turn.safety.message);
     assert.equal(provider.requests.length, 0);
     assert.equal(chatResponseSchema.safeParse(withSession(turn)).success, true);
   });

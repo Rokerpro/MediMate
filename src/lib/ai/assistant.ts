@@ -31,6 +31,10 @@ export type ChatTurnDeps = {
   references?: readonly CuratedReference[];
 };
 
+/** Chat reply for an urgent result. No reassurance and no medical content of its own. */
+export const URGENT_ASSISTANT_MESSAGE =
+  "I can't continue with an educational summary here. Please read the urgent safety guidance and get help now.";
+
 export type ChatTurnResult = Omit<ChatResponse, "sessionId"> & { safetyRuleId: string | null };
 
 export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps): Promise<ChatTurnResult> {
@@ -41,7 +45,8 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
   if (safety.result.triggered && safety.result.message) {
     return {
       status: "urgent",
-      assistantMessage: safety.result.message,
+      // Fixed short reply; the reviewed safety wording is shown once, from safety.message.
+      assistantMessage: URGENT_ASSISTANT_MESSAGE,
       followUpQuestions: [],
       safety: safety.result,
       assessment: null,
