@@ -196,6 +196,32 @@ Any subset of `title`, `category`, `notes`, `remindAt`, `repeat`, `active` (at l
 
 `204` with no body. `404` if the id is unknown or not a UUID.
 
+## 3b. Prescription abbreviation explainer
+
+### `POST /api/prescriptions/explain`
+
+Deterministic (no AI call). The text is not stored or logged. Schemas: `src/lib/validations/prescription.ts`. Source and rules: `docs/AI_SAFETY_SPEC.md` §9.3.
+
+Request: `{ "text": "Ibuprofen 200mg tds prn" }` (1–2000 chars, trimmed; unknown fields rejected).
+
+`200` response:
+
+```json
+{
+  "terms": [
+    { "abbreviation": "t.d.s.", "latin": "ter die sumendum", "meaning": "to be taken three times daily", "matchedText": "tds", "caution": null },
+    { "abbreviation": "p.r.n.", "latin": "pro re nata", "meaning": "when required", "matchedText": "prn", "caution": null }
+  ],
+  "guidance": "This only explains common prescription abbreviations. It does not check your medicine, dose or timing. Follow the label and the instructions from your pharmacist or prescriber, and ask them if anything is unclear.",
+  "source": { "title": "General prescribing guidance", "publisher": "Patient.info", "url": "https://patient.info/doctor/general-prescribing-guidance" }
+}
+```
+
+- Recognised: `stat`, `p.r.n.`, `o.d.`, `o.n.`, `b.d.`, `t.d.s.`, `q.d.s.` (dotted or not, any case; `o.n.` only with dots). Order = first appearance; each listed once.
+- `terms` may be empty: the UI must say no common abbreviations were recognised and still show `guidance`.
+- `caution` is non-null for `o.d.` (may mean right eye on eye prescriptions) and must be shown next to that term.
+- `guidance` and `source` must always be shown.
+
 ## 4. Status and error behavior
 
 - `400`: malformed or invalid request.

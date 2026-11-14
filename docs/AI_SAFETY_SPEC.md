@@ -111,6 +111,7 @@ Sources approved by Person A on 2026-11-14 and checked (fetched and quoted) the 
 | NHS — Back pain | https://www.nhs.uk/conditions/back-pain/ | 2026-03-05 | Safety rules `back-*`; reference `nhs-back-pain` |
 | NHS — Headaches | https://www.nhs.uk/conditions/headaches/ | 2024-04-17 | Safety rules `headache-*`; reference `nhs-headaches` |
 | NHS — Chest pain | https://www.nhs.uk/conditions/chest-pain/ | 2023-08-08 (page says next review due 2026-08-08) | Safety rules `chest-*`; reference `nhs-chest-pain`. Fetched, quoted and approved by Person A on 2026-11-14 |
+| Patient.info — General prescribing guidance (clinician page; author Dr Hayley Willacy, peer reviewed by Dr Colin Tidy) | https://patient.info/doctor/general-prescribing-guidance | 2024-02-14 (next review due 2029-02-12) | Prescription abbreviation explainer (§9.3). Fetched, quoted and approved by Person A on 2026-11-14. BNF/NHS pages could not be fetched (403 / bot check) |
 
 ### 9.1 Implemented safety rules (`src/lib/health/safety-rules.ts`)
 
@@ -159,3 +160,19 @@ Each rule has positive, negative (negated) and ambiguous test cases in `tests/sa
 | `nhs-chest-pain` | NHS — Chest pain | Verbatim sentences: most chest pain is not serious, get immediate help for a suspected heart attack, and when to see a GP |
 
 Medication advice from these pages is deliberately excluded from the excerpts, because the assistant must not give medication guidance.
+
+### 9.3 Prescription abbreviation explainer (`src/lib/health/prescription-terms.ts`)
+
+`POST /api/prescriptions/explain` is deterministic: no AI model, and the text is neither stored nor logged. It expands only the abbreviations below, with meanings quoted from the Patient.info "Writing prescriptions" section. It never explains doses, drug names, what a medicine is for or when to take it, and always returns fixed guidance pointing to the pharmacist or prescriber.
+
+| Abbreviation | Source wording (quoted) |
+|---|---|
+| `stat` | "stat = immediately." |
+| `p.r.n.` | "p.r.n. = pro re nata = when required." |
+| `o.d.` | "o.d. = omni die = every day." |
+| `o.n.` | "o.n. = omni nocte = every night." |
+| `b.d.` | "b.d. = bis die = twice daily." |
+| `t.d.s.` | "t.d.s. = ter die sumendum = to be taken three times daily." |
+| `q.d.s.` | "q.d.s. = quater die sumendum = to be taken four times daily." |
+
+`o.d.` carries a caution that on eye prescriptions it can mean the right eye (oculus dexter); the user is told to check with their pharmacist. `o.n.` is matched only with its dots because "on" is an ordinary word. Tests: `tests/prescription-terms.test.ts`.
