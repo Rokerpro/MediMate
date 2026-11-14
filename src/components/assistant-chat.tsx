@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ChatResponse } from "@/lib/validations";
 import { ApiClientError, sendAssistantMessage } from "@/lib/api-client";
 
@@ -22,6 +22,7 @@ export function AssistantChat() {
   const [latestResponse, setLatestResponse] = useState<ChatResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
   async function submitMessage(
     message = input,
@@ -70,6 +71,11 @@ export function AssistantChat() {
     setInput("");
     setLastSubmittedMessage(null);
     setErrorMessage(null);
+  }
+
+  function selectFollowUpQuestion(question: string) {
+    setInput(question);
+    requestAnimationFrame(() => messageInputRef.current?.focus());
   }
 
   return (
@@ -138,7 +144,7 @@ export function AssistantChat() {
                 <button
                   key={question}
                   type="button"
-                  onClick={() => setInput(question)}
+                  onClick={() => selectFollowUpQuestion(question)}
                   disabled={loading}
                   className="rounded-full border border-blue-300 bg-white px-3 py-2 text-left text-sm text-blue-950 hover:bg-blue-100 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 >
@@ -179,6 +185,7 @@ export function AssistantChat() {
           </label>
           <textarea
             id="assistant-message"
+            ref={messageInputRef}
             rows={3}
             maxLength={2000}
             value={input}

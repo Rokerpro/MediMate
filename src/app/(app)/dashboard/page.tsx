@@ -11,7 +11,7 @@ export default function DashboardPage() {
           qualified professional.
         </p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Link
           href="/profile"
           className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
@@ -28,6 +28,15 @@ export default function DashboardPage() {
           <h2 className="text-lg font-semibold">Daily health logs</h2>
           <p className="mt-2 text-sm text-slate-600">
             Add an observation and review your timeline.
+          </p>
+        </Link>
+        <Link
+          href="/assistant"
+          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+        >
+          <h2 className="text-lg font-semibold">Discuss a concern</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Talk through a concern using relevant synthetic history.
           </p>
         </Link>
       </div>
