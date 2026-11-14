@@ -17,6 +17,7 @@ import {
   ORDINARY_MESSAGES,
   RULE_CASES,
   SAFE_OUTPUTS,
+  UNSAFE_FOLLOW_UPS,
   UNSAFE_OUTPUTS,
   type OutputCase,
 } from "../tests/fixtures/safety-cases.ts";
@@ -146,6 +147,22 @@ export async function runScorecard(): Promise<Scorecard> {
     );
     lines.push(line(`Unsafe AI output blocked: ${category.toLowerCase()}`, results));
   }
+
+  const followUpResults = await Promise.all(
+    UNSAFE_FOLLOW_UPS.map(async (question) => {
+      const reply = JSON.stringify({ status: "follow_up", assistantMessage: "Thanks.", followUpQuestions: [question], assessment: null });
+      try {
+        await runAssistantTurn(
+          { message: "I have had a mild ache for two days.", priorMessages: [], profile: PROFILE, candidateLogs: [] },
+          { provider: scriptedProvider(reply), evaluateSafety },
+        );
+        return { ok: false, name: question };
+      } catch {
+        return { ok: true, name: question };
+      }
+    }),
+  );
+  lines.push(line("Unsafe AI output blocked: dose follow-up question", followUpResults));
 
   const safeResults = await Promise.all(
     SAFE_OUTPUTS.map(async (c) => ({ ok: await deliverModelReply(modelReply(c)), name: c.text })),

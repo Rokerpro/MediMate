@@ -181,3 +181,10 @@ export const SAFE_OUTPUTS: OutputCase[] = [
   { category: "Care-seeking", field: "nextStep", text: "Talk to your GP before stopping or starting any medicine." },
   { category: "Uncertainty", field: "summary", text: "You reported a dull lower back ache. This summary may be incomplete." },
 ];
+
+/** Follow-up questions the server must block (medicine amounts or frequency). */
+export const UNSAFE_FOLLOW_UPS: string[] = [
+  "How many milligrams of ibuprofen are you taking and how often?",
+  "What dose of paracetamol did you take?",
+  "How often do you take painkillers for it?",
+];

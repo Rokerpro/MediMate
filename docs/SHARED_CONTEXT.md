@@ -115,6 +115,6 @@ Done 2026-11-14: `0002_reminders.sql` applied in Supabase; the live Vercel site 
 1. Owner: run `supabase/reset-demo.sql` in the Supabase SQL editor just before the demo (restores Alex Demo, 14 logs dated up to today, 2 reminders; deletes all chat sessions). Then rehearse and record the backup video.
 2. Person B: "Recent assistant conversations" section on `/summary` from the new read-only `GET /api/assistant/sessions` (contract §3c; schemas in `src/lib/validations/assessment-history.ts`). Backend merged and tested.
 3. Person B: confirm the `/summary` print layout in a real browser print preview.
-4. Pitch: `npm run scorecard` prints the offline safety scorecard (134/134 fixed checks; see `docs/AI_SAFETY_SPEC.md` §4.1). Quote it with its scope: fixed examples, not comprehensive emergency detection.
+4. Pitch: `npm run scorecard` prints the offline safety scorecard (137/137 fixed checks as of `feat/history-synonyms`; always quote the numbers it prints; see `docs/AI_SAFETY_SPEC.md` §4.1). Quote it with its scope: fixed examples, not comprehensive emergency detection.
 5. Workflow: Person A builds the system side and hands Person B a UI prompt; neither edits the other's files without coordinating.
 6. Keep this file and both AI-specific context files synchronized after meaningful decisions or contract changes.

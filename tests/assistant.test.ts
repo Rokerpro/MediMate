@@ -130,6 +130,22 @@ describe("history retrieval", () => {
     assert.equal(stripNegatedPhrases("without numbness in my legs").includes("legs"), false);
   });
 
+  it("matches everyday words for the same body area", () => {
+    for (const query of ["I have a backache today", "Lumbar pain since this morning", "My spine aches"]) {
+      assert.deepEqual(selectRelevantLogs(LOGS, query).map((l) => l.id), [BACK_1.id, BACK_2.id], query);
+    }
+    const headache = log("aaaaaaaa-0000-4000-8000-0000000000f1", "12", "Headache", null);
+    assert.deepEqual(selectRelevantLogs([headache], "My head hurts"), [headache]);
+    const tummy = log("aaaaaaaa-0000-4000-8000-0000000000f2", "12", "Stomach ache", "Abdomen");
+    assert.deepEqual(selectRelevantLogs([tummy], "My tummy is sore"), [tummy]);
+  });
+
+  it("does not link different body areas through synonyms", () => {
+    assert.deepEqual(selectRelevantLogs(LOGS, "My tummy is sore"), []);
+    assert.deepEqual(selectRelevantLogs(LOGS, "Lumbar pain").length, 2);
+    assert.equal(extractTerms("backache").has("head"), false);
+  });
+
   it("ignores stopwords and generic modifiers", () => {
     assert.equal(extractTerms("I feel mild symptoms today").size, 0);
     assert.ok(extractTerms("headaches").has("headache"));

@@ -26,13 +26,33 @@ const STOPWORDS = new Set([
   "yesterday", "you", "your",
 ]);
 
-/** Lowercase content words (length >= 3), with a simple plural strip. */
+/**
+ * Everyday words for the same body area, mapped to one term so "backache" or
+ * "lumbar pain" finds logs about the "lower back". Body areas only: no symptom
+ * or condition synonyms, so matching stays literal and explainable.
+ */
+const BODY_AREA_SYNONYMS: Readonly<Record<string, string>> = {
+  backache: "back",
+  lumbar: "back",
+  spine: "back",
+  spinal: "back",
+  headache: "head",
+  tummy: "stomach",
+  belly: "stomach",
+  abdomen: "stomach",
+  abdominal: "stomach",
+};
+
+/** Lowercase content words (length >= 3), with a simple plural strip and body-area synonyms. */
 export function extractTerms(text: string): Set<string> {
   const terms = new Set<string>();
   for (const raw of text.toLowerCase().split(/[^a-z]+/)) {
     if (raw.length < 3 || STOPWORDS.has(raw)) continue;
-    const term = raw.length > 4 && raw.endsWith("s") && !raw.endsWith("ss") ? raw.slice(0, -1) : raw;
-    if (!STOPWORDS.has(term)) terms.add(term);
+    const singular = raw.length > 4 && raw.endsWith("s") && !raw.endsWith("ss") ? raw.slice(0, -1) : raw;
+    if (STOPWORDS.has(singular)) continue;
+    terms.add(singular);
+    const area = BODY_AREA_SYNONYMS[singular];
+    if (area) terms.add(area);
   }
   return terms;
 }
