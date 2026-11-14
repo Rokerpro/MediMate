@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-14
 
-This is the combined source of truth for both coding AIs. It supplements, but does not replace, `CLAUDE.md`, `docs/ARCHITECTURE.md`, `docs/API_CONTRACTS.md`, and `docs/AI_SAFETY_SPEC.md`. When these documents conflict, the executable schemas and safety specification take precedence; resolve conflicts explicitly rather than guessing.
+This is the combined source of truth for both coding AIs. Naming: `docs/AI_A.md` = frontend AI (Person B), `docs/AI_B.md` = backend/AI assistant (Person A, called "Person A" in `CLAUDE.md`). It supplements, but does not replace, `CLAUDE.md`, `docs/ARCHITECTURE.md`, `docs/API_CONTRACTS.md`, and `docs/AI_SAFETY_SPEC.md`. When these documents conflict, the executable schemas and safety specification take precedence; resolve conflicts explicitly rather than guessing.
 
 ## Current repository state
 
@@ -59,7 +59,7 @@ Main user flows:
 - Assistant: `/assistant` → `/api/assistant/chat`.
 - Reminders: `/reminders` → `/api/reminders` and `/api/reminders/{id}`.
 - Printable summary: `/summary` combines profile and health-log APIs with pure 14-day trend helpers.
-- Prescription explainer: backend-only deterministic endpoint `/api/prescriptions/explain`.
+- Prescription explainer: deterministic endpoint `/api/prescriptions/explain` (no AI, nothing stored; contract §3b). UI not built yet.
 
 ## Contract and schema rules
 
@@ -97,13 +97,15 @@ npm test
 npm run build
 ```
 
-The latest reminder integration passed all four checks; the test suite reported 160 passing tests. Browser validation is still required for every UI change, including 375px layout and async loading/error/empty states where practical.
+The latest checks (after the prescription explainer) passed: lint, typecheck, build and tests (167 passing on `main` at `39fe7dc`). Browser validation is still required for every UI change, including 375px layout and async loading/error/empty states where practical.
 
 Use short-lived feature branches, focused Conventional Commits, explicit `git add` paths, and no force-pushes. Merge only after the other AI reviews changed files and the checks pass.
 
 ## Pending shared work
 
-1. Confirm the reminders migration is applied to the deployed Supabase project.
-2. Confirm the deployed Vercel build includes the merged reminders route and UI.
-3. Have the backend AI fill `docs/AI_B.md` with its exact implementation, migration, safety, and deployment context.
+Done 2026-11-14: `0002_reminders.sql` applied in Supabase; the live Vercel site serves `/api/reminders` (200); `docs/AI_B.md` filled in by the backend assistant.
+
+1. Person B: prescription explainer UI against `POST /api/prescriptions/explain` (contract §3b). Always show `guidance`, the `source` link and any `caution`; no dose, drug or timing explanations.
+2. Owner: reset the demo profile (currently "Alex Demo Updated") just before the demo; rehearse and record the backup video.
+3. Workflow: Person A builds the system side and hands Person B a UI prompt; neither edits the other's files without coordinating.
 4. Keep this file and both AI-specific context files updated after meaningful decisions or contract changes.

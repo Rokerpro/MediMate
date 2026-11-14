@@ -1,63 +1,99 @@
-# AI_B — Backend/AI Context Handoff Instructions
+# AI_B — Backend/AI Context (Person A)
 
-This file is the handoff target for the backend/AI assistant (Person A). It is intentionally an instruction template until that assistant fills in its current project context.
+Last updated: 2026-11-14
 
-## Required reading before writing
+Written by Person A's assistant (Claude Code). Naming note: in these context files **AI_A = frontend (Person B)** and **AI_B = backend (Person A)**. `CLAUDE.md` calls the backend owner "Person A".
 
-Read all of these first:
+Read with `docs/SHARED_CONTEXT.md`, `docs/AI_A.md`, `CLAUDE.md`, `docs/API_CONTRACTS.md` and `docs/AI_SAFETY_SPEC.md`. No secrets, keys or real health data belong in this file.
 
-- `docs/SHARED_CONTEXT.md`
-- `docs/AI_A.md`
-- `CLAUDE.md`
-- `docs/ARCHITECTURE.md`
-- `docs/API_CONTRACTS.md`
-- `docs/AI_SAFETY_SPEC.md`
-- `docs/PROJECT_PLAN.md`
-- `docs/WORKFLOW.md`
-- `AGENTS.md`
+## 1. Current branch, commits and deployment
 
-Inspect the current branch and worktree before documenting anything:
+- `main` at `39fe7dc` (Person B's shared-context docs) includes every backend feature below. This file is added on `docs/backend-ai-context` and fast-forwarded into `main`.
+- Backend commits of note: `032828a` reminders table and API, `aab2970` prescription abbreviation explainer, `6406129` chest-pain rules, `0b1c013` recent daily measurements in the prompt, `99c3d38` no-reference guardrails, `4669354` assistant reply clean-up.
+- Supabase: `0001_initial_schema.sql`, `seed.sql` and `0002_reminders.sql` are **applied** to the project (reminders confirmed 2026-11-14; `GET /api/reminders` returned the 2 seeded reminders).
+- Vercel (https://medi-mate-mauve.vercel.app) deploys `main` automatically. `/api/reminders` returned 200 on the live site after the merge.
+- Avoid polling the live site in tight loops: about 60 rapid requests triggered Vercel's bot challenge (403) once.
 
-```text
-git status --short
-git branch --show-current
-git log --oneline -10
-```
+## 2. Backend architecture
 
-## What to document here
+- Next.js Route Handlers under `src/app/api/**`; no separate backend service.
+- `src/lib/supabase/server.ts` → `supabaseRest(path, { method, body, returnRepresentation })`: a small `fetch` client for Supabase PostgREST (GET/POST/PATCH/DELETE). No `@supabase/supabase-js` dependency. Uses only the anon/publishable key; never the service-role key. Errors become `SupabaseConfigError` / `SupabaseRequestError` holding status and code only.
+- `src/lib/supabase/mappers.ts`: pure row ↔ contract mapping (snake_case ↔ camelCase), timestamps normalized to UTC ISO, column lists (`PROFILE_COLUMNS`, `HEALTH_LOG_COLUMNS`, `REMINDER_COLUMNS`). Unit-tested.
+- `src/lib/supabase/assistant-store.ts`: profile, recent logs, sessions and messages for the chat route.
+- `src/app/api/_lib/responses.ts`: `apiError`, `validationError` (first 3 Zod issues), `readJsonBody` (20,000-char limit, malformed JSON → 400), `internalError` (logs a content-free summary, returns a generic 500).
+- Demo access model: one fixed profile `00000000-0000-4000-8000-000000000001` (`DEMO_PROFILE_ID`). Every RLS policy uses `public.is_medimate_demo_profile(...)`. Routes never accept a profile id from the client.
+- Server-only env vars (names only): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `AI_PROVIDER` (`groq` | `gemini` | `mock`), `GROQ_API_KEY`, `GROQ_MODEL` (optional), `GEMINI_API_KEY`, `GEMINI_MODEL`. Never prefix with `NEXT_PUBLIC_`. Production uses `AI_PROVIDER=groq` (free tier, ~8,000 tokens/min).
+- AI adapters: `src/lib/ai/client.ts` selects the provider; `openai-compatible.ts` serves Groq and Gemini; `mock-provider.ts` gives offline replies marked "[Mock]".
 
-Replace this instruction section with a factual, current backend/AI context report covering:
+## 3. Implemented endpoints
 
-1. **Current branch and commit**
-   - Branch, latest commit, whether it is pushed, and whether migrations are deployed.
+Shapes: `docs/API_CONTRACTS.md` and `src/lib/validations/*` (exported from `@/lib/validations`). Errors always use `{ error: { code, message } }`.
 
-2. **Backend architecture**
-   - Route Handlers, Supabase access, fixed demo profile/RLS model, server-only environment variables, and any provider adapters.
+| Endpoint | Contract | Notes |
+|---|---|---|
+| `GET /api/profile` | §1 | 404 if the demo profile row is missing. |
+| `PATCH /api/profile` | §1 | Any subset of editable fields, at least one; unknown keys (e.g. `id`) → 400. |
+| `GET /api/health-logs?limit=30` | §2 | `limit` 1–100; newest first. |
+| `POST /api/health-logs` | §2 | `symptoms` required; 201. |
+| `POST /api/assistant/chat` | §3 | See §5. 404 "This conversation was not found. Please start a new one." for an unknown session; 503 `AI_UNAVAILABLE` with a safe message when the provider fails or output stays invalid. |
+| `GET /api/reminders?includeInactive=false` | §3a | Active first, by `nextDueAt`; max 100; `includeInactive` must be `true`/`false`. |
+| `POST /api/reminders` | §3a | Requires `userConfirmed: true` (else 400); 201. |
+| `PATCH /api/reminders/{id}` | §3a | At least one field; non-UUID or unknown id → 404. |
+| `DELETE /api/reminders/{id}` | §3a | 204 with no body; repeat or unknown → 404. |
+| `POST /api/prescriptions/explain` | §3b | Deterministic, no AI, not stored or logged. `text` 1–2000 chars. |
 
-3. **Implemented endpoints**
-   - Route paths, request/response schemas, status codes, error behavior, and important edge cases.
-   - Link every shape to `docs/API_CONTRACTS.md` and `src/lib/validations/`.
+Reminder `nextDueAt` (`src/lib/reminders/schedule.ts`): one-off reminders keep `remindAt` even when past (UI shows "overdue"); daily/weekly roll forward in fixed 24 h / 7 day UTC steps; `null` when paused.
 
-4. **Database and migrations**
-   - Tables, columns, constraints, indexes, seed data, RLS policies, and which migrations must be applied.
-   - Never include credentials or secret values.
+## 4. Database and migrations
 
-5. **AI and health safety**
-   - Provider selection, prompts, history retrieval window, curated references, deterministic warning rules, output validation, repair behavior, and known limitations.
+- `supabase/migrations/0001_initial_schema.sql`: `profiles`, `health_logs`, `symptom_sessions`, `symptom_messages`, CHECK constraints matching the Zod ranges, indexes, demo-only RLS.
+- `supabase/migrations/0002_reminders.sql`: `reminders` (title 1–120, category `medication|appointment|health_log|other`, notes ≤ 500, `remind_at`, repeat `none|daily|weekly`, `active`), index on `(profile_id, remind_at)`, RLS policy "demo reminders access", 2 synthetic seed reminders (fixed ids `…0a1`, `…0a2`, `on conflict do nothing`).
+- `supabase/seed.sql`: profile "Alex Demo" and 14 days of logs (recurring lower-back discomfort after long sitting, variable sleep).
+- The live profile currently reads "Alex Demo Updated" (age 24) from UI testing. **Reset it just before the demo**, not earlier.
+- Test data hygiene: backend tests create rows only with "Synthetic … test" wording and delete them afterwards (messages first, then sessions).
 
-6. **Tests and verification**
-   - Exact commands run and their results.
-   - Important fixed cases and any endpoint/browser verification still needed.
+## 5. AI and health safety
 
-7. **Decisions and pending work**
-   - Decisions another AI must not reverse casually.
-   - Contract or schema work that requires coordination.
-   - Deployment blockers, migration blockers, or known risks.
+Pipeline in `POST /api/assistant/chat` (`src/lib/ai/assistant.ts`):
 
-## Synchronization rules
+1. Validate the request; load the demo profile and up to 60 logs from the last 30 days.
+2. **Safety rules first** (`src/lib/health/safety-rules.ts`, `evaluateSafety`). A match returns `status: "urgent"`, the reviewed message, `assessment: null`, and `URGENT_ASSISTANT_MESSAGE`. The LLM is not called and cannot override it.
+3. **History** (`src/lib/health/retrieve-history.ts`): `selectRelevantLogs` (up to 5 related logs, keyword match with negated phrases removed) plus `selectRecentMeasurementLogs` (last 7 days of sleep/water/activity/mood, up to 7).
+4. **References** (`src/lib/health/references.ts`): verbatim excerpts for `nhs-back-pain`, `nhs-headaches`, `nhs-chest-pain` when the topic matches.
+5. **LLM** (`src/lib/ai/prompts.ts`): separate labelled sections for profile, related history, recent measurements and references; structured JSON only. One follow-up round (`MAX_FOLLOW_UP_ROUNDS = 1`), then it must assess.
+6. **Output checks** (`src/lib/ai/output.ts`, `parseModelOutput`): rejects diagnosis wording, percentages/probabilities, medication or dose advice, invented links, self-care not found in the references (`findUnsourcedSelfCare`), and named conditions when no reference was supplied (`namesConditionWithoutReference`). `tidyAssistantMessage` strips heading-only lines. One repair retry; otherwise 503.
+7. `toContractAssessment` attaches the dated history used, sources from the curated set only, `NO_HISTORY_NOTE` when no related history was found, and the fixed `ASSESSMENT_DISCLAIMER`.
 
-- Do not overwrite `AI_A`’s context. Add backend facts here and put cross-cutting decisions in `SHARED_CONTEXT.md`.
-- Do not include secrets, real health data, provider keys, or private user information.
-- Update this file after important backend/API/schema/safety changes.
-- After writing this file, update `SHARED_CONTEXT.md` with the concise shared conclusions and tell the other AI which files changed.
-- If an API contract changes, update `docs/API_CONTRACTS.md`, the Zod schema, tests, and both AI context files in the same coordinated change.
+Sources register (`docs/AI_SAFETY_SPEC.md` §9; each approved by Person A on 2026-11-14):
+
+- NHS Back pain, Headaches, Chest pain: safety rules and reference excerpts. Chest pain alone does not trigger; the rules need the NHS "Call 999" combinations.
+- Patient.info "General prescribing guidance": prescription explainer only (§9.3). It expands only stat, p.r.n., o.d., o.n., b.d., t.d.s., q.d.s. with quoted meanings, adds a right-eye caution for o.d., and always returns fixed pharmacist/prescriber guidance and the source.
+
+Known limitations: rules use keyword matching with simple negation handling and are not comprehensive emergency detection; history retrieval is keyword-based, not semantic; only three topics have rules and references; Groq's free-tier token limit can cause 503s under rapid testing.
+
+## 6. Tests and verification
+
+- Commands: `npm run lint`, `npm run typecheck` (`next typegen && tsc --noEmit`), `npm test` (node:test over `tests/**/*.test.ts`), `npm run build`.
+- Latest backend run (after `aab2970`): lint, typecheck and build clean; 161 tests pass. On `main` at `39fe7dc` (with Person B's merges): 167 tests pass. Test files: `assistant`, `contracts`, `safety-rules`, `supabase-mappers`, `trends`, `reminders`, `prescription-terms`.
+- Endpoint checks against Supabase on 2026-11-14:
+  - Reminders: list, create (201), missing confirmation (400), pause (200, `nextDueAt: null`), empty patch (400), delete (204), repeat delete (404), non-UUID id (404), bad query (400). Test row removed.
+  - Prescription explainer: "Eye drops 1 drop OD, ibuprofen 200mg tds prn" → o.d. (with caution), t.d.s., p.r.n.; empty text → 400.
+  - Live chat: "severe chest pain and trouble breathing" → urgent.
+- Still needed: browser walk-through of the full demo on the judging device; the prescription explainer UI once Person B builds it.
+
+## 7. Decisions and pending work
+
+Do not reverse these without agreeing first:
+
+- No vector database, no second backend service, no `@supabase/supabase-js`, no service-role key in request paths.
+- A safety rule or medical explanation is only added with an approved source recorded in `docs/AI_SAFETY_SPEC.md` §9, plus tests.
+- The prescription explainer stays deterministic (no LLM) and never explains doses, drug names, purpose or timing.
+- Reminders are user-written and in-app only: no notifications, no suggested content, `userConfirmed: true` required.
+- Charts use plain SVG (no Recharts dependency).
+- Workflow: Person A builds the system side (schemas, routes, DB, AI/safety, contract, tests) and hands Person B a UI prompt; Person A does not edit frontend files.
+
+Pending:
+
+- Person B: prescription explainer UI (contract §3b; ClickUp "Prescription abbreviation explainer UI").
+- Owner: reset the demo profile right before the demo; rehearse and record the backup video.
+- Any contract change: update `docs/API_CONTRACTS.md`, the Zod schema, tests and both AI context files together, and tell the other developer.

@@ -12,6 +12,9 @@ Before making code changes, read:
 4. `docs/AI_SAFETY_SPEC.md`
 5. `docs/WORKFLOW.md`
 6. `docs/DEMO_TEST_PLAN.md`
+7. `AGENTS.md`, `docs/SHARED_CONTEXT.md`, `docs/AI_A.md` (frontend AI) and `docs/AI_B.md` (backend AI, this assistant's own context)
+
+After an important implementation, API, schema, safety, ownership, migration or deployment change, update `docs/AI_B.md` and the concise cross-team decision in `docs/SHARED_CONTEXT.md` (see `AGENTS.md`). Never put secrets or real health data in them.
 
 These documents define the agreed product scope and engineering constraints. If the repository already contains code that conflicts with a proposal, inspect it and preserve working behavior; report the discrepancy rather than overwriting it blindly.
 
