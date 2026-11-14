@@ -145,11 +145,12 @@ export function ProfileForm() {
           error={fieldErrors.age}
           onChange={(value) => updateField("age", value)}
         />
-        <TextField
+        <SelectField
           id="gender"
           label="Gender"
           value={profile.gender ?? ""}
           error={fieldErrors.gender}
+          options={["Male", "Female", "Other"]}
           onChange={(value) => updateField("gender", value || null)}
         />
         <NumberField
@@ -238,6 +239,46 @@ function TextField({
         aria-describedby={error ? `${id}-error` : undefined}
         className={fieldClass(error)}
       />
+      {error && <p id={`${id}-error`} className="mt-1 text-sm text-red-700">{error}</p>}
+    </div>
+  );
+}
+
+function SelectField({
+  id,
+  label,
+  value,
+  options,
+  error,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  options: string[];
+  error?: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium text-slate-800">
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `${id}-error` : undefined}
+        className={fieldClass(error)}
+      >
+        <option value="">Select an option</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
       {error && <p id={`${id}-error`} className="mt-1 text-sm text-red-700">{error}</p>}
     </div>
   );
