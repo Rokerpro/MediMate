@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ScrollAwareHeader } from "@/components/scroll-aware-header";
 
 const features = [
   {
@@ -50,23 +51,29 @@ function ArrowUpRight() {
 
 export function LandingPage() {
   return (
-    <main className="landing-page overflow-hidden bg-[#f7f5ed] text-[#24352d]">
-      <div className="landing-grain pointer-events-none fixed inset-0 z-50 opacity-[0.035]" aria-hidden="true" />
-      <nav className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
-        <Link href="/" className="group flex items-center gap-2 text-[#254a38] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">
-          <LeafMark className="h-8 w-8 transition-transform duration-500 group-hover:-rotate-12" />
-          <span className="display-font text-2xl font-semibold tracking-[-0.04em]">MediMate</span>
-        </Link>
-        <div className="hidden items-center gap-8 text-sm text-[#52655a] md:flex">
-          <a href="#why" className="transition-colors hover:text-[#254a38]">Why MediMate</a>
-          <a href="#how" className="transition-colors hover:text-[#254a38]">How it works</a>
-          <a href="#questions" className="transition-colors hover:text-[#254a38]">Questions</a>
-        </div>
-        <Link href="/dashboard" className="landing-pill landing-pill-dark">
-          Open the demo <ArrowUpRight />
-        </Link>
-      </nav>
+    <>
+      <ScrollAwareHeader
+        className="w-full border-b border-[#dfe3d6] bg-[#f7f5ed]/95 backdrop-blur"
+        spacerClassName="h-[81px]"
+      >
+        <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
+          <Link href="/home" className="group flex items-center gap-2 text-[#254a38] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">
+            <LeafMark className="h-8 w-8 transition-transform duration-500 group-hover:-rotate-12" />
+            <span className="display-font text-2xl font-semibold tracking-[-0.04em]">MediMate</span>
+          </Link>
+          <div className="hidden items-center gap-8 text-sm text-[#52655a] md:flex">
+            <a href="#why" className="transition-colors hover:text-[#254a38]">Why MediMate</a>
+            <a href="#how" className="transition-colors hover:text-[#254a38]">How it works</a>
+            <a href="#questions" className="transition-colors hover:text-[#254a38]">Questions</a>
+          </div>
+          <Link href="/dashboard" className="landing-pill landing-pill-dark">
+            Open the demo <ArrowUpRight />
+          </Link>
+        </nav>
+      </ScrollAwareHeader>
 
+    <main className="landing-page overflow-x-clip bg-[#f7f5ed] text-[#24352d]">
+      <div className="landing-grain pointer-events-none fixed inset-0 z-50 opacity-[0.035]" aria-hidden="true" />
       <section className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 pb-20 pt-10 sm:px-8 sm:pb-28 lg:grid-cols-[1.05fr_.95fr] lg:px-12 lg:pt-20">
         <div className="relative z-10 max-w-2xl">
           <p className="landing-kicker reveal">A gentler way to make sense of your health story</p>
@@ -260,5 +267,6 @@ export function LandingPage() {
         </div>
       </footer>
     </main>
+    </>
   );
 }

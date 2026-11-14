@@ -61,7 +61,7 @@ Main user flows:
 - Printable summary: `/summary` combines profile and health-log APIs with pure 14-day trend helpers.
 - Prescription explainer: deterministic endpoint `/api/prescriptions/explain` (no AI, nothing stored; contract §3b), surfaced at `/prescriptions` with a shared-schema client method and accessible result cards.
 - Assistant requests can be rate-limited with HTTP 429 `RATE_LIMITED`; the server returns a `Retry-After` header and does not persist the failed turn.
-- Public landing page: `/` now presents the product story, real features, safety boundaries, workflow, FAQ, and entry CTA; `/dashboard` remains the app workspace.
+- Public landing page: `/home` presents the product story, real features, safety boundaries, workflow, FAQ, and entry CTA; `/` redirects there and `/dashboard` remains the app workspace.
 
 ## Contract and schema rules
 
@@ -86,6 +86,7 @@ Required behavior:
 - `/summary` contains profile/background/medication sections, 14-day charts, observations, a printable history table, and notes.
 - `/dashboard` loads up to 100 logs through the existing API client, shows 14-day log/sleep/pain/latest-observation tiles and reuses the 14-day pain/sleep charts. It includes loading, empty, error/retry, and success states; the statistic tiles and latest observation link to `/logs`.
 - `/logs` groups entries by date, newest first, labels Today and Yesterday, shows pain and sleep in neutral small indicators, and links to `/summary`.
+- App and landing-page headers stay pinned while visible, hide after scrolling down past 80px, and reappear when the user scrolls up or focuses a control by keyboard. Both logos link to `/home`.
 - `/reminders` contains a confirmation-before-create form, local-time conversion, active/paused list, Pause/Resume, Edit, inline Delete confirmation, and loading/empty/error/retry states.
 - Reminder UI uses the shared `Reminder` schemas and only talks through `src/lib/api-client.ts`.
 - The reminders page was tested at 375px with no horizontal overflow and through create → confirm → pause → resume → edit → delete. The temporary test reminder was deleted.
