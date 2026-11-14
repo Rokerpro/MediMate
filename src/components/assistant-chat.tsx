@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { ChatResponse } from "@/lib/validations";
-import { sendAssistantMessage } from "@/lib/api-client";
+import { ApiClientError, sendAssistantMessage } from "@/lib/api-client";
 
 type ChatMessage = {
   id: string;
@@ -23,17 +23,22 @@ export function AssistantChat() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  async function submitMessage(message = input) {
+  async function submitMessage(
+    message = input,
+    options: { appendUserMessage?: boolean } = {},
+  ) {
     const trimmedMessage = message.trim();
     if (!trimmedMessage || loading) return;
 
     setInput("");
     setErrorMessage(null);
     setLastSubmittedMessage(trimmedMessage);
-    setMessages((current) => [
-      ...current,
-      { id: makeMessageId(), role: "user", content: trimmedMessage },
-    ]);
+    if (options.appendUserMessage !== false) {
+      setMessages((current) => [
+        ...current,
+        { id: makeMessageId(), role: "user", content: trimmedMessage },
+      ]);
+    }
     setLoading(true);
 
     try {
@@ -45,6 +50,9 @@ export function AssistantChat() {
         { id: makeMessageId(), role: "assistant", content: response.assistantMessage },
       ]);
     } catch (error) {
+      if (error instanceof ApiClientError && error.status === 404) {
+        setLastSubmittedMessage(null);
+      }
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -147,7 +155,9 @@ export function AssistantChat() {
             {lastSubmittedMessage && (
               <button
                 type="button"
-                onClick={() => void submitMessage(lastSubmittedMessage)}
+                onClick={() =>
+                  void submitMessage(lastSubmittedMessage, { appendUserMessage: false })
+                }
                 disabled={loading}
                 className="mt-3 rounded-md bg-red-800 px-3 py-2 text-sm font-semibold text-white hover:bg-red-900 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-red-600"
               >

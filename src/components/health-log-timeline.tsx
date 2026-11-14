@@ -5,7 +5,10 @@ import type { HealthLog } from "@/lib/validations";
 import { getHealthLogs } from "@/lib/api-client";
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(value));
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  }).format(new Date(value));
 }
 
 export function HealthLogTimeline({ newLog }: { newLog: HealthLog | null }) {

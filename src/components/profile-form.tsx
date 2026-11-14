@@ -8,6 +8,7 @@ import {
 import { getProfile, updateProfile } from "@/lib/api-client";
 
 type FieldErrors = Record<string, string>;
+type ProfileDraft = Omit<Profile, "age"> & { age: number | null };
 
 function getFieldErrors(error: { issues: Array<{ path: PropertyKey[]; message: string }> }) {
   return error.issues.reduce<FieldErrors>((errors, issue) => {
@@ -27,7 +28,7 @@ function parseList(value: string) {
 }
 
 export function ProfileForm() {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<ProfileDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -64,7 +65,7 @@ export function ProfileForm() {
     };
   }, []);
 
-  function updateField<K extends keyof Profile>(field: K, value: Profile[K]) {
+  function updateField<K extends keyof ProfileDraft>(field: K, value: ProfileDraft[K]) {
     setProfile((current) => (current ? { ...current, [field]: value } : current));
     setFieldErrors((current) => ({ ...current, [field]: "" }));
     setSuccessMessage(null);
@@ -142,7 +143,7 @@ export function ProfileForm() {
           label="Age"
           value={profile.age}
           error={fieldErrors.age}
-          onChange={(value) => updateField("age", value ?? 0)}
+          onChange={(value) => updateField("age", value)}
         />
         <TextField
           id="gender"

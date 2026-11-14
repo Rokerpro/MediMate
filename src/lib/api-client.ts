@@ -20,7 +20,7 @@ import {
 const REQUEST_TIMEOUT_MS = 10_000;
 const CHAT_REQUEST_TIMEOUT_MS = 30_000;
 
-class ApiClientError extends Error {
+export class ApiClientError extends Error {
   constructor(
     message: string,
     readonly retryable = false,
@@ -164,7 +164,11 @@ export async function sendAssistantMessage(input: ChatRequest): Promise<ChatResp
     );
   } catch (error) {
     if (error instanceof ApiClientError && error.status === 404 && validatedInput.sessionId !== null) {
-      return sendAssistantMessage({ ...validatedInput, sessionId: null });
+      throw new ApiClientError(
+        "This conversation has expired. Please start over.",
+        false,
+        404,
+      );
     }
     throw error;
   }
