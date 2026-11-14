@@ -69,7 +69,7 @@ export function PrescriptionExplainer() {
               onChange={(event) => setText(event.target.value)}
               maxLength={MAX_LENGTH}
               rows={5}
-              placeholder="Example: Eye drops s prn"
+              placeholder="Example: Ibuprofen 200mg tds prn"
               aria-describedby="prescription-note prescription-count"
               className="mt-2 block w-full rounded-xl border border-[#cbd6c5] bg-[#fbfaf5] px-4 py-3 text-[#24352d] outline-none transition placeholder:text-[#94a096] focus:border-[#789078] focus:ring-2 focus:ring-[#d8e1cf]"
             />

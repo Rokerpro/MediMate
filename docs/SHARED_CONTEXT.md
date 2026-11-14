@@ -6,8 +6,8 @@ This is the combined source of truth for both coding AIs. Naming: `docs/AI_A.md`
 
 ## Current repository state
 
-- `main` contains the merged health summary, trends, navigation polish, reminders UI, reminder API, reminder migration, and prescription abbreviation explainer.
-- `main` at `ef8074d` (PR #1 merged 2026-11-14) includes the landing page at `/`, the prescription explainer UI at `/prescriptions`, and assistant 429 retry handling, on top of the backend rate limit and demo reset script (`a538db5`).
+- `main` at `9dd4b22` contains the merged health summary, trends, navigation polish, reminders UI and API, reminder migration, prescription explainer, landing page, and assistant 429 retry handling.
+- PR #2 (`feat/health-insights-journey`: PR #1 review fixes `ad87a1f`, Personal Health Insights `09ebb8b`, Interactive Health Journey `bbfdd5e`) was reviewed and merged by Person A on 2026-11-14, together with the backend past-conversations endpoint (`cd73b88`), safety scorecard (`77e37a9`), security headers (`3962e9d`) and the dose-question fix (`1312d70`). Checks on the merged tree: lint, typecheck, build, 202 tests, scorecard 134/134.
 - The app is a Next.js 16.4.6 App Router application using React 19.3, TypeScript, Tailwind 4.3, Zod 4.6, Supabase PostgreSQL, and a server-side Groq-compatible AI provider.
 - Node.js `>=22.18` is required.
 - There is one synthetic demo profile and no authentication. Never add real health data.
@@ -84,11 +84,14 @@ Required behavior:
 - `AppShell` owns the global notice.
 - `PrimaryNavigation` marks the active route with `aria-current`.
 - `/summary` contains profile/background/medication sections, 14-day charts, observations, a printable history table, and notes.
+- `/dashboard` loads up to 100 logs through the existing API client, shows 14-day log/sleep/pain/latest-observation tiles and reuses the 14-day pain/sleep charts. It includes loading, empty, error/retry, and success states; the statistic tiles and latest observation link to `/logs`.
+- `/logs` groups entries by date, newest first, labels Today and Yesterday, shows pain and sleep in neutral small indicators, and links to `/summary`.
 - `/reminders` contains a confirmation-before-create form, local-time conversion, active/paused list, Pause/Resume, Edit, inline Delete confirmation, and loading/empty/error/retry states.
 - Reminder UI uses the shared `Reminder` schemas and only talks through `src/lib/api-client.ts`.
 - The reminders page was tested at 375px with no horizontal overflow and through create → confirm → pause → resume → edit → delete. The temporary test reminder was deleted.
 - The prescription explainer page was tested at 375px with no horizontal overflow. It always shows the API guidance and source after a successful response, including when no terms are recognized.
 - Assistant `RATE_LIMITED` (429) is retryable; the chat retains the failed text, shows the server message, and retries without duplicating its transcript entry.
+- Prescription example wording and the landing-page curated-source label were updated per PR #1 review; Send is disabled when it would duplicate text awaiting assistant Retry.
 
 ## Testing and delivery
 
@@ -101,17 +104,17 @@ npm test
 npm run build
 ```
 
-The latest checks (PR #1, `d5b94f4`) passed: lint, typecheck, build and 173 tests. Browser validation is still required for every UI change, including 375px layout and async loading/error/empty states where practical.
+The latest checks on `feat/health-insights-journey` passed: lint, typecheck, build, and all 188 tests. Browser checks at a 375px configured viewport found no horizontal overflow on `/dashboard`, `/logs`, or `/summary`; Dashboard charts and linked insights rendered, and the timeline showed Today then Yesterday with pain/sleep indicators and a `/summary` link. The summary contained the synthetic-data notice, charts, and table. Print media could not be verified in the browser harness because `page.emulateMedia({ media: "print" })` did not make `matchMedia("print").matches` true; confirm the print-specific layout in a real browser preview. Browser validation remains required for future UI changes, including async loading/error/empty states where practical.
 
 Use short-lived feature branches, focused Conventional Commits, explicit `git add` paths, and no force-pushes. Merge only after the other AI reviews changed files and the checks pass.
 
 ## Pending shared work
 
-Done 2026-11-14: `0002_reminders.sql` applied in Supabase; the live Vercel site serves `/api/reminders` (200); `docs/AI_B.md` filled in by the backend assistant.
+Done 2026-11-14: `0002_reminders.sql` applied in Supabase; the live Vercel site serves `/api/reminders` (200); `docs/AI_B.md` filled in by the backend assistant; PR #1 review follow-ups fixed and PR #2 merged.
 
 1. Owner: run `supabase/reset-demo.sql` in the Supabase SQL editor just before the demo (restores Alex Demo, 14 logs dated up to today, 2 reminders; deletes all chat sessions). Then rehearse and record the backup video.
-2. Person B (non-blocking follow-ups from the PR #1 review): fix the `/prescriptions` placeholder ("Eye drops s prn" → "Ibuprofen 200mg tds prn"); landing tech list should say "Curated NHS and Patient.info sources"; in the assistant chat, pressing Send after a failed request (instead of Retry) adds the user message twice.
-3. Person B: "Recent assistant conversations" section on `/summary` from the new read-only `GET /api/assistant/sessions` (contract §3c; schemas in `src/lib/validations/assessment-history.ts`). Backend merged and tested.
+2. Person B: "Recent assistant conversations" section on `/summary` from the new read-only `GET /api/assistant/sessions` (contract §3c; schemas in `src/lib/validations/assessment-history.ts`). Backend merged and tested.
+3. Person B: confirm the `/summary` print layout in a real browser print preview.
 4. Pitch: `npm run scorecard` prints the offline safety scorecard (134/134 fixed checks; see `docs/AI_SAFETY_SPEC.md` §4.1). Quote it with its scope: fixed examples, not comprehensive emergency detection.
 5. Workflow: Person A builds the system side and hands Person B a UI prompt; neither edits the other's files without coordinating.
 6. Keep this file and both AI-specific context files synchronized after meaningful decisions or contract changes.

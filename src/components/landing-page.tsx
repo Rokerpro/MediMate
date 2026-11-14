@@ -207,7 +207,7 @@ export function LandingPage() {
             <p className="mt-7 max-w-xl leading-7 text-[#66766b]">MediMate is built as a focused prototype: a single Next.js app, a bounded synthetic data model, curated references and fixed safety checks before the AI is called.</p>
           </div>
           <div className="grid grid-cols-2 gap-3 self-end text-sm">
-            {["Next.js", "TypeScript", "Tailwind CSS", "Zod", "Supabase", "Curated NHS sources"].map((item) => (
+            {["Next.js", "TypeScript", "Tailwind CSS", "Zod", "Supabase", "Curated NHS and Patient.info sources"].map((item) => (
               <div key={item} className="rounded-xl border border-[#dfe3d6] bg-white/60 px-4 py-4 font-medium text-[#52655a]">{item}</div>
             ))}
           </div>
