@@ -8,6 +8,14 @@ import {
   healthLogListResponseSchema,
   profileResponseSchema,
   profileUpdateSchema,
+  reminderCreateSchema,
+  reminderListResponseSchema,
+  reminderResponseSchema,
+  reminderUpdateSchema,
+  type ReminderCreateRequest,
+  type ReminderListResponse,
+  type ReminderResponse,
+  type ReminderUpdateRequest,
   type ChatRequest,
   type ChatResponse,
   type HealthLogCreateRequest,
@@ -172,4 +180,81 @@ export async function sendAssistantMessage(input: ChatRequest): Promise<ChatResp
     }
     throw error;
   }
+}
+
+export async function listReminders(includeInactive = true): Promise<ReminderListResponse> {
+  const params = new URLSearchParams({ includeInactive: String(includeInactive) });
+  return requestJson(
+    `/api/reminders?${params.toString()}`,
+    { method: "GET" },
+    reminderListResponseSchema,
+    200,
+  );
+}
+
+export async function createReminder(input: ReminderCreateRequest): Promise<ReminderResponse> {
+  const validatedInput = reminderCreateSchema.parse(input);
+  return requestJson(
+    "/api/reminders",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(validatedInput),
+    },
+    reminderResponseSchema,
+    201,
+  );
+}
+
+export async function updateReminder(
+  id: string,
+  input: ReminderUpdateRequest,
+): Promise<ReminderResponse> {
+  const validatedInput = reminderUpdateSchema.parse(input);
+  return requestJson(
+    `/api/reminders/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(validatedInput),
+    },
+    reminderResponseSchema,
+    200,
+  );
+}
+
+export async function deleteReminder(id: string): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`/api/reminders/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch {
+    throw new ApiClientError("The server is unavailable. Please try again.", true);
+  }
+
+  if (response.status === 204) return;
+
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    throw new ApiClientError(
+      `The request failed with status ${response.status}.`,
+      response.status >= 500,
+      response.status,
+    );
+  }
+
+  if (!response.ok) {
+    const parsedError = apiErrorResponseSchema.safeParse(body);
+    throw new ApiClientError(
+      parsedError.success ? parsedError.data.error.message : `The request failed with status ${response.status}.`,
+      response.status >= 500,
+      response.status,
+    );
+  }
+
+  throw new ApiClientError(`The server returned status ${response.status}. Please try again.`);
 }

@@ -8,6 +8,7 @@ const navigation = [
   { href: "/profile", label: "Profile" },
   { href: "/logs", label: "Daily logs" },
   { href: "/assistant", label: "Assistant" },
+  { href: "/reminders", label: "Reminders" },
   { href: "/summary", label: "Summary" },
 ];
 
