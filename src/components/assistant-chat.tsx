@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { ChatResponse } from "@/lib/validations";
-import { ApiClientError, sendAssistantMessage } from "@/lib/api-client";
+import {
+  useAssistantExperience,
+  type AssistantChatMessage,
+} from "@/components/assistant-experience";
 
 type SpeechRecognitionResultLike = ArrayLike<{ transcript: string }> & { isFinal: boolean };
 
@@ -31,16 +34,6 @@ type SpeechRecognitionWindow = Window & {
   webkitSpeechRecognition?: SpeechRecognitionConstructor;
 };
 
-type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-};
-
-function makeMessageId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
 function microphonePermissionMessage(error: unknown) {
   if (error instanceof DOMException) {
     if (error.name === "NotAllowedError" || error.name === "SecurityError") {
@@ -59,18 +52,22 @@ function microphonePermissionMessage(error: unknown) {
 export function AssistantChat({
   variant = "page",
   active = true,
+  onClose,
 }: {
   variant?: "page" | "popup";
   active?: boolean;
+  onClose?: () => void;
 }) {
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const experience = useAssistantExperience();
+  const messages = experience.activeConversation?.messages ?? [];
+  const latestResponse = [...messages].reverse().find((message) => message.response)?.response ?? null;
   const [input, setInput] = useState("");
-  const [lastSubmittedMessage, setLastSubmittedMessage] = useState<string | null>(null);
-  const [latestResponse, setLatestResponse] = useState<ChatResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [retryAvailable, setRetryAvailable] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [requestingMicrophone, setRequestingMicrophone] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<string | null>(null);
@@ -79,6 +76,17 @@ export function AssistantChat({
   const voiceRequestSequenceRef = useRef(0);
   const microphoneRequestPendingRef = useRef(false);
   const messageInputId = variant === "popup" ? "assistant-popup-message" : "assistant-message";
+  const loading = experience.isSending;
+  const errorMessage = experience.errorMessage;
+  const retryAvailable = experience.retryAvailable;
+  const dark = experience.theme === "dark";
+  const conversations = experience.conversations
+    .filter((conversation) => {
+      const query = search.trim().toLocaleLowerCase();
+      return !query || conversation.title.toLocaleLowerCase().includes(query)
+        || conversation.messages.some((message) => message.content.toLocaleLowerCase().includes(query));
+    })
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 
   useEffect(() => {
     if (active) return;
@@ -87,58 +95,22 @@ export function AssistantChat({
     if (isListening) recognitionRef.current?.stop();
   }, [active, isListening]);
 
-  async function submitMessage(
-    message = input,
-    options: { appendUserMessage?: boolean } = {},
-  ) {
-    const trimmedMessage = message.trim();
+  useEffect(() => () => {
+    voiceRequestSequenceRef.current += 1;
+    recognitionRef.current?.stop();
+  }, []);
+
+  async function submitMessage() {
+    const trimmedMessage = input.trim();
     if (!trimmedMessage || loading) return;
-
     if (isListening) recognitionRef.current?.stop();
-    setErrorMessage(null);
-    setRetryAvailable(false);
-    setLastSubmittedMessage(trimmedMessage);
-    if (options.appendUserMessage !== false) {
-      setMessages((current) => [
-        ...current,
-        { id: makeMessageId(), role: "user", content: trimmedMessage },
-      ]);
-    }
-    setLoading(true);
-
-    try {
-      const response = await sendAssistantMessage({ sessionId, message: trimmedMessage });
-      setSessionId(response.sessionId);
-      setLatestResponse(response);
-      setInput((current) => current === trimmedMessage ? "" : current);
-      setMessages((current) => [
-        ...current,
-        { id: makeMessageId(), role: "assistant", content: response.assistantMessage },
-      ]);
-    } catch (error) {
-      if (error instanceof ApiClientError && error.status === 404) {
-        setLastSubmittedMessage(null);
-      }
-      setRetryAvailable(error instanceof ApiClientError && error.retryable);
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "The assistant is temporarily unavailable. Please try again.",
-      );
-    } finally {
-      setLoading(false);
-    }
+    if (await experience.sendMessage(trimmedMessage)) setInput("");
   }
 
   function startOver() {
     if (isListening) recognitionRef.current?.stop();
-    setSessionId(null);
-    setMessages([]);
-    setLatestResponse(null);
     setInput("");
-    setLastSubmittedMessage(null);
-    setErrorMessage(null);
-    setRetryAvailable(false);
+    experience.createConversation();
   }
 
   function selectFollowUpQuestion(question: string) {
@@ -244,103 +216,262 @@ export function AssistantChat({
   }
 
   const popup = variant === "popup";
-  const urgentPopupResponse = popup && latestResponse?.status === "urgent";
+  const activeConversationId = experience.activeConversation?.id ?? null;
+
+  if (!experience.ready) {
+    return (
+      <div role="status" className="flex min-h-48 flex-1 items-center justify-center text-sm text-slate-500">
+        Loading saved conversations…
+      </div>
+    );
+  }
 
   return (
-    <div
-      className={
-        popup
-          ? "flex min-h-0 flex-1 flex-col gap-3 p-3"
-          : "grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]"
-      }
-    >
-      {(latestResponse || !popup) && (
-        <div
-          className={
-            popup
-              ? urgentPopupResponse
-                ? "order-1 shrink-0"
-                : "order-2 max-h-[35%] shrink-0 overflow-y-auto"
-              : "lg:col-start-2 lg:row-start-1"
-          }
-        >
-          <AssistantResult response={latestResponse} />
-        </div>
+    <div className={`relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border shadow-xl ${
+      dark ? "border-[#35443a] bg-[#17241d] text-[#f5f2e8]" : "border-[#dfe3d6] bg-[#fffdf8] text-[#24352d]"
+    } ${popup ? "h-full" : "min-h-[70vh]"}`}>
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close conversation history"
+          onClick={() => setSidebarOpen(false)}
+          className="absolute inset-0 z-20 bg-black/35"
+        />
       )}
-
-      <section
-        className={
-          popup
-            ? `${urgentPopupResponse ? "order-2" : "order-1"} flex min-h-0 flex-1 flex-col`
-            : "rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-start-1 lg:row-start-1 sm:p-8"
-        }
+      <aside
+        aria-label="Conversation history"
+        aria-hidden={!sidebarOpen}
+        inert={!sidebarOpen}
+        className={`absolute inset-y-0 left-0 z-30 flex w-[min(19rem,88%)] flex-col border-r p-4 shadow-2xl transition-transform duration-200 motion-reduce:transition-none ${
+          dark ? "border-[#35443a] bg-[#1f2c24]" : "border-[#e4e0d5] bg-[#fbfaf5]"
+        } ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex shrink-0 items-start justify-between gap-4">
-          {!popup && (
-            <div>
-              <h2 className="text-xl font-semibold">Conversation</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Share one concern at a time. This demo provides educational information, not a diagnosis.
-              </p>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-semibold">Your chats</h2>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close conversation history"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => { startOver(); setSidebarOpen(false); }}
+          className="mt-4 flex min-h-11 items-center gap-3 rounded-xl border border-[#bdc8bb] px-3 text-sm font-semibold hover:bg-[#eff1e9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
+        >
+          <PlusIcon /> New chat
+        </button>
+        <label htmlFor={`${messageInputId}-search`} className="sr-only">Search saved chats</label>
+        <input
+          id={`${messageInputId}-search`}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search chats"
+          className={`mt-4 min-h-10 rounded-xl border px-3 text-sm outline-none focus:ring-2 focus:ring-[#bd7e3e] ${
+            dark ? "border-[#49574d] bg-[#17241d] text-white placeholder:text-slate-400" : "border-[#d7d9d0] bg-white text-slate-900"
+          }`}
+        />
+        <p className="mt-3 text-xs leading-5 text-slate-500">
+          Saved in this browser only. Removing a chat here does not delete server records.
+        </p>
+        <div className="mt-3 min-h-0 flex-1 space-y-1 overflow-y-auto">
+          {conversations.length === 0 ? (
+            <p className="px-2 py-4 text-sm text-slate-500">
+              {search ? "No chats match your search." : "Your saved chats will appear here."}
+            </p>
+          ) : conversations.map((conversation) => (
+            <div
+              key={conversation.id}
+              className={`rounded-xl p-2 ${
+                activeConversationId === conversation.id
+                  ? dark ? "bg-[#35443a]" : "bg-[#e9ede4]"
+                  : "hover:bg-black/5"
+              }`}
+            >
+              {renameId === conversation.id ? (
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    experience.renameConversation(conversation.id, renameValue);
+                    setRenameId(null);
+                  }}
+                  className="flex gap-2"
+                >
+                  <input
+                    autoFocus
+                    aria-label="Chat name"
+                    value={renameValue}
+                    onChange={(event) => setRenameValue(event.target.value)}
+                    maxLength={80}
+                    className="min-w-0 flex-1 rounded-lg border border-[#bdc8bb] px-2 py-1 text-sm text-slate-950"
+                  />
+                  <button type="submit" className="rounded-lg px-2 text-sm font-semibold">Save</button>
+                </form>
+              ) : deleteId === conversation.id ? (
+                <div>
+                  <p className="text-xs">Remove this chat from this browser?</p>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { experience.deleteConversation(conversation.id); setDeleteId(null); }}
+                      className="rounded-lg bg-[#8b3c2f] px-2 py-1 text-xs font-semibold text-white"
+                    >
+                      Remove
+                    </button>
+                    <button type="button" onClick={() => setDeleteId(null)} className="rounded-lg px-2 py-1 text-xs">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-1">
+                  <button
+                    type="button"
+                    onClick={() => { experience.selectConversation(conversation.id); setSidebarOpen(false); }}
+                    className="min-w-0 flex-1 truncate rounded-lg px-2 py-2 text-left text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
+                    aria-pressed={activeConversationId === conversation.id}
+                  >
+                    {conversation.title}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setRenameId(conversation.id); setRenameValue(conversation.title); }}
+                    aria-label={`Rename ${conversation.title}`}
+                    title="Rename chat"
+                    className="h-9 w-9 shrink-0 rounded-lg text-xs hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
+                  >
+                    <PencilIcon />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteId(conversation.id)}
+                    aria-label={`Remove ${conversation.title} from this browser`}
+                    title="Remove from this browser"
+                    className="h-9 w-9 shrink-0 rounded-lg text-xs hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-          {messages.length > 0 && (
+          ))}
+        </div>
+      </aside>
+
+      <section className="flex min-h-0 flex-1 flex-col" inert={sidebarOpen}>
+        <header className={`flex shrink-0 items-center justify-between gap-2 border-b px-3 py-3 sm:px-5 ${
+          dark ? "border-[#35443a]" : "border-[#e7e4da]"
+        }`}>
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              aria-label="Open conversation history"
+              aria-expanded={sidebarOpen}
+              onClick={() => setSidebarOpen(true)}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
+            >
+              <MenuIcon />
+            </button>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">
+                {experience.activeConversation?.title ?? "New conversation"}
+              </p>
+              <p className="text-xs text-slate-500">Educational information · synthetic demo</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close assistant chat"
+                title="Close assistant chat"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
+              >
+                <CloseIcon />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={experience.toggleTheme}
+              aria-label={`Switch to ${dark ? "light" : "dark"} theme`}
+              title={`Switch to ${dark ? "light" : "dark"} theme`}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
+            >
+              {dark ? <SunIcon /> : <MoonIcon />}
+            </button>
             <button
               type="button"
               onClick={startOver}
-              className="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              aria-label="Start a new chat"
+              title="Start a new chat"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#254a38] text-white hover:bg-[#1d3d2e] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
             >
-              Start over
+              <PlusIcon />
             </button>
-          )}
-        </div>
+          </div>
+        </header>
+
+        {experience.storageMessage && (
+          <p role="status" className="shrink-0 border-b border-[#dec9a8] bg-[#f5ead9] px-4 py-2 text-xs text-[#654a2e]">
+            {experience.storageMessage}
+          </p>
+        )}
 
         <div
           aria-live="polite"
-          className={`mt-4 min-h-32 space-y-4 overflow-y-auto rounded-lg bg-slate-50 p-3 ${
-            popup ? "flex-1" : "mt-6 min-h-56 p-4"
+          className={`min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-5 sm:px-6 ${
+            dark ? "bg-[#17241d]" : "bg-[#fffdf8]"
           }`}
         >
           {messages.length === 0 ? (
-            <p className="py-16 text-center text-sm text-slate-500">
-              No messages yet. Describe what you have noticed.
-            </p>
-          ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <p
-                  className={`max-w-[85%] rounded-lg px-4 py-3 text-sm ${
-                    message.role === "user"
-                      ? "bg-blue-700 text-white"
-                      : "border border-slate-200 bg-white text-slate-800"
-                  }`}
-                >
-                  {message.content}
-                </p>
+            <div className="mx-auto flex min-h-full max-w-xl flex-col items-center justify-center py-10 text-center">
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-[#e8ede2] text-[#254a38]">
+                <ChatSparkIcon />
               </div>
-            ))
-          )}
+              <h2 className="text-2xl font-semibold tracking-tight">What would you like to discuss?</h2>
+              <p className="mt-3 max-w-md text-sm leading-6 text-slate-500">
+                Share one concern at a time. MediMate may ask follow-up questions and use relevant synthetic health history.
+              </p>
+            </div>
+          ) : messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              dark={dark}
+              onFeedback={experience.setFeedback}
+              onCopy={async (content) => {
+                try {
+                  await navigator.clipboard.writeText(content);
+                  setCopyStatus("Response copied.");
+                } catch {
+                  setCopyStatus("Copy is unavailable in this browser.");
+                }
+              }}
+            />
+          ))}
           {loading && (
-            <p role="status" className="text-sm text-slate-600">
-              Assistant is thinking…
+            <p role="status" className="flex items-center gap-3 text-sm text-slate-500">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-[#bd7e3e]" />
+              MediMate is preparing a response…
             </p>
           )}
         </div>
 
         {latestResponse?.status === "follow_up" && (
-          <div className="mt-4 shrink-0 rounded-lg border border-blue-200 bg-blue-50 p-4">
-            <h3 className="font-semibold text-blue-950">Helpful follow-up questions</h3>
-            <div className="mt-3 flex flex-wrap gap-2">
+          <div className={`shrink-0 border-t px-3 py-3 sm:px-5 ${dark ? "border-[#35443a]" : "border-[#e7e4da]"}`}>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Follow-up prompts</p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
               {latestResponse.followUpQuestions.map((question) => (
                 <button
                   key={question}
                   type="button"
                   onClick={() => selectFollowUpQuestion(question)}
                   disabled={loading}
-                  className="rounded-full border border-blue-300 bg-white px-3 py-2 text-left text-sm text-blue-950 hover:bg-blue-100 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="shrink-0 rounded-full border border-[#bdc8bb] px-3 py-2 text-left text-xs hover:bg-[#eff1e9] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
                 >
                   {question}
                 </button>
@@ -350,14 +481,14 @@ export function AssistantChat({
         )}
 
         {errorMessage && (
-          <div role="alert" className="mt-4 shrink-0 rounded-lg border border-red-200 bg-red-50 p-4 text-red-900">
+          <div role="alert" className="shrink-0 border-t border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
             <p>{errorMessage}</p>
-            {retryAvailable && lastSubmittedMessage && (
+            {retryAvailable && (
               <button
                 type="button"
-                onClick={() => void submitMessage(lastSubmittedMessage, { appendUserMessage: false })}
+                onClick={() => void experience.retry()}
                 disabled={loading}
-                className="mt-3 rounded-md bg-red-800 px-3 py-2 text-sm font-semibold text-white hover:bg-red-900 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-red-600"
+                className="mt-2 rounded-lg bg-red-800 px-3 py-2 text-xs font-semibold text-white hover:bg-red-900 disabled:opacity-60"
               >
                 Retry
               </button>
@@ -365,145 +496,271 @@ export function AssistantChat({
           </div>
         )}
 
+        {copyStatus && <p role="status" className="sr-only">{copyStatus}</p>}
+
         <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void submitMessage();
-          }}
-          className={`mt-4 shrink-0 ${popup ? "" : "mt-5"}`}
+          onSubmit={(event) => { event.preventDefault(); void submitMessage(); }}
+          className={`shrink-0 border-t p-3 sm:p-5 ${dark ? "border-[#35443a] bg-[#1f2c24]" : "border-[#e7e4da] bg-[#fbfaf5]"}`}
         >
-          <label htmlFor={messageInputId} className="block text-sm font-medium text-slate-800">
-            Message
-          </label>
-          <textarea
-            id={messageInputId}
-            ref={messageInputRef}
-            rows={3}
-            maxLength={2000}
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="For example: My lower back has been uncomfortable since yesterday."
-            disabled={loading}
-            className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 shadow-sm outline-none focus:ring-2 focus:ring-blue-600 disabled:bg-slate-100"
-          />
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <p className="text-xs text-slate-500">Do not enter real health information.</p>
-              <button
-                type="button"
-                onClick={() => void toggleVoiceInput()}
-                disabled={loading || requestingMicrophone}
-                aria-label={
-                  requestingMicrophone
-                    ? "Requesting microphone permission"
-                    : isListening
-                      ? "Stop voice input"
-                      : "Start voice input"
+          <label htmlFor={messageInputId} className="sr-only">Message</label>
+          <div className={`flex items-end gap-2 rounded-2xl border p-2 shadow-sm ${
+            dark ? "border-[#49574d] bg-[#17241d]" : "border-[#d7d9d0] bg-white"
+          }`}>
+            <textarea
+              id={messageInputId}
+              ref={messageInputRef}
+              rows={2}
+              maxLength={2000}
+              value={input}
+              onChange={(event) => { setInput(event.target.value); setCopyStatus(null); }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  void submitMessage();
                 }
-                aria-pressed={isListening}
-                title={
-                  requestingMicrophone
-                    ? "Requesting microphone permission"
-                    : isListening
-                      ? "Stop voice input"
-                      : "Start voice input"
-                }
-                className={`inline-flex shrink-0 items-center justify-center rounded-md border border-slate-300 text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
-                  popup ? "h-10 w-10" : "min-h-10 gap-2 px-3 py-2 text-sm font-medium"
-                }`}
-              >
-                {isListening ? (
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    className={popup ? "h-5 w-5" : "h-4 w-4"}
-                    fill="currentColor"
-                  >
-                    <rect x="7" y="7" width="10" height="10" rx="1" />
-                  </svg>
-                ) : (
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    className={popup ? "h-5 w-5" : "h-4 w-4"}
-                    fill="none"
-                  >
-                    <rect
-                      x="9"
-                      y="3"
-                      width="6"
-                      height="12"
-                      rx="3"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                    />
-                    <path
-                      d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                )}
-                {!popup && (isListening ? "Stop" : "Speak")}
-              </button>
-            </div>
+              }}
+              placeholder="Message MediMate…"
+              disabled={loading}
+              className={`min-h-12 min-w-0 flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none ${
+                dark ? "text-white placeholder:text-slate-400" : "text-slate-950 placeholder:text-slate-400"
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => void toggleVoiceInput()}
+              disabled={loading || requestingMicrophone}
+              aria-label={requestingMicrophone ? "Requesting microphone permission" : isListening ? "Stop voice input" : "Start voice input"}
+              aria-pressed={isListening}
+              title={requestingMicrophone ? "Requesting microphone permission" : isListening ? "Stop voice input" : "Start voice input"}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl hover:bg-black/5 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
+            >
+              {isListening ? <StopIcon /> : <MicrophoneIcon />}
+            </button>
             <button
               type="submit"
               aria-label={loading ? "Sending message" : "Send message"}
               title={loading ? "Sending message" : "Send message"}
-              disabled={
-                loading ||
-                input.trim().length === 0 ||
-                (retryAvailable && lastSubmittedMessage === input.trim())
-              }
-              className={`ml-auto inline-flex items-center justify-center rounded-md bg-blue-700 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
-                popup ? "h-10 w-10 shrink-0" : "min-h-10 px-4 py-2.5"
-              }`}
-            >
-              {popup ? (
-                <>
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    className="h-5 w-5"
-                    fill="none"
-                  >
-                    <path
-                      d="m22 2-7 20-4-9-9-4Z"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M22 2 11 13"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <span className="sr-only">{loading ? "Sending…" : "Send message"}</span>
-                </>
-              ) : (
-                loading ? "Sending…" : "Send message"
+              disabled={loading || input.trim().length === 0 || (
+                retryAvailable
+                && messages[messages.length - 1]?.role === "user"
+                && messages[messages.length - 1]?.content === input.trim()
               )}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#254a38] text-white hover:bg-[#1d3d2e] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
+            >
+              <SendIcon />
             </button>
           </div>
-          {voiceStatus && (
-            <p role="status" className="mt-2 text-xs text-slate-600">
-              {voiceStatus}
-            </p>
-          )}
+          <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+            <span>{voiceStatus ?? "Synthetic demo only · do not enter real health information."}</span>
+            <span>{input.length}/2000</span>
+          </div>
         </form>
       </section>
     </div>
   );
 }
 
-function AssistantResult({ response }: { response: ChatResponse | null }) {
+function MessageBubble({
+  message,
+  dark,
+  onFeedback,
+  onCopy,
+}: {
+  message: AssistantChatMessage;
+  dark: boolean;
+  onFeedback: (messageId: string, feedback: "helpful" | "not-helpful") => void;
+  onCopy: (content: string) => void;
+}) {
+  const isUser = message.role === "user";
+  const isUrgent = message.response?.status === "urgent";
+  return (
+    <article className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
+      {!isUrgent && (
+        <div
+          className={`max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-6 sm:max-w-[85%] ${
+            isUser
+              ? "rounded-br-md bg-[#254a38] text-white"
+              : dark ? "rounded-bl-md bg-[#26372c] text-slate-100" : "rounded-bl-md bg-[#f1f0e9] text-[#24352d]"
+          }`}
+        >
+          <MarkdownMessage content={message.content} />
+        </div>
+      )}
+      {!isUser && (
+        <div className="mt-1 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onCopy(message.content)}
+            aria-label="Copy response"
+            title="Copy response"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
+          >
+            <Icon name="copy" />
+          </button>
+          {message.response && (
+            <>
+              <button
+                type="button"
+                onClick={() => onFeedback(message.id, "helpful")}
+                aria-label="Mark response helpful"
+                aria-pressed={message.feedback === "helpful"}
+                title="Helpful"
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e] ${
+                  message.feedback === "helpful" ? "text-[#276847]" : "text-slate-500"
+                }`}
+              >
+                <Icon name="thumbs-up" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onFeedback(message.id, "not-helpful")}
+                aria-label="Mark response not helpful"
+                aria-pressed={message.feedback === "not-helpful"}
+                title="Not helpful"
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e] ${
+                  message.feedback === "not-helpful" ? "text-[#8b3c2f]" : "text-slate-500"
+                }`}
+              >
+                <Icon name="thumbs-down" />
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {!isUser && message.response && (
+        <div className="mt-3 w-full max-w-3xl">
+          <AssistantResult response={message.response} dark={dark} />
+        </div>
+      )}
+    </article>
+  );
+}
+
+function MarkdownMessage({ content }: { content: string }) {
+  const lines = content.split(/\r?\n/);
+  const blocks: ReactNode[] = [];
+  let paragraph: string[] = [];
+  let list: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraph.length === 0) return;
+    blocks.push(<p key={`p-${blocks.length}`}>{renderInline(paragraph.join(" "))}</p>);
+    paragraph = [];
+  };
+  const flushList = () => {
+    if (list.length === 0) return;
+    blocks.push(
+      <ul key={`ul-${blocks.length}`} className="list-disc space-y-1 pl-5">
+        {list.map((item, index) => <li key={`${blocks.length}-${index}`}>{renderInline(item)}</li>)}
+      </ul>,
+    );
+    list = [];
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    const fence = line.match(/^```([a-z0-9+#.-]{0,24})\s*$/i);
+    if (fence) {
+      flushParagraph();
+      flushList();
+      const codeLines: string[] = [];
+      index += 1;
+      while (index < lines.length && !/^```\s*$/.test(lines[index] ?? "")) {
+        codeLines.push(lines[index] ?? "");
+        index += 1;
+      }
+      blocks.push(
+        <div key={`code-${blocks.length}`} className="overflow-hidden rounded-xl border border-slate-700 bg-[#17211b] text-slate-100">
+          {fence[1] && <p className="border-b border-slate-700 px-3 py-1 text-[10px] uppercase tracking-wide text-slate-400">{fence[1]}</p>}
+          <pre className="overflow-x-auto p-4 text-xs leading-5"><code>{codeLines.join("\n")}</code></pre>
+        </div>,
+      );
+      continue;
+    }
+
+    const heading = line.match(/^#{1,3}\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      blocks.push(<h3 key={`h-${blocks.length}`} className="text-base font-semibold">{renderInline(heading[1] ?? "")}</h3>);
+    } else if (/^\s*[-*]\s+/.test(line)) {
+      flushParagraph();
+      list.push(line.replace(/^\s*[-*]\s+/, ""));
+    } else if (!line.trim()) {
+      flushParagraph();
+      flushList();
+    } else {
+      flushList();
+      paragraph.push(line);
+    }
+  }
+  flushParagraph();
+  flushList();
+
+  return <div className="space-y-3 break-words">{blocks}</div>;
+}
+
+function renderInline(text: string): ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return <code key={index} className="rounded bg-black/10 px-1 py-0.5 font-mono text-[0.9em]">{part.slice(1, -1)}</code>;
+    }
+    if (part.startsWith("*") && part.endsWith("*")) {
+      return <em key={index}>{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
+}
+
+type IconName =
+  | "menu" | "plus" | "close" | "pencil" | "trash" | "sun" | "moon"
+  | "chat" | "microphone" | "stop" | "send" | "copy" | "thumbs-up" | "thumbs-down";
+
+function Icon({ name }: { name: IconName }) {
+  const paths: Record<IconName, ReactNode> = {
+    menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
+    plus: <><path d="M12 5v14M5 12h14" /></>,
+    close: <><path d="m6 6 12 12M18 6 6 18" /></>,
+    pencil: <><path d="m4 16.5-.8 4.3 4.3-.8L20 7.5 16.5 4 4 16.5Z" /><path d="m14.5 6 3.5 3.5" /></>,
+    trash: <><path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3" /></>,
+    sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></>,
+    moon: <><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5 8.5 8.5 0 1 0 20.5 14.5Z" /></>,
+    chat: <><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2 1-4a7.5 7.5 0 1 1 16-5.5Z" /><path d="M8 11h.01M12 11h.01M16 11h.01" /></>,
+    microphone: <><rect x="9" y="3" width="6" height="12" rx="3" /><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8" /></>,
+    stop: <><rect x="6" y="6" width="12" height="12" rx="2" /></>,
+    send: <><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></>,
+    copy: <><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" /></>,
+    "thumbs-up": <><path d="M7 10v11H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3Zm0 0 5-8c2 0 3 2 2 4l-1 4h6a2 2 0 0 1 2 2l-1 7a2 2 0 0 1-2 2H7" /></>,
+    "thumbs-down": <><path d="M7 14V3H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3Zm0 0 5 8c2 0 3-2 2-4l-1-4h6a2 2 0 0 0 2-2l-1-7a2 2 0 0 0-2-2H7" /></>,
+  };
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      {paths[name]}
+    </svg>
+  );
+}
+
+function MenuIcon() { return <Icon name="menu" />; }
+function PlusIcon() { return <Icon name="plus" />; }
+function CloseIcon() { return <Icon name="close" />; }
+function PencilIcon() { return <Icon name="pencil" />; }
+function TrashIcon() { return <Icon name="trash" />; }
+function SunIcon() { return <Icon name="sun" />; }
+function MoonIcon() { return <Icon name="moon" />; }
+function ChatSparkIcon() { return <Icon name="chat" />; }
+function MicrophoneIcon() { return <Icon name="microphone" />; }
+function StopIcon() { return <Icon name="stop" />; }
+function SendIcon() { return <Icon name="send" />; }
+
+function AssistantResult({ response, dark = false }: { response: ChatResponse | null; dark?: boolean }) {
   if (!response) {
     return (
-      <aside className="rounded-xl border border-dashed border-slate-300 p-6 text-sm text-slate-600">
+      <aside className={`rounded-xl border border-dashed p-6 text-sm ${dark ? "border-slate-600 text-slate-300" : "border-slate-300 text-slate-600"}`}>
         Your follow-up questions and educational assessment will appear here.
       </aside>
     );
@@ -513,7 +770,7 @@ function AssistantResult({ response }: { response: ChatResponse | null }) {
     return (
       <aside
         role="alert"
-        className="h-fit rounded-xl border-2 border-red-600 bg-red-50 p-6 text-red-950 shadow-sm"
+        className={`h-fit rounded-xl border-2 border-red-600 p-6 shadow-sm ${dark ? "bg-red-950 text-red-50" : "bg-red-50 text-red-950"}`}
       >
         <p className="text-sm font-bold uppercase tracking-wide">Urgent safety guidance</p>
         <h2 className="mt-2 text-xl font-semibold">Please seek professional help</h2>
@@ -525,7 +782,7 @@ function AssistantResult({ response }: { response: ChatResponse | null }) {
 
   if (response.status === "follow_up") {
     return (
-      <aside className="h-fit rounded-xl border border-blue-200 bg-blue-50 p-6 text-blue-950">
+      <aside className={`h-fit rounded-xl border p-6 ${dark ? "border-blue-900 bg-blue-950 text-blue-50" : "border-blue-200 bg-blue-50 text-blue-950"}`}>
         <h2 className="text-xl font-semibold">More information needed</h2>
         <p className="mt-2 text-sm">
           The assistant is asking focused questions before offering an educational summary.
@@ -538,27 +795,29 @@ function AssistantResult({ response }: { response: ChatResponse | null }) {
   if (!assessment) return null;
 
   return (
-    <aside className="h-fit space-y-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+    <aside className={`h-fit space-y-5 rounded-xl border p-5 shadow-sm sm:p-6 ${
+      dark ? "border-[#35443a] bg-[#1f2c24] text-slate-100" : "border-slate-200 bg-white text-slate-950"
+    }`}>
       <div>
-        <p className="text-sm font-medium text-blue-700">Educational assessment</p>
+        <p className={`text-sm font-medium ${dark ? "text-blue-300" : "text-blue-700"}`}>Educational assessment</p>
         <h2 className="mt-1 text-xl font-semibold">What the information may suggest</h2>
-        <p className="mt-3 text-slate-700">{assessment.summary}</p>
+        <p className={`mt-3 ${dark ? "text-slate-200" : "text-slate-700"}`}>{assessment.summary}</p>
       </div>
 
-      <section aria-labelledby="explanations-heading">
-        <h3 id="explanations-heading" className="font-semibold">Possible explanations to discuss with a clinician</h3>
+      <section aria-label="Possible explanations">
+        <h3 className="font-semibold">Possible explanations to discuss with a clinician</h3>
         <div className="mt-3 space-y-4">
-          {assessment.possibleExplanations.map((explanation) => (
-            <article key={explanation.title} className="rounded-lg border border-slate-200 p-4">
+          {assessment.possibleExplanations.map((explanation, index) => (
+            <article key={`${explanation.title}-${index}`} className={`rounded-lg border p-4 ${dark ? "border-[#49574d]" : "border-slate-200"}`}>
               <h4 className="font-medium">{explanation.title}</h4>
-              <p className="mt-2 text-sm text-slate-600">{explanation.whyItMayBeRelevant}</p>
+              <p className={`mt-2 text-sm ${dark ? "text-slate-300" : "text-slate-600"}`}>{explanation.whyItMayBeRelevant}</p>
               {explanation.supportingHistory.length > 0 && (
-                <div className="mt-3 border-t border-slate-100 pt-3">
+                <div className={`mt-3 border-t pt-3 ${dark ? "border-[#35443a]" : "border-slate-100"}`}>
                   <h5 className="text-sm font-semibold">Historical observations used</h5>
-                  <ul className="mt-2 space-y-2 text-sm text-slate-600">
+                  <ul className={`mt-2 space-y-2 text-sm ${dark ? "text-slate-300" : "text-slate-600"}`}>
                     {explanation.supportingHistory.map((history) => (
                       <li key={`${history.logId}-${history.date}`}>
-                        <time dateTime={history.date} className="font-medium text-slate-800">{history.date}</time>
+                        <time dateTime={history.date} className={`font-medium ${dark ? "text-slate-100" : "text-slate-800"}`}>{history.date}</time>
                         : {history.observation}
                       </li>
                     ))}
@@ -568,7 +827,7 @@ function AssistantResult({ response }: { response: ChatResponse | null }) {
               {explanation.unknowns.length > 0 && (
                 <div className="mt-3">
                   <h5 className="text-sm font-semibold">Unknowns</h5>
-                  <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                  <ul className={`mt-1 list-disc space-y-1 pl-5 text-sm ${dark ? "text-slate-300" : "text-slate-600"}`}>
                     {explanation.unknowns.map((unknown) => <li key={unknown}>{unknown}</li>)}
                   </ul>
                 </div>
@@ -578,16 +837,16 @@ function AssistantResult({ response }: { response: ChatResponse | null }) {
         </div>
       </section>
 
-      <section aria-labelledby="next-steps-heading">
-        <h3 id="next-steps-heading" className="font-semibold">Next steps</h3>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+      <section aria-label="Next steps">
+        <h3 className="font-semibold">Next steps</h3>
+        <ul className={`mt-2 list-disc space-y-1 pl-5 text-sm ${dark ? "text-slate-200" : "text-slate-700"}`}>
           {assessment.nextSteps.map((step) => <li key={step}>{step}</li>)}
         </ul>
       </section>
 
       {assessment.sources.length > 0 && (
-        <section aria-labelledby="sources-heading">
-          <h3 id="sources-heading" className="font-semibold">References</h3>
+        <section aria-label="References">
+          <h3 className="font-semibold">References</h3>
           <ul className="mt-2 space-y-2 text-sm">
             {assessment.sources.map((source) => (
               <li key={source.url}>
@@ -595,18 +854,18 @@ function AssistantResult({ response }: { response: ChatResponse | null }) {
                   href={source.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-blue-700 underline hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className={dark ? "text-blue-300 underline hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-300" : "text-blue-700 underline hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-600"}
                 >
                   {source.title}
                 </a>
-                <span className="text-slate-600"> — {source.publisher}</span>
+                <span className={dark ? "text-slate-300" : "text-slate-600"}> — {source.publisher}</span>
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      <p className="border-t border-slate-200 pt-4 text-sm font-medium text-slate-700">
+      <p className={`border-t pt-4 text-sm font-medium ${dark ? "border-[#49574d] text-slate-200" : "border-slate-200 text-slate-700"}`}>
         {assessment.disclaimer}
       </p>
     </aside>

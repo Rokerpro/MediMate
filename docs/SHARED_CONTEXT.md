@@ -7,7 +7,7 @@ This is the combined source of truth for both coding AIs. Naming: `docs/AI_A.md`
 ## Current repository state
 
 - `main` at `feb2db0` contains the merged health summary, trends, navigation polish, reminders UI and API, reminder migration, prescription explainer, landing page, assistant popup, mobile navigation, and route preloader.
-- The current follow-up branch is `fix/assistant-popup-controls`, based on `feb2db0`; it aligns the desktop popup with its launcher, makes popup voice/send controls icon-only, and explicitly requests microphone permission before recognition.
+- The current follow-up branch is `feat/assistant-experience`, based on `fix/assistant-popup-controls` at `9ac7866`; it rebuilds popup and full-page chat around persistent browser-local conversation state while preserving the existing synchronous API and safety rendering.
 - PR #2 (`feat/health-insights-journey`: PR #1 review fixes `ad87a1f`, Personal Health Insights `09ebb8b`, Interactive Health Journey `bbfdd5e`) was reviewed and merged by Person A on 2026-11-14, together with the backend past-conversations endpoint (`cd73b88`), safety scorecard (`77e37a9`), security headers (`3962e9d`) and the dose-question fix (`1312d70`). Checks on the merged tree: lint, typecheck, build, 202 tests, scorecard 134/134.
 - The app is a Next.js 16.4.6 App Router application using React 19.3, TypeScript, Tailwind 4.3, Zod 4.6, Supabase PostgreSQL, and a server-side Groq-compatible AI provider.
 - Node.js `>=22.18` is required.
@@ -64,6 +64,7 @@ Main user flows:
 - Assistant requests can be rate-limited with HTTP 429 `RATE_LIMITED`; the server returns a `Retry-After` header and does not persist the failed turn.
 - Public landing page: `/` now presents the product story, real features, safety boundaries, workflow, FAQ, and entry CTA; `/dashboard` remains the app workspace.
 - The responsive assistant popup appears on the landing page and app pages except `/assistant`, where the dedicated full-page chat remains unobstructed. Desktop uses a bottom-right launcher with a panel right-aligned above it; mobile uses a full-screen, animated dialog with focus management and a close control.
+- `/assistant` and the popup share the app-shell conversation provider; conversations, theme, and local chat actions persist in the current browser (`medimate-assistant-experience-v1`). The landing-page popup has its own provider instance and restores the same saved browser state on mount.
 - The popup reuses `AssistantChat` and the existing API. Its optional browser speech-to-text requests microphone permission before recognition, stops the permission stream immediately, and appends recognized words to the composer for review; sending remains a user action, and unsupported browsers or denied permission fall back to typing. Closing during a pending permission request prevents recognition from starting. Voice recognition is browser-provided, so users must continue using synthetic data only.
 - App navigation keeps its desktop links and uses a full-screen hamburger overlay on mobile, with Escape handling, focus containment, scroll locking, and a close control.
 - Internal route changes and browser back/forward navigation display a branded full-screen preloader for at least one second and until tracked frontend API requests settle. It has a 30-second failsafe; API activity tracking is in `src/lib/api-client.ts`.
@@ -97,6 +98,7 @@ Required behavior:
 - The prescription explainer page was tested at 375px with no horizontal overflow. It always shows the API guidance and source after a successful response, including when no terms are recognized.
 - Assistant `RATE_LIMITED` (429) is retryable; the chat retains the failed text, shows the server message, and retries without duplicating its transcript entry.
 - `AssistantChat` supports page and popup presentation variants without duplicating chat state/API logic. Browser speech recognition is optional, announces unsupported/permission failures, and never auto-sends recognized text.
+- The expanded assistant UI supports local create/search/switch/rename/remove, theme selection, copy, local response feedback, and safe basic Markdown. Removing a local conversation does not delete a server record. The current API is synchronous and does not provide streaming/cancellation, transcript retrieval, attachment upload, true edit/regenerate, server-side feedback, or syntax highlighting; the UI does not claim these features.
 - Prescription example wording and the landing-page curated-source label were updated per PR #1 review; Send is disabled when it would duplicate text awaiting assistant Retry.
 
 ## Testing and delivery
@@ -117,6 +119,8 @@ For `feat/chatbot-popup`, lint, typecheck, all 204 tests, and the production bui
 For `fix/assistant-popup-controls`, browser checks verified desktop panel alignment above the launcher, mobile full-screen layout without horizontal overflow, icon-only popup Speak/Send controls with accessible names, and text-labelled controls on `/assistant`. Mocked `getUserMedia` confirmed the permission request, immediate track release before recognition, denied-permission feedback, and cancellation when closed during a pending request. The harness did not display a real operating-system permission prompt or provide a real speech-recognition service.
 
 For mobile navigation and the route preloader, lint, typecheck, all 204 tests, and the production build passed. Browser checks at 375×812 verified the full-screen navigation overlay, Escape and close-button behavior, focus return, scroll locking, and no horizontal overflow. Desktop links remain visible without the hamburger. Route navigation showed the branded preloader for at least one second and until tracked page API requests settled.
+
+For `feat/assistant-experience`, lint, typecheck, all 204 tests, and production build pass. Browser checks verified mocked follow-up rendering, local persistence across reloads, rename, popup/page continuity, desktop popup alignment, responsive mobile sizing, and mocked microphone permission/recognition behavior. The API limitations listed above remain intentional.
 
 Use short-lived feature branches, focused Conventional Commits, explicit `git add` paths, and no force-pushes. Merge only after the other AI reviews changed files and the checks pass.
 

@@ -78,7 +78,7 @@ export function AssistantChatPopup() {
       panel.querySelectorAll<HTMLElement>(
         'a[href], button:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
       ),
-    ).filter((element) => !element.hasAttribute("inert"));
+    ).filter((element) => !element.closest("[inert]"));
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
 
@@ -117,28 +117,11 @@ export function AssistantChatPopup() {
             : "pointer-events-none translate-y-full opacity-0 md:translate-y-4 md:scale-95"
         }`}
       >
-        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-3">
-          <div>
-            <p className="font-semibold text-slate-950">MediMate assistant</p>
-            <p className="text-xs text-slate-600">Educational information, not a diagnosis</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsOpen(false)}
-            aria-label="Close assistant chat"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
-          >
-            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none">
-              <path
-                d="m6 6 12 12M18 6 6 18"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-        </div>
-        <AssistantChat variant="popup" active={isOpen} />
+        <AssistantChat
+          variant="popup"
+          active={isOpen}
+          onClose={() => setIsOpen(false)}
+        />
       </section>
 
       <button
