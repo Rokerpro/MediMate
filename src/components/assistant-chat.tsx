@@ -200,7 +200,11 @@ export function AssistantChat() {
             <p className="text-xs text-slate-500">Do not enter real health information.</p>
             <button
               type="submit"
-              disabled={loading || input.trim().length === 0}
+              disabled={
+                loading ||
+                input.trim().length === 0 ||
+                (retryAvailable && lastSubmittedMessage === input.trim())
+              }
               className="rounded-md bg-blue-700 px-4 py-2.5 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-600"
             >
               {loading ? "Sending…" : "Send message"}
