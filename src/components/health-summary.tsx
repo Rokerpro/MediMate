@@ -149,12 +149,12 @@ export function HealthSummary() {
         <p className="mt-2 text-xs text-slate-500">Counts of what was recorded. They do not show what caused any symptom.</p>
       </Section>
 
-      <Section title={`Recent history (last ${TREND_DAYS} days)`}>
+      <Section title={`Recent history (last ${TREND_DAYS} days)`} avoidBreak={false}>
         {windowLogs.length === 0 ? (
           <p className="text-sm text-slate-600">No entries.</p>
         ) : (
           <div className="overflow-x-auto print:overflow-visible">
-            <table className="w-full min-w-[40rem] border-collapse text-left text-sm print:min-w-0">
+            <table className="w-full min-w-[40rem] table-fixed border-collapse text-left text-sm print:min-w-0 print:text-[9px]">
               <thead>
                 <tr className="border-b border-slate-300 text-slate-700">
                   <th scope="col" className="py-2 pr-3 font-semibold">Date</th>
@@ -169,20 +169,20 @@ export function HealthSummary() {
               <tbody>
                 {windowLogs.map((log) => (
                   <tr key={log.id} className="border-b border-slate-100 align-top print:break-inside-avoid">
-                    <td className="py-2 pr-3 whitespace-nowrap">{formatDate(log.loggedAt)}</td>
-                    <td className="py-2 pr-3">
+                    <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">{formatDate(log.loggedAt)}</td>
+                    <td className="py-2 pr-3 break-words">
                       {log.symptoms}
                       {log.painLocation && <span className="text-slate-500"> ({log.painLocation})</span>}
                       {log.notes && <span className="block text-xs text-slate-500">{log.notes}</span>}
                     </td>
-                    <td className="py-2 pr-3 whitespace-nowrap">{log.painLevel !== null ? `${log.painLevel}/10` : "—"}</td>
-                    <td className="py-2 pr-3 whitespace-nowrap">
+                    <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">{log.painLevel !== null ? `${log.painLevel}/10` : "—"}</td>
+                    <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">
                       {sleepText(log.sleepDurationMinutes)}
                       {log.sleepQuality !== null && <span className="text-slate-500"> ({log.sleepQuality}/5)</span>}
                     </td>
-                    <td className="py-2 pr-3 whitespace-nowrap">{log.waterMl !== null ? `${log.waterMl} ml` : "—"}</td>
-                    <td className="py-2 pr-3 whitespace-nowrap">{log.activityMinutes !== null ? `${log.activityMinutes} min` : "—"}</td>
-                    <td className="py-2">{log.mood ?? "—"}</td>
+                    <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">{log.waterMl !== null ? `${log.waterMl} ml` : "—"}</td>
+                    <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">{log.activityMinutes !== null ? `${log.activityMinutes} min` : "—"}</td>
+                    <td className="py-2 break-words">{log.mood ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -199,9 +199,21 @@ export function HealthSummary() {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+  avoidBreak = true,
+}: {
+  title: string;
+  children: React.ReactNode;
+  avoidBreak?: boolean;
+}) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm print:break-inside-avoid print:border-slate-300 print:p-3 print:shadow-none">
+    <section
+      className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm ${
+        avoidBreak ? "print:break-inside-avoid" : ""
+      } print:border-slate-300 print:p-3 print:shadow-none`}
+    >
       <h2 className="mb-3 text-lg font-semibold text-slate-900">{title}</h2>
       {children}
     </section>

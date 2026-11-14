@@ -105,7 +105,7 @@ export function HealthTrends({ logs, now }: { logs: readonly HealthLog[]; now?: 
   const sleepMax = Math.ceil(maxSleep / 2) * 2;
   return (
     <div className="space-y-2">
-      <div className="grid gap-4 md:grid-cols-2 print:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <TrendChart
           title="Pain level"
           unitLabel="0–10, highest recorded each day"
