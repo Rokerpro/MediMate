@@ -22,6 +22,7 @@ Read with `docs/SHARED_CONTEXT.md`, `docs/AI_A.md`, `CLAUDE.md`, `docs/API_CONTR
 - `src/lib/supabase/assistant-store.ts`: profile, recent logs, sessions and messages for the chat route.
 - `src/app/api/_lib/responses.ts`: `apiError`, `validationError` (first 3 Zod issues), `readJsonBody` (20,000-char limit, malformed JSON → 400), `internalError` (logs a content-free summary, returns a generic 500).
 - Demo access model: one fixed profile `00000000-0000-4000-8000-000000000001` (`DEMO_PROFILE_ID`). Every RLS policy uses `public.is_medimate_demo_profile(...)`. Routes never accept a profile id from the client.
+- Security headers (`next.config.ts`): `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, a restrictive `Permissions-Policy` on every route, and `Cache-Control: no-store` on `/api/*`. No CSP yet (Next.js inline scripts would need nonces).
 - Server-only env vars (names only): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `AI_PROVIDER` (`groq` | `gemini` | `mock`), `GROQ_API_KEY`, `GROQ_MODEL` (optional), `GEMINI_API_KEY`, `GEMINI_MODEL`. Never prefix with `NEXT_PUBLIC_`. Production uses `AI_PROVIDER=groq` (free tier, ~8,000 tokens/min).
 - AI adapters: `src/lib/ai/client.ts` selects the provider; `openai-compatible.ts` serves Groq and Gemini; `mock-provider.ts` gives offline replies marked "[Mock]".
 
