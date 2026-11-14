@@ -62,6 +62,8 @@ Main user flows:
 - Prescription explainer: deterministic endpoint `/api/prescriptions/explain` (no AI, nothing stored; contract §3b), surfaced at `/prescriptions` with a shared-schema client method and accessible result cards.
 - Assistant requests can be rate-limited with HTTP 429 `RATE_LIMITED`; the server returns a `Retry-After` header and does not persist the failed turn.
 - Public landing page: `/` now presents the product story, real features, safety boundaries, workflow, FAQ, and entry CTA; `/dashboard` remains the app workspace.
+- The responsive assistant popup appears on the landing page and app pages except `/assistant`, where the dedicated full-page chat remains unobstructed. Desktop uses a bottom-right launcher and bottom-left panel; mobile uses a full-screen, animated dialog with focus management and a close control.
+- The popup reuses `AssistantChat` and the existing API. Its optional browser speech-to-text appends recognized words to the composer for review; sending remains a user action, and unsupported browsers fall back to typing. Voice recognition is browser-provided, so users must continue using synthetic data only.
 
 ## Contract and schema rules
 
@@ -91,6 +93,7 @@ Required behavior:
 - The reminders page was tested at 375px with no horizontal overflow and through create → confirm → pause → resume → edit → delete. The temporary test reminder was deleted.
 - The prescription explainer page was tested at 375px with no horizontal overflow. It always shows the API guidance and source after a successful response, including when no terms are recognized.
 - Assistant `RATE_LIMITED` (429) is retryable; the chat retains the failed text, shows the server message, and retries without duplicating its transcript entry.
+- `AssistantChat` supports page and popup presentation variants without duplicating chat state/API logic. Browser speech recognition is optional, announces unsupported/permission failures, and never auto-sends recognized text.
 - Prescription example wording and the landing-page curated-source label were updated per PR #1 review; Send is disabled when it would duplicate text awaiting assistant Retry.
 
 ## Testing and delivery
@@ -105,6 +108,8 @@ npm run build
 ```
 
 The latest checks on `feat/health-insights-journey` passed: lint, typecheck, build, and all 188 tests. Browser checks at a 375px configured viewport found no horizontal overflow on `/dashboard`, `/logs`, or `/summary`; Dashboard charts and linked insights rendered, and the timeline showed Today then Yesterday with pain/sleep indicators and a `/summary` link. The summary contained the synthetic-data notice, charts, and table. Print media could not be verified in the browser harness because `page.emulateMedia({ media: "print" })` did not make `matchMedia("print").matches` true; confirm the print-specific layout in a real browser preview. Browser validation remains required for future UI changes, including async loading/error/empty states where practical.
+
+For `feat/chatbot-popup`, lint, typecheck, all 204 tests, and the production build passed. Local browser checks verified desktop placement, the full-screen mobile dialog at 375px without horizontal overflow, focus return and scroll restoration after close, and no popup launcher on the dedicated `/assistant` page. Mocked speech recognition verified unsupported-browser feedback and transcript insertion without automatic sending; actual microphone permission/service behavior was not tested.
 
 Use short-lived feature branches, focused Conventional Commits, explicit `git add` paths, and no force-pushes. Merge only after the other AI reviews changed files and the checks pass.
 

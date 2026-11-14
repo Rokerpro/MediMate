@@ -27,7 +27,7 @@ Integrated UI stretch work:
 - User-controlled in-app reminders at `/reminders`.
 - Dashboard health insights and a date-grouped health-log timeline.
 
-Out of scope: diagnosis, probabilities, disease prediction, image analysis, voice, wearables, native apps, push/SMS/email notifications, model training, vector search, and broad web crawling.
+Out of scope: diagnosis, probabilities, disease prediction, image analysis, voice assistants/audio output, wearables, native apps, push/SMS/email notifications, model training, vector search, and broad web crawling. Browser speech-to-text is available only as an input method for the existing assistant.
 
 ## Architecture
 
@@ -136,6 +136,14 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 - On a retryable assistant error, keeps the submitted text in the message field and shows the server error message with a Retry action.
 - Retrying resends the same message without appending another user transcript entry; the field clears only after a successful response.
 
+### Responsive assistant popup and voice input
+
+- `src/components/assistant-chat-popup.tsx` adds a floating launcher throughout the public landing page and app shell, except `/assistant`, where the dedicated full-page chat remains unobstructed.
+- Desktop uses a bottom-right launcher and bottom-left chat panel. On narrow screens the panel fills the viewport, animates in/out, locks background scrolling, traps keyboard focus, and has an explicit SVG close control.
+- The popup renders the existing `AssistantChat` component and uses the existing chat API, response rendering, retry behavior, and safety guidance; it does not introduce another chat implementation.
+- `AssistantChat` offers optional browser speech-to-text. Recognition is feature-detected when used; unsupported browsers and permission/start errors get a text-entry fallback. Recognized words are appended to the composer and are never sent automatically. The UI tells users their browser handles recognition and reminds them not to enter real health information.
+- Urgent guidance is prioritized above the popup conversation. The launcher and panel are hidden in print.
+
 ### Printable summary
 
 `src/components/health-summary.tsx`, `src/components/health-trends.tsx`, and `/summary`:
@@ -208,6 +216,8 @@ The reminders UI was tested in the browser at 375px:
 The temporary test reminder was confirmed absent from the API list afterward. The final checks passed: lint, typecheck, build, and 160 tests.
 
 For `feat/health-insights-journey`, lint, typecheck, build, and all 188 tests passed. Browser checks at a 375px configured viewport found no horizontal overflow on `/dashboard`, `/logs`, or `/summary`; the dashboard showed both charts and linked stat tiles, and the timeline showed Today then Yesterday with the expected pain/sleep formatting and a summary link. The `/summary` page showed its synthetic-data notice, charts, and history table. Print CSS could not be verified in the browser harness because `page.emulateMedia({ media: "print" })` left `matchMedia("print").matches` false; use a real browser print preview before confirming print-specific behavior.
+
+For `feat/chatbot-popup`, lint, typecheck, all 204 tests, and the production build passed. Local browser checks verified the desktop split placement, the full-screen mobile dialog at 375px without horizontal overflow, focus return and scroll restoration on close, and that `/assistant` remains a dedicated full-page chat. A mocked SpeechRecognition verified both the unsupported-browser message and transcript insertion without automatic sending; real microphone permission/service behavior was not exercised.
 
 ## Pending work and coordination
 

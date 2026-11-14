@@ -1,8 +1,35 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChatResponse } from "@/lib/validations";
 import { ApiClientError, sendAssistantMessage } from "@/lib/api-client";
+
+type SpeechRecognitionResultLike = ArrayLike<{ transcript: string }> & { isFinal: boolean };
+
+type SpeechRecognitionEventLike = {
+  resultIndex: number;
+  results: ArrayLike<SpeechRecognitionResultLike>;
+};
+
+type SpeechRecognitionErrorLike = { error: string };
+
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorLike) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+type SpeechRecognitionWindow = Window & {
+  SpeechRecognition?: SpeechRecognitionConstructor;
+  webkitSpeechRecognition?: SpeechRecognitionConstructor;
+};
 
 type ChatMessage = {
   id: string;
@@ -14,7 +41,13 @@ function makeMessageId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function AssistantChat() {
+export function AssistantChat({
+  variant = "page",
+  active = true,
+}: {
+  variant?: "page" | "popup";
+  active?: boolean;
+}) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -23,7 +56,15 @@ export function AssistantChat() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryAvailable, setRetryAvailable] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState<string | null>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const messageInputId = variant === "popup" ? "assistant-popup-message" : "assistant-message";
+
+  useEffect(() => {
+    if (!active && isListening) recognitionRef.current?.stop();
+  }, [active, isListening]);
 
   async function submitMessage(
     message = input,
@@ -32,6 +73,7 @@ export function AssistantChat() {
     const trimmedMessage = message.trim();
     if (!trimmedMessage || loading) return;
 
+    if (isListening) recognitionRef.current?.stop();
     setErrorMessage(null);
     setRetryAvailable(false);
     setLastSubmittedMessage(trimmedMessage);
@@ -68,6 +110,7 @@ export function AssistantChat() {
   }
 
   function startOver() {
+    if (isListening) recognitionRef.current?.stop();
     setSessionId(null);
     setMessages([]);
     setLatestResponse(null);
@@ -82,20 +125,116 @@ export function AssistantChat() {
     requestAnimationFrame(() => messageInputRef.current?.focus());
   }
 
-  return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]">
-      <div className="lg:col-start-2 lg:row-start-1">
-        <AssistantResult response={latestResponse} />
-      </div>
+  function toggleVoiceInput() {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      return;
+    }
 
-      <section className="lg:col-start-1 lg:row-start-1 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold">Conversation</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Share one concern at a time. This demo provides educational information, not a diagnosis.
-            </p>
-          </div>
+    const speechWindow = window as SpeechRecognitionWindow;
+    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      setVoiceStatus("Voice input is not supported in this browser. You can type your message instead.");
+      return;
+    }
+
+    const recognition = new Recognition();
+    let hasTranscript = false;
+    let hasError = false;
+    recognition.lang = navigator.language;
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.onresult = (event) => {
+      const transcript: string[] = [];
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        if (result?.isFinal && result[0]) transcript.push(result[0].transcript);
+      }
+      if (transcript.length > 0) {
+        hasTranscript = true;
+        const spokenText = transcript.join(" ").trim();
+        setInput((current) =>
+          `${current.trimEnd()}${current.trim() ? " " : ""}${spokenText}`.slice(0, 2000),
+        );
+        setVoiceStatus("Speech added to your message. Review it before sending.");
+      }
+    };
+    recognition.onerror = (event) => {
+      hasError = true;
+      if (recognitionRef.current === recognition) {
+        recognitionRef.current = null;
+        setIsListening(false);
+      }
+      setVoiceStatus(
+        event.error === "not-allowed" || event.error === "service-not-allowed"
+          ? "Microphone access was not allowed. You can type your message instead."
+          : "Voice input could not be completed. You can type your message instead.",
+      );
+    };
+    recognition.onend = () => {
+      if (recognitionRef.current === recognition) {
+        recognitionRef.current = null;
+        setIsListening(false);
+      }
+      if (!hasTranscript && !hasError) {
+        setVoiceStatus("No speech was recognized. Try again or type your message.");
+      }
+    };
+
+    recognitionRef.current = recognition;
+    setVoiceStatus("Listening… Your browser handles speech recognition. Review the text before sending.");
+    setIsListening(true);
+    try {
+      recognition.start();
+    } catch (error) {
+      recognitionRef.current = null;
+      setIsListening(false);
+      if (!(error instanceof DOMException)) throw error;
+      setVoiceStatus("Voice input could not start. Check microphone access or type your message instead.");
+    }
+  }
+
+  const popup = variant === "popup";
+  const urgentPopupResponse = popup && latestResponse?.status === "urgent";
+
+  return (
+    <div
+      className={
+        popup
+          ? "flex min-h-0 flex-1 flex-col gap-3 p-3"
+          : "grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]"
+      }
+    >
+      {(latestResponse || !popup) && (
+        <div
+          className={
+            popup
+              ? urgentPopupResponse
+                ? "order-1 shrink-0"
+                : "order-2 max-h-[35%] shrink-0 overflow-y-auto"
+              : "lg:col-start-2 lg:row-start-1"
+          }
+        >
+          <AssistantResult response={latestResponse} />
+        </div>
+      )}
+
+      <section
+        className={
+          popup
+            ? `${urgentPopupResponse ? "order-2" : "order-1"} flex min-h-0 flex-1 flex-col`
+            : "rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-start-1 lg:row-start-1 sm:p-8"
+        }
+      >
+        <div className="flex shrink-0 items-start justify-between gap-4">
+          {!popup && (
+            <div>
+              <h2 className="text-xl font-semibold">Conversation</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Share one concern at a time. This demo provides educational information, not a diagnosis.
+              </p>
+            </div>
+          )}
           {messages.length > 0 && (
             <button
               type="button"
@@ -109,7 +248,9 @@ export function AssistantChat() {
 
         <div
           aria-live="polite"
-          className="mt-6 min-h-56 space-y-4 rounded-lg bg-slate-50 p-4"
+          className={`mt-4 min-h-32 space-y-4 overflow-y-auto rounded-lg bg-slate-50 p-3 ${
+            popup ? "flex-1" : "mt-6 min-h-56 p-4"
+          }`}
         >
           {messages.length === 0 ? (
             <p className="py-16 text-center text-sm text-slate-500">
@@ -141,7 +282,7 @@ export function AssistantChat() {
         </div>
 
         {latestResponse?.status === "follow_up" && (
-          <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="mt-4 shrink-0 rounded-lg border border-blue-200 bg-blue-50 p-4">
             <h3 className="font-semibold text-blue-950">Helpful follow-up questions</h3>
             <div className="mt-3 flex flex-wrap gap-2">
               {latestResponse.followUpQuestions.map((question) => (
@@ -160,7 +301,7 @@ export function AssistantChat() {
         )}
 
         {errorMessage && (
-          <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-900">
+          <div role="alert" className="mt-4 shrink-0 rounded-lg border border-red-200 bg-red-50 p-4 text-red-900">
             <p>{errorMessage}</p>
             {retryAvailable && lastSubmittedMessage && (
               <button
@@ -180,13 +321,13 @@ export function AssistantChat() {
             event.preventDefault();
             void submitMessage();
           }}
-          className="mt-5"
+          className={`mt-4 shrink-0 ${popup ? "" : "mt-5"}`}
         >
-          <label htmlFor="assistant-message" className="block text-sm font-medium text-slate-800">
+          <label htmlFor={messageInputId} className="block text-sm font-medium text-slate-800">
             Message
           </label>
           <textarea
-            id="assistant-message"
+            id={messageInputId}
             ref={messageInputRef}
             rows={3}
             maxLength={2000}
@@ -196,8 +337,30 @@ export function AssistantChat() {
             disabled={loading}
             className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 shadow-sm outline-none focus:ring-2 focus:ring-blue-600 disabled:bg-slate-100"
           />
-          <div className="mt-3 flex items-center justify-between gap-4">
-            <p className="text-xs text-slate-500">Do not enter real health information.</p>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <p className="text-xs text-slate-500">Do not enter real health information.</p>
+              <button
+                type="button"
+                onClick={toggleVoiceInput}
+                disabled={loading}
+                aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                aria-pressed={isListening}
+                className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+              >
+                {isListening ? (
+                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+                    <rect x="7" y="7" width="10" height="10" rx="1" />
+                  </svg>
+                ) : (
+                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+                    <rect x="9" y="3" width="6" height="12" rx="3" stroke="currentColor" strokeWidth="1.7" />
+                    <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                  </svg>
+                )}
+                {isListening ? "Stop" : "Speak"}
+              </button>
+            </div>
             <button
               type="submit"
               disabled={
@@ -205,11 +368,16 @@ export function AssistantChat() {
                 input.trim().length === 0 ||
                 (retryAvailable && lastSubmittedMessage === input.trim())
               }
-              className="rounded-md bg-blue-700 px-4 py-2.5 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="ml-auto min-h-10 rounded-md bg-blue-700 px-4 py-2.5 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-600"
             >
               {loading ? "Sending…" : "Send message"}
             </button>
           </div>
+          {voiceStatus && (
+            <p role="status" className="mt-2 text-xs text-slate-600">
+              {voiceStatus}
+            </p>
+          )}
         </form>
       </section>
     </div>

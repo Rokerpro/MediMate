@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AssistantChatPopup } from "@/components/assistant-chat-popup";
 import { PrimaryNavigation } from "@/components/primary-navigation";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -26,6 +27,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </p>
       </div>
       <main className="mx-auto w-full max-w-6xl px-4 py-8 print:py-4">{children}</main>
+      <AssistantChatPopup />
     </div>
   );
 }
