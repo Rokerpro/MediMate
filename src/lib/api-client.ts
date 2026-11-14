@@ -12,6 +12,8 @@ import {
   reminderListResponseSchema,
   reminderResponseSchema,
   reminderUpdateSchema,
+  prescriptionExplainRequestSchema,
+  prescriptionExplainResponseSchema,
   type ReminderCreateRequest,
   type ReminderListResponse,
   type ReminderResponse,
@@ -23,6 +25,8 @@ import {
   type HealthLogListResponse,
   type ProfileResponse,
   type ProfileUpdateRequest,
+  type PrescriptionExplainRequest,
+  type PrescriptionExplainResponse,
 } from "@/lib/validations";
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -76,7 +80,7 @@ async function requestJson<T>(
     if (parsedError.success) {
       throw new ApiClientError(
         parsedError.data.error.message,
-        response.status >= 500,
+        response.status === 429 || response.status >= 500,
         response.status,
       );
     }
@@ -257,4 +261,20 @@ export async function deleteReminder(id: string): Promise<void> {
   }
 
   throw new ApiClientError(`The server returned status ${response.status}. Please try again.`);
+}
+
+export async function explainPrescription(
+  input: PrescriptionExplainRequest,
+): Promise<PrescriptionExplainResponse> {
+  const validatedInput = prescriptionExplainRequestSchema.parse(input);
+  return requestJson(
+    "/api/prescriptions/explain",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(validatedInput),
+    },
+    prescriptionExplainResponseSchema,
+    200,
+  );
 }

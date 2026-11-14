@@ -4,7 +4,7 @@ Last updated: 2026-11-14
 
 ## Role and current state
 
-This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, navigation polish, and their frontend data-access methods are merged into `main`. The backend reminder API and validation contract were merged into the same branch before the final integration.
+This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, navigation polish, prescription explainer UI, and their frontend data-access methods are present in the working tree. The backend reminder and prescription contracts are on `main`; review and commit the current frontend work before merging.
 
 The current `main` branch is deployable at commit `ed81a7c` before this documentation change. Do not assume that a feature is deployed just because it is merged; verify the deployed app separately.
 
@@ -80,11 +80,19 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 
 ## Frontend implementation details
 
+### Public landing page and visual language
+
+- `/` is now a public landing page; `/dashboard` remains the demo workspace entry point.
+- `src/components/landing-page.tsx` uses real MediMate features and safe product copy across hero, benefits, workflow, showcase, technology, roadmap, FAQ, CTA, and footer sections.
+- `src/app/globals.css` provides the organic/luxurious visual foundation: earthy colors, serif display typography, subtle grain, organic motion, hover states, and reduced-motion handling.
+- `AppShell`, `PrimaryNavigation`, and the dashboard entry card use the shared warm palette without changing data behavior.
+
 ### Shell and navigation
 
 - `AppShell` renders the global synthetic-data warning.
 - `PrimaryNavigation` uses `usePathname()` and `aria-current="page"` for active links.
 - Navigation currently includes Dashboard, Profile, Daily logs, Assistant, Reminders, and Summary.
+- Navigation also includes Prescriptions, which links to the deterministic abbreviation explainer.
 - Focus-visible rings and keyboard-operable controls are required.
 
 ### API client
@@ -94,8 +102,19 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 - Parses successful JSON with the corresponding Zod response schema.
 - Parses the standard `{ error: { code, message } }` envelope.
 - Uses bounded request timeouts and safe retryable errors.
+- Marks HTTP 429 as retryable for rate-limited assistant requests.
 - Reminder methods are `listReminders`, `createReminder`, `updateReminder`, and `deleteReminder`.
 - DELETE handles the contract's `204 No Content` response separately.
+- `explainPrescription` posts example wording to `/api/prescriptions/explain` and parses `PrescriptionExplainResponse` with the shared schema.
+
+### Prescription explainer UI
+
+`src/components/prescription-explainer.tsx` and `/prescriptions`:
+
+- Accepts up to 2000 characters under the label `Prescription wording`.
+- Shows the example-only warning, loading state, retryable error state, recognized terms, matched text, Latin origin, meaning, cautions, fixed guidance, and the API-provided source link.
+- Does not add drug, dose, timing, checking, or prescribing advice.
+- Was browser-checked at 375px with no horizontal overflow. The contract example `Eye drops s prn` returns `p.r.n.` only because the backend recognizer only returns abbreviations present in the submitted text; use explicit `o.d.`, `t.d.s.`, and `p.r.n.` tokens to exercise all three terms.
 
 ### Reminders UI
 
@@ -108,6 +127,13 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 - A reminder 404 refreshes the list because another actor may have removed it.
 - Includes loading, empty (`No reminders yet`), error, retry, and success states.
 - Required safety copy states that reminders are user-set, medication timing/doses are not suggested or checked, pharmacists/prescribers should answer medication questions, and reminders are in-app only.
+
+### Assistant rate-limit retry
+
+`src/components/assistant-chat.tsx`:
+
+- On a retryable assistant error, keeps the submitted text in the message field and shows the server error message with a Retry action.
+- Retrying resends the same message without appending another user transcript entry; the field clears only after a successful response.
 
 ### Printable summary
 

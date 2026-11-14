@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MediMate",
-  description: "History-aware, non-diagnostic health information prototype (synthetic demo data only).",
+  title: "MediMate — Notice more. Assume less.",
+  description: "A history-aware, non-diagnostic health information prototype built for clearer care conversations.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

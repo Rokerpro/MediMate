@@ -9,6 +9,7 @@ const navigation = [
   { href: "/logs", label: "Daily logs" },
   { href: "/assistant", label: "Assistant" },
   { href: "/reminders", label: "Reminders" },
+  { href: "/prescriptions", label: "Prescriptions" },
   { href: "/summary", label: "Summary" },
 ];
 
@@ -25,10 +26,10 @@ export function PrimaryNavigation() {
             key={item.href}
             href={item.href}
             aria-current={isActive ? "page" : undefined}
-            className={`rounded-md px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
+            className={`rounded-full px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] ${
               isActive
-                ? "bg-blue-50 text-blue-800"
-                : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
+                ? "bg-[#dfe8d8] text-[#254a38]"
+                : "text-[#66766b] hover:bg-[#eef0e5] hover:text-[#254a38]"
             }`}
           >
             {item.label}

@@ -22,6 +22,7 @@ export function AssistantChat() {
   const [latestResponse, setLatestResponse] = useState<ChatResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [retryAvailable, setRetryAvailable] = useState(false);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
   async function submitMessage(
@@ -31,8 +32,8 @@ export function AssistantChat() {
     const trimmedMessage = message.trim();
     if (!trimmedMessage || loading) return;
 
-    setInput("");
     setErrorMessage(null);
+    setRetryAvailable(false);
     setLastSubmittedMessage(trimmedMessage);
     if (options.appendUserMessage !== false) {
       setMessages((current) => [
@@ -46,6 +47,7 @@ export function AssistantChat() {
       const response = await sendAssistantMessage({ sessionId, message: trimmedMessage });
       setSessionId(response.sessionId);
       setLatestResponse(response);
+      setInput((current) => current === trimmedMessage ? "" : current);
       setMessages((current) => [
         ...current,
         { id: makeMessageId(), role: "assistant", content: response.assistantMessage },
@@ -54,6 +56,7 @@ export function AssistantChat() {
       if (error instanceof ApiClientError && error.status === 404) {
         setLastSubmittedMessage(null);
       }
+      setRetryAvailable(error instanceof ApiClientError && error.retryable);
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -71,6 +74,7 @@ export function AssistantChat() {
     setInput("");
     setLastSubmittedMessage(null);
     setErrorMessage(null);
+    setRetryAvailable(false);
   }
 
   function selectFollowUpQuestion(question: string) {
@@ -158,12 +162,10 @@ export function AssistantChat() {
         {errorMessage && (
           <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-900">
             <p>{errorMessage}</p>
-            {lastSubmittedMessage && (
+            {retryAvailable && lastSubmittedMessage && (
               <button
                 type="button"
-                onClick={() =>
-                  void submitMessage(lastSubmittedMessage, { appendUserMessage: false })
-                }
+                onClick={() => void submitMessage(lastSubmittedMessage, { appendUserMessage: false })}
                 disabled={loading}
                 className="mt-3 rounded-md bg-red-800 px-3 py-2 text-sm font-semibold text-white hover:bg-red-900 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-red-600"
               >
