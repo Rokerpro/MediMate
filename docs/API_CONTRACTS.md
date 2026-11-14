@@ -226,7 +226,7 @@ Request: `{ "text": "Ibuprofen 200mg tds prn" }` (1–2000 chars, trimmed; unkno
 
 - `400`: malformed or invalid request.
 - `404`: requested session/profile/log/reminder does not exist.
-- `429`: rate limit exceeded, if implemented.
+- `429` (`RATE_LIMITED`): `POST /api/assistant/chat` only, when a turn would call the AI model and the limit is reached (6 turns per minute per client address, 20 per minute per server instance; best-effort, in memory). Includes a `Retry-After` header (seconds) and a message saying how long to wait. Nothing is saved. Urgent safety replies are never rate-limited. The UI should show the message and offer Retry.
 - `500`: generic unexpected server error; no internal details to client.
 - `503`: configured AI provider unavailable or timed out; return a safe fallback message.
 

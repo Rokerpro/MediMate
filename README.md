@@ -51,7 +51,9 @@ Environment variables (server-side only; never prefix them with `NEXT_PUBLIC_`):
 | `GROQ_API_KEY` | Groq API key, when `AI_PROVIDER=groq` |
 | `GROQ_MODEL` | Optional model override |
 
-Database: run `supabase/migrations/0001_initial_schema.sql` and then `supabase/seed.sql` in the Supabase SQL editor. The seed creates the synthetic profile "Alex Demo" and 14 days of logs (recurring lower-back discomfort after long sitting, variable sleep).
+Database: run `supabase/migrations/0001_initial_schema.sql`, `supabase/seed.sql` and `supabase/migrations/0002_reminders.sql` in the Supabase SQL editor. The seed creates the synthetic profile "Alex Demo" and 14 days of logs (recurring lower-back discomfort after long sitting, variable sleep).
+
+Before a demo, run `supabase/reset-demo.sql` to restore the synthetic data (logs re-dated to today) and delete all chat sessions. It is destructive for the demo profile.
 
 ## Checks
 
@@ -76,6 +78,7 @@ npm run build
 - Only three topics (back pain, headaches, chest pain) have checked references and warning rules.
 - History retrieval is keyword-based, not semantic.
 - Single synthetic demo profile, no authentication.
+- The assistant is rate-limited (6 turns per minute per address, best-effort in memory) to protect the free-tier AI quota; urgent safety replies are never limited.
 
 ## Documentation
 

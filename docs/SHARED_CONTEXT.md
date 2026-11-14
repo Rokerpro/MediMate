@@ -106,6 +106,7 @@ Use short-lived feature branches, focused Conventional Commits, explicit `git ad
 Done 2026-11-14: `0002_reminders.sql` applied in Supabase; the live Vercel site serves `/api/reminders` (200); `docs/AI_B.md` filled in by the backend assistant.
 
 1. Person B: prescription explainer UI against `POST /api/prescriptions/explain` (contract §3b). Always show `guidance`, the `source` link and any `caution`; no dose, drug or timing explanations.
-2. Owner: reset the demo profile (currently "Alex Demo Updated") just before the demo; rehearse and record the backup video.
+2. Owner: run `supabase/reset-demo.sql` in the Supabase SQL editor just before the demo (restores Alex Demo, 14 logs dated up to today, 2 reminders; deletes all chat sessions). Then rehearse and record the backup video.
+2a. Person B: the assistant chat can now return 429 `RATE_LIMITED` with `Retry-After`; make 429 retryable in `src/lib/api-client.ts` and show the message with a Retry button.
 3. Workflow: Person A builds the system side and hands Person B a UI prompt; neither edits the other's files without coordinating.
 4. Keep this file and both AI-specific context files updated after meaningful decisions or contract changes.

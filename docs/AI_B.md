@@ -35,7 +35,7 @@ Shapes: `docs/API_CONTRACTS.md` and `src/lib/validations/*` (exported from `@/li
 | `PATCH /api/profile` | §1 | Any subset of editable fields, at least one; unknown keys (e.g. `id`) → 400. |
 | `GET /api/health-logs?limit=30` | §2 | `limit` 1–100; newest first. |
 | `POST /api/health-logs` | §2 | `symptoms` required; 201. |
-| `POST /api/assistant/chat` | §3 | See §5. 404 "This conversation was not found. Please start a new one." for an unknown session; 503 `AI_UNAVAILABLE` with a safe message when the provider fails or output stays invalid. |
+| `POST /api/assistant/chat` | §3 | See §5. 429 `RATE_LIMITED` + `Retry-After` when a turn that would call the model exceeds 6/min per client or 20/min per instance (`src/lib/ai/rate-limit.ts`; urgent safety turns are never limited, nothing saved). 404 "This conversation was not found. Please start a new one." for an unknown session; 503 `AI_UNAVAILABLE` with a safe message when the provider fails or output stays invalid. |
 | `GET /api/reminders?includeInactive=false` | §3a | Active first, by `nextDueAt`; max 100; `includeInactive` must be `true`/`false`. |
 | `POST /api/reminders` | §3a | Requires `userConfirmed: true` (else 400); 201. |
 | `PATCH /api/reminders/{id}` | §3a | At least one field; non-UUID or unknown id → 404. |
@@ -49,7 +49,7 @@ Reminder `nextDueAt` (`src/lib/reminders/schedule.ts`): one-off reminders keep `
 - `supabase/migrations/0001_initial_schema.sql`: `profiles`, `health_logs`, `symptom_sessions`, `symptom_messages`, CHECK constraints matching the Zod ranges, indexes, demo-only RLS.
 - `supabase/migrations/0002_reminders.sql`: `reminders` (title 1–120, category `medication|appointment|health_log|other`, notes ≤ 500, `remind_at`, repeat `none|daily|weekly`, `active`), index on `(profile_id, remind_at)`, RLS policy "demo reminders access", 2 synthetic seed reminders (fixed ids `…0a1`, `…0a2`, `on conflict do nothing`).
 - `supabase/seed.sql`: profile "Alex Demo" and 14 days of logs (recurring lower-back discomfort after long sitting, variable sleep).
-- The live profile currently reads "Alex Demo Updated" (age 24) from UI testing. **Reset it just before the demo**, not earlier.
+- The live profile currently reads "Alex Demo Updated" (age 24) from UI testing. **Run `supabase/reset-demo.sql` just before the demo**, not earlier. It is destructive for the demo profile only.
 - Test data hygiene: backend tests create rows only with "Synthetic … test" wording and delete them afterwards (messages first, then sessions).
 
 ## 5. AI and health safety
@@ -75,7 +75,7 @@ Known limitations: rules use keyword matching with simple negation handling and 
 
 - Commands: `npm run lint`, `npm run typecheck` (`next typegen && tsc --noEmit`), `npm test` (node:test over `tests/**/*.test.ts`), `npm run build`.
 - Latest backend run (after `aab2970`): lint, typecheck and build clean; 161 tests pass. On `main` at `39fe7dc` (with Person B's merges): 167 tests pass. Test files: `assistant`, `contracts`, `safety-rules`, `supabase-mappers`, `trends`, `reminders`, `prescription-terms`.
-- Endpoint checks against Supabase on 2026-11-14:
+- Endpoint checks against Supabase on 2026-11-14 (plus the full README demo script on the live site: follow-up → assessment with 3 dated history entries and the NHS source; urgent back-pain case; all pages and read APIs 200; rate limit checked locally with the mock provider: 7th turn → 429, urgent still 200, other address unaffected):
   - Reminders: list, create (201), missing confirmation (400), pause (200, `nextDueAt: null`), empty patch (400), delete (204), repeat delete (404), non-UUID id (404), bad query (400). Test row removed.
   - Prescription explainer: "Eye drops 1 drop OD, ibuprofen 200mg tds prn" → o.d. (with caution), t.d.s., p.r.n.; empty text → 400.
   - Live chat: "severe chest pain and trouble breathing" → urgent.
@@ -95,5 +95,6 @@ Do not reverse these without agreeing first:
 Pending:
 
 - Person B: prescription explainer UI (contract §3b; ClickUp "Prescription abbreviation explainer UI").
-- Owner: reset the demo profile right before the demo; rehearse and record the backup video.
+- Owner: run `supabase/reset-demo.sql` in the Supabase SQL editor right before the demo (restores Alex Demo, 14 logs re-dated to today, 2 reminders; deletes all chat sessions). Then rehearse and record the backup video.
+- Person B: treat 429 as retryable in `src/lib/api-client.ts` and show the wait message.
 - Any contract change: update `docs/API_CONTRACTS.md`, the Zod schema, tests and both AI context files together, and tell the other developer.

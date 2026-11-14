@@ -1,6 +1,7 @@
 import { apiError, internalError, readJsonBody, validationError } from "@/app/api/_lib/responses";
 import { runAssistantTurn, type ChatTurnResult } from "@/lib/ai/assistant";
 import { getLlmProvider } from "@/lib/ai/client";
+import { RateLimitedError, checkAssistantRateLimit, clientKey, withRateLimit } from "@/lib/ai/rate-limit";
 import { AiUnavailableError } from "@/lib/ai/types";
 import { HISTORY_CANDIDATE_LIMIT, HISTORY_WINDOW_DAYS } from "@/lib/health/retrieve-history";
 import { evaluateSafety } from "@/lib/health/safety-rules";
@@ -53,7 +54,10 @@ export async function POST(request: Request): Promise<Response> {
 
     const turn = await runAssistantTurn(
       { message, priorMessages, profile, candidateLogs },
-      { provider: getLlmProvider(), evaluateSafety },
+      {
+        provider: withRateLimit(getLlmProvider(), () => checkAssistantRateLimit(clientKey(request.headers))),
+        evaluateSafety,
+      },
     );
 
     const sessionId = requestedSessionId ?? (await createSession(message));
@@ -66,6 +70,14 @@ export async function POST(request: Request): Promise<Response> {
     if (safetyRuleId) console.info(`[api] POST /api/assistant/chat: safety rule ${safetyRuleId} triggered`);
     return Response.json(chatResponseSchema.parse({ sessionId, ...result }));
   } catch (error) {
+    if (error instanceof RateLimitedError) {
+      const response = apiError(
+        "RATE_LIMITED",
+        `Too many assistant requests right now. Please wait about ${error.retryAfterSeconds} seconds and try again.`,
+      );
+      response.headers.set("Retry-After", String(error.retryAfterSeconds));
+      return response;
+    }
     if (error instanceof AiUnavailableError) {
       console.error(`[api] POST /api/assistant/chat: ${error.reason}`);
       return apiError(
