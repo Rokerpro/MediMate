@@ -33,7 +33,7 @@ export class SupabaseRequestError extends Error {
 }
 
 type SupabaseRestOptions = {
-  method?: "GET" | "POST" | "PATCH";
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   /** Ask PostgREST to return the written rows (inserts/updates). */
   returnRepresentation?: boolean;

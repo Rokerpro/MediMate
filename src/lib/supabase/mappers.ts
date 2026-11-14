@@ -9,6 +9,13 @@ import {
   type HealthLogCreateRequest,
 } from "../validations/health-log.ts";
 import {
+  reminderSchema,
+  type Reminder,
+  type ReminderCreateRequest,
+  type ReminderUpdateRequest,
+} from "../validations/reminder.ts";
+import { nextDueAt } from "../reminders/schedule.ts";
+import {
   profileSchema,
   type Profile,
   type ProfileUpdateRequest,
@@ -19,6 +26,8 @@ export const PROFILE_COLUMNS =
 
 export const HEALTH_LOG_COLUMNS =
   "id,logged_at,symptoms,pain_location,pain_level,sleep_duration_minutes,sleep_quality,mood,water_ml,activity_minutes,notes";
+
+export const REMINDER_COLUMNS = "id,title,category,notes,remind_at,repeat,active,created_at";
 
 // Postgres `numeric` can arrive as a number or a numeric string depending on settings.
 const numeric = z.union([z.number(), z.string().regex(/^-?\d+(\.\d+)?$/).transform(Number)]);
@@ -48,6 +57,17 @@ const healthLogRowSchema = z.object({
   water_ml: z.number().nullable(),
   activity_minutes: z.number().nullable(),
   notes: z.string().nullable(),
+});
+
+const reminderRowSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  category: z.string(),
+  notes: z.string().nullable(),
+  remind_at: z.string(),
+  repeat: z.string(),
+  active: z.boolean(),
+  created_at: z.string(),
 });
 
 /** First element of a PostgREST array response, or undefined. */
@@ -134,5 +154,57 @@ export function healthLogCreateToRow(
   if (input.waterMl !== undefined) row.water_ml = input.waterMl;
   if (input.activityMinutes !== undefined) row.activity_minutes = input.activityMinutes;
   if (input.notes !== undefined) row.notes = blankToNull(input.notes);
+  return row;
+}
+
+/** DB row -> contract Reminder, with `nextDueAt` computed for `now`. Timestamps normalized to UTC ISO. */
+export function rowToReminder(row: unknown, now: number = Date.now()): Reminder {
+  const r = reminderRowSchema.parse(row);
+  const remindAt = new Date(r.remind_at).getTime();
+  const parsedRepeat = reminderSchema.shape.repeat.parse(r.repeat);
+  const due = nextDueAt(remindAt, parsedRepeat, r.active, now);
+  return reminderSchema.parse({
+    id: r.id,
+    title: r.title,
+    category: r.category,
+    notes: r.notes,
+    remindAt: new Date(remindAt).toISOString(),
+    repeat: parsedRepeat,
+    active: r.active,
+    nextDueAt: due === null ? null : new Date(due).toISOString(),
+    createdAt: new Date(r.created_at).toISOString(),
+  });
+}
+
+/** Active reminders by next due time, then inactive ones by remindAt. */
+export function sortReminders(reminders: readonly Reminder[]): Reminder[] {
+  return [...reminders].sort((a, b) => {
+    if (a.active !== b.active) return a.active ? -1 : 1;
+    return (a.nextDueAt ?? a.remindAt).localeCompare(b.nextDueAt ?? b.remindAt);
+  });
+}
+
+/** Validated POST body -> DB insert payload. `profileId` comes from the server only. */
+export function reminderCreateToRow(input: ReminderCreateRequest, profileId: string): Record<string, unknown> {
+  return {
+    profile_id: profileId,
+    title: input.title,
+    category: input.category,
+    notes: input.notes === undefined ? null : blankToNull(input.notes),
+    remind_at: input.remindAt,
+    repeat: input.repeat,
+  };
+}
+
+/** Validated PATCH body -> DB update payload. Only provided fields are written. */
+export function reminderUpdateToRow(update: ReminderUpdateRequest, now: Date = new Date()): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  if (update.title !== undefined) row.title = update.title;
+  if (update.category !== undefined) row.category = update.category;
+  if (update.notes !== undefined) row.notes = blankToNull(update.notes);
+  if (update.remindAt !== undefined) row.remind_at = update.remindAt;
+  if (update.repeat !== undefined) row.repeat = update.repeat;
+  if (update.active !== undefined) row.active = update.active;
+  row.updated_at = now.toISOString();
   return row;
 }

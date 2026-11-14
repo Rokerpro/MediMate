@@ -4,3 +4,4 @@ export * from "./api-error";
 export * from "./profile";
 export * from "./health-log";
 export * from "./assistant";
+export * from "./reminder";

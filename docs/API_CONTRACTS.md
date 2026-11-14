@@ -146,10 +146,60 @@ When sufficient information is available:
 
 If a safety rule triggers, return `status: "urgent"`, a non-null safety message and no ordinary LLM-generated reassurance. The exact urgency wording must come from the reviewed safety specification. Do not let an AI response override the deterministic safety result.
 
+## 3a. Reminders
+
+Reminders are written and confirmed by the user. MediMate stores the user's own wording only: it never generates, suggests or checks reminder content, medication timing or doses. In-app list only; there are no push, SMS or email notifications. Schemas: `src/lib/validations/reminder.ts`. Table: `supabase/migrations/0002_reminders.sql`.
+
+`Reminder`:
+
+```json
+{
+  "id": "uuid",
+  "title": "Fill in daily health log",
+  "category": "medication | appointment | health_log | other",
+  "notes": "string or null",
+  "remindAt": "2026-11-14T20:00:00.000Z",
+  "repeat": "none | daily | weekly",
+  "active": true,
+  "nextDueAt": "2026-11-14T20:00:00.000Z or null",
+  "createdAt": "2026-11-10T08:00:00.000Z"
+}
+```
+
+- `title` 1–120 chars, `notes` up to 500 chars.
+- `nextDueAt` is computed by the server. One-off reminders return `remindAt` even when it has passed (show as overdue). Repeating reminders return the next occurrence at or after now (fixed 24 h / 7 day steps in UTC). `null` when `active` is false.
+
+### `GET /api/reminders?includeInactive=false`
+
+`200` → `{ "reminders": Reminder[] }`. Active reminders first, ordered by `nextDueAt`; then inactive ones (only when `includeInactive=true`). Maximum 100.
+
+### `POST /api/reminders`
+
+```json
+{
+  "title": "GP appointment",
+  "category": "appointment",
+  "notes": "Bring the printed summary",
+  "remindAt": "2026-11-20T10:00:00+00:00",
+  "repeat": "none",
+  "userConfirmed": true
+}
+```
+
+`category` defaults to `other`, `repeat` to `none`, `notes` is optional. `userConfirmed` must be `true`: the UI shows the reminder back to the user and sends it only after they confirm. Unknown fields (e.g. `profileId`) are rejected. `201` → `{ "reminder": Reminder }`.
+
+### `PATCH /api/reminders/{id}`
+
+Any subset of `title`, `category`, `notes`, `remindAt`, `repeat`, `active` (at least one). Use `{ "active": false }` to pause or mark done, `{ "active": true }` to resume. `200` → `{ "reminder": Reminder }`. `404` if the id is unknown or not a UUID.
+
+### `DELETE /api/reminders/{id}`
+
+`204` with no body. `404` if the id is unknown or not a UUID.
+
 ## 4. Status and error behavior
 
 - `400`: malformed or invalid request.
-- `404`: requested session/profile/log does not exist.
+- `404`: requested session/profile/log/reminder does not exist.
 - `429`: rate limit exceeded, if implemented.
 - `500`: generic unexpected server error; no internal details to client.
 - `503`: configured AI provider unavailable or timed out; return a safe fallback message.
