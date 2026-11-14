@@ -222,6 +222,43 @@ Request: `{ "text": "Ibuprofen 200mg tds prn" }` (1–2000 chars, trimmed; unkno
 - `caution` is non-null for `o.d.` (may mean right eye on eye prescriptions) and must be shown next to that term.
 - `guidance` and `source` must always be shown.
 
+## 3c. Past assistant conversations
+
+### `GET /api/assistant/sessions?limit=5`
+
+Read-only. The demo profile's **completed** assistant conversations, newest first (by `completedAt`). In-progress conversations (still at a follow-up question) are not returned. Schemas: `src/lib/validations/assessment-history.ts` (`assessmentHistoryResponseSchema`, type `PastAssessment`). `limit` is an integer 1–20 (default 5); any other query key → 400.
+
+`200` response:
+
+```json
+{
+  "sessions": [
+    {
+      "sessionId": "uuid",
+      "startedAt": "2026-11-14T09:00:00.000Z",
+      "completedAt": "2026-11-14T09:02:30.000Z",
+      "initialConcern": "My lower back has been sore since yesterday",
+      "urgencyLevel": "routine",
+      "assessment": { "summary": "…", "possibleExplanations": [], "nextSteps": [], "sources": [], "disclaimer": "…" }
+    },
+    {
+      "sessionId": "uuid",
+      "startedAt": "…",
+      "completedAt": "…",
+      "initialConcern": "Back pain with numbness in both legs",
+      "urgencyLevel": "urgent",
+      "assessment": null
+    }
+  ]
+}
+```
+
+- `assessment` has the same shape as in §3 and is exactly what the user was shown then.
+- `urgencyLevel: "urgent"` with `assessment: null` means the warning-sign rules fired and the user was told to seek urgent care. Show it as "Urgent-care guidance was given" — never as a diagnosis or a result.
+- `assessment` can also be `null` for a routine conversation if the stored data no longer matches the contract; show "Summary not available".
+- `sessions` may be empty: show an empty state ("No completed assistant conversations yet").
+- Anything shown from an assessment must keep its `disclaimer`; label `initialConcern` as what the user reported, not a recorded fact.
+
 ## 4. Status and error behavior
 
 - `400`: malformed or invalid request.

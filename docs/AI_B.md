@@ -41,6 +41,7 @@ Shapes: `docs/API_CONTRACTS.md` and `src/lib/validations/*` (exported from `@/li
 | `PATCH /api/reminders/{id}` | §3a | At least one field; non-UUID or unknown id → 404. |
 | `DELETE /api/reminders/{id}` | §3a | 204 with no body; repeat or unknown → 404. |
 | `POST /api/prescriptions/explain` | §3b | Deterministic, no AI, not stored or logged. `text` 1–2000 chars. |
+| `GET /api/assistant/sessions?limit=5` | §3c | Read-only, completed conversations newest first; `limit` 1–20. Urgent sessions → `assessment: null`; a stored assessment that fails the contract schema is returned as `null`, never unvalidated (`rowToPastAssessment`). |
 
 Reminder `nextDueAt` (`src/lib/reminders/schedule.ts`): one-off reminders keep `remindAt` even when past (UI shows "overdue"); daily/weekly roll forward in fixed 24 h / 7 day UTC steps; `null` when paused.
 
@@ -79,6 +80,7 @@ Known limitations: rules use keyword matching with simple negation handling and 
   - Reminders: list, create (201), missing confirmation (400), pause (200, `nextDueAt: null`), empty patch (400), delete (204), repeat delete (404), non-UUID id (404), bad query (400). Test row removed.
   - Prescription explainer: "Eye drops 1 drop OD, ibuprofen 200mg tds prn" → o.d. (with caution), t.d.s., p.r.n.; empty text → 400.
   - Live chat: "severe chest pain and trouble breathing" → urgent.
+- Past conversations (`GET /api/assistant/sessions`, mock provider, 2026-11-14): empty table → `{ sessions: [] }`; after one routine and one urgent synthetic conversation → both listed newest first (routine with its assessment, urgent with `null`); `limit=0`, `limit=abc`, unknown key → 400. Test sessions deleted. 197 tests pass.
 - Still needed: browser walk-through of the full demo on the judging device; the prescription explainer UI once Person B builds it.
 
 ## 7. Decisions and pending work
@@ -93,6 +95,8 @@ Do not reverse these without agreeing first:
 - Workflow: Person A builds the system side (schemas, routes, DB, AI/safety, contract, tests) and hands Person B a UI prompt; Person A does not edit frontend files.
 
 Pending:
+
+- Person B: "Recent assistant conversations" section on `/summary` using `GET /api/assistant/sessions` (contract §3c).
 
 - Person B: prescription explainer UI (contract §3b; ClickUp "Prescription abbreviation explainer UI").
 - Owner: run `supabase/reset-demo.sql` in the Supabase SQL editor right before the demo (restores Alex Demo, 14 logs re-dated to today, 2 reminders; deletes all chat sessions). Then rehearse and record the backup video.

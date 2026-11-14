@@ -15,6 +15,8 @@ import {
   type ReminderUpdateRequest,
 } from "../validations/reminder.ts";
 import { nextDueAt } from "../reminders/schedule.ts";
+import { assessmentSchema, safetyLevelSchema } from "../validations/assistant.ts";
+import { pastAssessmentSchema, type PastAssessment } from "../validations/assessment-history.ts";
 import {
   profileSchema,
   type Profile,
@@ -28,6 +30,8 @@ export const HEALTH_LOG_COLUMNS =
   "id,logged_at,symptoms,pain_location,pain_level,sleep_duration_minutes,sleep_quality,mood,water_ml,activity_minutes,notes";
 
 export const REMINDER_COLUMNS = "id,title,category,notes,remind_at,repeat,active,created_at";
+
+export const PAST_ASSESSMENT_COLUMNS = "id,initial_symptom,assessment,urgency_level,created_at,updated_at";
 
 // Postgres `numeric` can arrive as a number or a numeric string depending on settings.
 const numeric = z.union([z.number(), z.string().regex(/^-?\d+(\.\d+)?$/).transform(Number)]);
@@ -207,4 +211,32 @@ export function reminderUpdateToRow(update: ReminderUpdateRequest, now: Date = n
   if (update.active !== undefined) row.active = update.active;
   row.updated_at = now.toISOString();
   return row;
+}
+
+const sessionRowSchema = z.object({
+  id: z.string(),
+  initial_symptom: z.string(),
+  assessment: z.unknown(),
+  urgency_level: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+/**
+ * Completed symptom_sessions row -> contract PastAssessment.
+ * A stored assessment that no longer matches the contract becomes null rather
+ * than being shown unvalidated. A missing urgency level is treated as routine.
+ */
+export function rowToPastAssessment(row: unknown): PastAssessment {
+  const r = sessionRowSchema.parse(row);
+  const assessment = r.assessment === null ? null : assessmentSchema.safeParse(r.assessment);
+  const urgency = safetyLevelSchema.safeParse(r.urgency_level);
+  return pastAssessmentSchema.parse({
+    sessionId: r.id,
+    startedAt: new Date(r.created_at).toISOString(),
+    completedAt: new Date(r.updated_at).toISOString(),
+    initialConcern: r.initial_symptom,
+    urgencyLevel: urgency.success ? urgency.data : "routine",
+    assessment: assessment?.success && urgency.data !== "urgent" ? assessment.data : null,
+  });
 }
