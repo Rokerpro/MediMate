@@ -7,7 +7,7 @@ This is the combined source of truth for both coding AIs. Naming: `docs/AI_A.md`
 ## Current repository state
 
 - `main` contains the merged health summary, trends, navigation polish, reminders UI, reminder API, reminder migration, and prescription abbreviation explainer.
-- `main` is synchronized through `a538db5`; the current working tree also contains uncommitted landing-page, prescription-explainer, and assistant 429 retry frontend work.
+- `main` at `ef8074d` (PR #1 merged 2026-11-14) includes the landing page at `/`, the prescription explainer UI at `/prescriptions`, and assistant 429 retry handling, on top of the backend rate limit and demo reset script (`a538db5`).
 - The app is a Next.js 16.4.6 App Router application using React 19.3, TypeScript, Tailwind 4.3, Zod 4.6, Supabase PostgreSQL, and a server-side Groq-compatible AI provider.
 - Node.js `>=22.18` is required.
 - There is one synthetic demo profile and no authentication. Never add real health data.
@@ -101,7 +101,7 @@ npm test
 npm run build
 ```
 
-The latest checks after the prescription explainer passed: lint, typecheck, build and tests (167 passing). Browser validation is still required for every UI change, including 375px layout and async loading/error/empty states where practical.
+The latest checks (PR #1, `d5b94f4`) passed: lint, typecheck, build and 173 tests. Browser validation is still required for every UI change, including 375px layout and async loading/error/empty states where practical.
 
 Use short-lived feature branches, focused Conventional Commits, explicit `git add` paths, and no force-pushes. Merge only after the other AI reviews changed files and the checks pass.
 
@@ -110,6 +110,6 @@ Use short-lived feature branches, focused Conventional Commits, explicit `git ad
 Done 2026-11-14: `0002_reminders.sql` applied in Supabase; the live Vercel site serves `/api/reminders` (200); `docs/AI_B.md` filled in by the backend assistant.
 
 1. Owner: run `supabase/reset-demo.sql` in the Supabase SQL editor just before the demo (restores Alex Demo, 14 logs dated up to today, 2 reminders; deletes all chat sessions). Then rehearse and record the backup video.
-2. Owner: review and commit the landing page, prescription explainer, and assistant retry frontend work, then deploy/verify the routes.
+2. Person B (non-blocking follow-ups from the PR #1 review): fix the `/prescriptions` placeholder ("Eye drops s prn" → "Ibuprofen 200mg tds prn"); landing tech list should say "Curated NHS and Patient.info sources"; in the assistant chat, pressing Send after a failed request (instead of Retry) adds the user message twice.
 3. Workflow: Person A builds the system side and hands Person B a UI prompt; neither edits the other's files without coordinating.
 4. Keep this file and both AI-specific context files synchronized after meaningful decisions or contract changes.
