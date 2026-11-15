@@ -1,5 +1,8 @@
 import {
   apiErrorResponseSchema,
+  assessmentHistoryQuerySchema,
+  assessmentHistoryResponseSchema,
+  type AssessmentHistoryResponse,
   chatRequestSchema,
   chatResponseSchema,
   healthLogCreateResponseSchema,
@@ -177,6 +180,17 @@ export async function listHealthLogs(limit?: number): Promise<HealthLogListRespo
 
 export async function getHealthLogs(limit?: number): Promise<HealthLogListResponse> {
   return listHealthLogs(limit);
+}
+
+/** Completed assistant conversations, newest first (contract §3c). Read-only. */
+export async function listAssistantSessions(limit?: number): Promise<AssessmentHistoryResponse> {
+  const query = assessmentHistoryQuerySchema.parse({ limit });
+  return requestJson(
+    `/api/assistant/sessions?limit=${query.limit}`,
+    { method: "GET" },
+    assessmentHistoryResponseSchema,
+    200,
+  );
 }
 
 export async function createHealthLog(

@@ -210,6 +210,15 @@ describe("recent daily measurements", () => {
     assert.equal(result.possibleExplanations[0]?.supportingHistory[0]?.date, "2026-11-12");
     assert.ok(!result.summary.includes(NO_HISTORY_NOTE));
   });
+
+  it("does not add the no-history note when the model already said so (\"No prior related logs\")", () => {
+    const out = JSON.parse(validAssessment([])) as {
+      assessment: NonNullable<Parameters<typeof toContractAssessment>[0]>;
+    };
+    const summary = "You reported knee pain since Sunday. No prior related logs were found.";
+    const result = toContractAssessment({ ...out.assessment, summary }, [], []);
+    assert.equal(result.summary, summary);
+  });
 });
 
 describe("prompt context separation", () => {

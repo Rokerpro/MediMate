@@ -227,7 +227,7 @@ export function makesCausalClaim(output: ModelOutput): boolean {
 /** Added by the server when retrieval found nothing, so honesty does not depend on the model. */
 export const NO_HISTORY_NOTE =
   "No related entries were found in your recent health logs, so this is based only on what you shared.";
-const MENTIONS_NO_HISTORY = /\bno (relevant|related|matching)\b[^.]{0,40}\b(history|logs?|records?|entries)\b/i;
+const MENTIONS_NO_HISTORY = /\bno (prior |previous |past |earlier )?(relevant|related|matching|prior|previous)\b[^.]{0,40}\b(history|logs?|records?|entries)\b/i;
 
 /** Pulls the first {...} block, tolerating markdown fences around it. */
 function extractJson(raw: string): unknown {
