@@ -257,11 +257,95 @@ function extractJson(raw: string): unknown {
 const DOSE_QUESTION =
   /\b(mg|milligrams?|doses?|dosage|how (much|many|often)\b[^?]{0,60}\b(medicines?|medications?|tablets?|pills?|painkillers?|ibuprofen|paracetamol|acetaminophen|aspirin|naproxen|codeine))\b/i;
 
+/**
+ * What the model may state as recorded data: dates of the logs it was given, and the
+ * numbers that appear in those logs, the server's recorded facts or the user's own words.
+ */
+export type ClaimEvidence = {
+  dates: ReadonlySet<string>;
+  numbers: ReadonlySet<string>;
+};
+
+const NUMBER_WORDS: Readonly<Record<string, string>> = {
+  one: "1", two: "2", three: "3", four: "4", five: "5", six: "6", seven: "7", eight: "8", nine: "9", ten: "10",
+  eleven: "11", twelve: "12", thirteen: "13", fourteen: "14", fifteen: "15", twenty: "20", thirty: "30",
+};
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+const NUMBER = /\d+(?:\.\d+)?/g;
+
+const normaliseNumber = (value: string): string => String(Number(NUMBER_WORDS[value.toLowerCase()] ?? value));
+
+/** Builds the evidence set from everything the model was given. */
+export function claimEvidence(
+  logs: readonly HealthLog[],
+  texts: readonly string[],
+  now: number = Date.now(),
+): ClaimEvidence {
+  const dates = new Set(logs.map(logDate));
+  dates.add(new Date(now).toISOString().slice(0, 10));
+  const numbers = new Set<string>();
+  const sources = [...logs.map(describeLog), ...texts];
+  for (const source of sources) {
+    // Dates are checked separately; their parts ("2026", "11") must not count as recorded figures.
+    for (const match of source.replace(/\b\d{4}-\d{2}-\d{2}\b/g, " ").match(NUMBER) ?? []) {
+      numbers.add(normaliseNumber(match));
+    }
+    for (const word of source.toLowerCase().match(/\b[a-z]+\b/g) ?? []) {
+      if (NUMBER_WORDS[word]) numbers.add(NUMBER_WORDS[word]!);
+    }
+    for (const iso of source.match(/\b\d{4}-\d{2}-\d{2}\b/g) ?? []) dates.add(iso);
+  }
+  // How many records were provided is a supported count; per-topic day counts come from the recorded facts.
+  numbers.add(String(logs.length));
+  return { dates, numbers };
+}
+
+const ISO_DATE = /\b\d{4}-\d{2}-\d{2}\b/g;
+const MONTH_NAME = "(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\\.?";
+const MONTH_DAY = new RegExp(`\\b${MONTH_NAME}\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b`, "gi");
+const DAY_MONTH = new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTH_NAME}\\b`, "gi");
+const PAIN_SCORE = /\b(\d+(?:\.\d+)?)\s*(?:\/|out of)\s*10\b/gi;
+const COUNT_WORD = "(\\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|twenty|thirty)";
+const COUNT = new RegExp(
+  `\\b(?:on|in|across|over|for|from)\\s+${COUNT_WORD}\\s+(?:separate\\s+|different\\s+|recent\\s+)?(?:days|logs|entries|occasions|records|nights)\\b|\\b${COUNT_WORD}\\s+times\\b`,
+  "gi",
+);
+
+/**
+ * Dates, pain scores and counts the model states that are not in the data it was
+ * given (AI_SAFETY_SPEC.md: never invent history, dates or measurements).
+ * Returns the offending phrases.
+ */
+export function findUnsupportedClaims(output: ModelOutput, evidence: ClaimEvidence): string[] {
+  const text = bannedSearchText(output);
+  const monthDays = new Set([...evidence.dates].map((date) => date.slice(5)));
+  const found: string[] = [];
+  for (const match of text.matchAll(ISO_DATE)) if (!evidence.dates.has(match[0])) found.push(match[0]);
+  const checkMonthDay = (phrase: string, month: string, day: string) => {
+    const key = `${String(MONTHS.indexOf(month.slice(0, 3).toLowerCase()) + 1).padStart(2, "0")}-${day.padStart(2, "0")}`;
+    if (!monthDays.has(key)) found.push(phrase);
+  };
+  for (const match of text.matchAll(MONTH_DAY)) checkMonthDay(match[0], match[1]!, match[2]!);
+  for (const match of text.matchAll(DAY_MONTH)) checkMonthDay(match[0], match[2]!, match[1]!);
+  for (const match of text.matchAll(PAIN_SCORE)) {
+    if (!evidence.numbers.has(normaliseNumber(match[1]!))) found.push(match[0]);
+  }
+  for (const match of text.matchAll(COUNT)) {
+    const value = match[1] ?? match[2]!;
+    if (!evidence.numbers.has(normaliseNumber(value))) found.push(match[0]);
+  }
+  return [...new Set(found)];
+}
+
 export type ParseResult = { ok: true; output: ModelOutput } | { ok: false; problems: string[]; quotes: string[] };
 
 export function parseModelOutput(
   raw: string,
-  { mustAssess, hasReferences = true }: { mustAssess: boolean; hasReferences?: boolean },
+  {
+    mustAssess,
+    hasReferences = true,
+    evidence,
+  }: { mustAssess: boolean; hasReferences?: boolean; evidence?: ClaimEvidence },
 ): ParseResult {
   let json: unknown;
   try {
@@ -297,10 +381,18 @@ export function parseModelOutput(
     }
   }
 
+  const unsupported = evidence ? findUnsupportedClaims(output, evidence) : [];
+  if (unsupported.length) {
+    problems.push(
+      "it mentioned a date, pain level or count that is not in the provided records; use only figures from RELEVANT_HISTORY, RECENT_DAILY_MEASUREMENTS or RECORDED_PATTERNS",
+    );
+  }
+
   if (!problems.length) return { ok: true, output };
   const quotes = [
     ...quoteMatches([bannedSearchText(output)], BANNED_PATTERNS.map(({ pattern }) => pattern)),
     ...quoteMatches(causalSearchTexts(output), CAUSAL_CLAIM),
+    ...unsupported,
   ];
   return { ok: false, problems, quotes };
 }
@@ -317,23 +409,46 @@ const USER_MENTIONS_MEDICINE =
   /\b(medications?|medicines?|meds|tablets?|pills?|prescriptions?|doses?|dosage|painkillers?|ibuprofen|paracetamol|acetaminophen|aspirin|naproxen|codeine)\b/i;
 const REFERS_TO_PHARMACIST = /\b(pharmacist|prescriber|prescribing)\b/i;
 
+/** Server-calculated grounding added to the assessment (never written by the model). */
+export type Grounding = {
+  /** Terms each retrieved log shares with the user's concern, by log id. */
+  matchedTerms?: ReadonlyMap<string, readonly string[]>;
+  /** Recorded facts from src/lib/health/analytics.ts. */
+  recordedFacts?: readonly string[];
+};
+
 export function toContractAssessment(
   output: NonNullable<ModelOutput["assessment"]>,
   relevantLogs: readonly HealthLog[],
   sources: readonly Source[],
   recentMeasurementLogs: readonly HealthLog[] = [],
   userText = "",
+  grounding: Grounding = {},
 ): Assessment {
   const logsById = new Map([...relevantLogs, ...recentMeasurementLogs].map((log) => [log.id, log]));
+  const termsOf = (id: string): string[] => [...(grounding.matchedTerms?.get(id) ?? [])];
   const possibleExplanations = output.possibleExplanations.map((explanation) => ({
     title: explanation.title,
     whyItMayBeRelevant: explanation.whyItMayBeRelevant,
     supportingHistory: [...new Set(explanation.supportingLogIds)]
       .map((id) => logsById.get(id))
       .filter((log): log is HealthLog => log !== undefined)
-      .map((log) => ({ logId: log.id, date: logDate(log), observation: describeLog(log) })),
+      .map((log) => ({ logId: log.id, date: logDate(log), observation: describeLog(log), matchedTerms: termsOf(log.id) })),
     unknowns: explanation.unknowns,
   }));
+  const citedIds = new Set(possibleExplanations.flatMap((e) => e.supportingHistory.map((h) => h.logId)));
+  const relevantIds = new Set(relevantLogs.map((log) => log.id));
+  const historyConsidered = [...logsById.values()]
+    .sort((a, b) => b.loggedAt.localeCompare(a.loggedAt))
+    .map((log) => ({
+      logId: log.id,
+      date: logDate(log),
+      observation: describeLog(log),
+      matchedTerms: termsOf(log.id),
+      reason: relevantIds.has(log.id) ? ("symptom_match" as const) : ("recent_measurement" as const),
+      cited: citedIds.has(log.id),
+    }))
+    .slice(0, 20);
   const citedAnyHistory = possibleExplanations.some((e) => e.supportingHistory.length > 0);
   const summary =
     relevantLogs.length === 0 && !citedAnyHistory && !MENTIONS_NO_HISTORY.test(output.summary)
@@ -348,5 +463,7 @@ export function toContractAssessment(
         : output.nextSteps,
     sources: sources.map(({ title, publisher, url }) => ({ title, publisher, url })),
     disclaimer: ASSESSMENT_DISCLAIMER,
+    recordedFacts: [...(grounding.recordedFacts ?? [])].slice(0, 10),
+    historyConsidered,
   };
 }

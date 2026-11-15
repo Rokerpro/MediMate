@@ -40,7 +40,16 @@ describe("rowToPastAssessment", () => {
     assert.equal(past.startedAt, "2026-11-14T09:00:00.000Z");
     assert.equal(past.completedAt, "2026-11-14T09:02:30.123Z");
     assert.equal(past.urgencyLevel, "routine");
-    assert.deepEqual(past.assessment, assessment);
+    // Assessments saved before 2026-11-15 gain the new grounded fields as empty lists.
+    assert.deepEqual(past.assessment, {
+      ...assessment,
+      possibleExplanations: assessment.possibleExplanations.map((e) => ({
+        ...e,
+        supportingHistory: e.supportingHistory.map((h) => ({ ...h, matchedTerms: [] })),
+      })),
+      recordedFacts: [],
+      historyConsidered: [],
+    });
   });
 
   it("returns no assessment for an urgent session", () => {

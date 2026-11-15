@@ -65,32 +65,93 @@ export function stripNegatedPhrases(text: string): string {
   return text.replace(/\b(no|not|without|never|denies)\b(?:(?!\b(?:but|and|although|however)\b)[^,.;!?\n])*/gi, " ");
 }
 
+/** A retrieved log with the words it shares with the user's concern and its ranking score. */
+export type RankedLog = { log: HealthLog; score: number; matchedTerms: string[] };
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** Recency and recorded pain only break ties: together they stay below one shared term. */
+const RECENCY_WEIGHT = 0.5;
+const SEVERITY_WEIGHT = 0.25;
+
+/** Same calendar day and same symptom text (case and spacing ignored). */
+const duplicateKey = (log: HealthLog): string =>
+  `${log.loggedAt.slice(0, 10)}|${log.symptoms.trim().toLowerCase().replace(/\s+/g, " ")}`;
+
 /**
- * Returns up to `max` logs whose symptoms or pain location share a term with the
- * query, ranked by overlap then recency, and returned newest first. Logs with no
- * overlap are never included, so irrelevant history is not forced into answers.
+ * Ranks logs against the user's concern (CLAUDE.md §7). Each log scores one point per
+ * shared term, plus one more when the term is in its recorded pain location; recency
+ * (linear over HISTORY_WINDOW_DAYS) and recorded pain level add less than one point in
+ * total, so they only order logs that match equally well. Logs that share no term are
+ * dropped, and duplicates (same day, same symptom text) keep the entry with the highest
+ * recorded pain. Returns the top `max`, newest first.
  */
+export function rankRelevantLogs(
+  logs: readonly HealthLog[],
+  queryText: string,
+  { max = MAX_RELEVANT_LOGS, now = Date.now() }: { max?: number; now?: number } = {},
+): RankedLog[] {
+  const queryTerms = extractTerms(stripNegatedPhrases(queryText));
+  if (queryTerms.size === 0) return [];
+
+  const best = new Map<string, RankedLog>();
+  for (const log of logs) {
+    const symptomTerms = extractTerms(log.symptoms);
+    const locationTerms = extractTerms(log.painLocation ?? "");
+    const matchedTerms = [...new Set([...symptomTerms, ...locationTerms])].filter((term) => queryTerms.has(term)).sort();
+    if (matchedTerms.length === 0) continue;
+
+    const ageDays = Math.max(0, (now - Date.parse(log.loggedAt)) / DAY_MS);
+    const recency = Math.max(0, 1 - ageDays / HISTORY_WINDOW_DAYS);
+    const severity = log.painLevel === null ? 0 : log.painLevel / 10;
+    const score =
+      matchedTerms.length +
+      matchedTerms.filter((term) => locationTerms.has(term)).length +
+      RECENCY_WEIGHT * recency +
+      SEVERITY_WEIGHT * severity;
+
+    const key = duplicateKey(log);
+    const existing = best.get(key);
+    const keep =
+      !existing ||
+      (log.painLevel ?? -1) > (existing.log.painLevel ?? -1) ||
+      ((log.painLevel ?? -1) === (existing.log.painLevel ?? -1) && log.loggedAt > existing.log.loggedAt);
+    if (keep) best.set(key, { log, score, matchedTerms });
+  }
+
+  return [...best.values()]
+    .sort((a, b) => b.score - a.score || b.log.loggedAt.localeCompare(a.log.loggedAt))
+    .slice(0, max)
+    .sort((a, b) => b.log.loggedAt.localeCompare(a.log.loggedAt));
+}
+
+/** The relevant logs only (see rankRelevantLogs), newest first. */
 export function selectRelevantLogs(
   logs: readonly HealthLog[],
   queryText: string,
   max: number = MAX_RELEVANT_LOGS,
+  now: number = Date.now(),
 ): HealthLog[] {
-  const queryTerms = extractTerms(stripNegatedPhrases(queryText));
-  if (queryTerms.size === 0) return [];
+  return rankRelevantLogs(logs, queryText, { max, now }).map((entry) => entry.log);
+}
 
-  const scored = logs
-    .map((log) => {
-      const logTerms = extractTerms(`${log.symptoms} ${log.painLocation ?? ""}`);
-      let score = 0;
-      for (const term of logTerms) if (queryTerms.has(term)) score += 1;
-      return { log, score };
-    })
-    .filter((entry) => entry.score > 0)
-    .sort((a, b) => b.score - a.score || b.log.loggedAt.localeCompare(a.log.loggedAt))
-    .slice(0, max)
-    .map((entry) => entry.log);
+/** Generic symptom words that say nothing about where or what (used for analytics topics). */
+const GENERIC_SYMPTOM_WORDS = new Set([
+  "ache", "aching", "achy", "discomfort", "hurt", "hurting", "hurt", "issue", "pain", "painful",
+  "problem", "sore", "soreness", "feel", "felt", "long", "period", "sitting", "after", "noticed",
+]);
 
-  return scored.sort((a, b) => b.loggedAt.localeCompare(a.loggedAt));
+/**
+ * Symptom topics of a log for analytics: content words from its symptoms and pain
+ * location, with generic words ("pain", "discomfort") removed and everyday synonyms
+ * folded into one body area ("headache" counts as "head").
+ */
+export function topicTerms(log: Pick<HealthLog, "symptoms" | "painLocation">): Set<string> {
+  const topics = new Set<string>();
+  for (const term of extractTerms(`${log.symptoms} ${log.painLocation ?? ""}`)) {
+    if (GENERIC_SYMPTOM_WORDS.has(term) || BODY_AREA_SYNONYMS[term]) continue;
+    topics.add(term);
+  }
+  return topics;
 }
 
 const hasMeasurements = (log: HealthLog): boolean =>

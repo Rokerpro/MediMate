@@ -9,7 +9,8 @@ import { selectReferences, type CuratedReference } from "../health/references.ts
 import { extractTerms, selectRecentMeasurementLogs } from "../health/retrieve-history.ts";
 import { PROMPT_ASSISTANT_NOTE, PROMPT_NEXT_STEP, type SafetyEvaluation } from "../health/safety-rules.ts";
 import { isSymptomEntry } from "../health/trends.ts";
-import { parseModelOutput, toContractAssessment } from "./output.ts";
+import { recordedFactsFor } from "../health/analytics.ts";
+import { claimEvidence, parseModelOutput, toContractAssessment } from "./output.ts";
 import { SYSTEM_PROMPT, WEEKLY_REQUEST, buildRepairInstruction, buildUserContent } from "./prompts.ts";
 import { AiUnavailableError, type LlmProvider, type ModelContext } from "./types.ts";
 import type { WeeklySummaryResponse } from "@/lib/validations";
@@ -92,6 +93,7 @@ export async function runWeeklySummary(
   const hasReferences = references.length > 0;
   const isPrompt = safety.result.level === "prompt" && safety.result.triggered;
 
+  const recordedPatterns = recordedFactsFor(weekLogs, null, 7, now);
   const context: ModelContext = {
     currentMessage: WEEKLY_REQUEST,
     priorMessages: [],
@@ -99,6 +101,7 @@ export async function runWeeklySummary(
     profile: input.profile,
     relevantLogs: symptomLogs,
     recentMeasurementLogs: measurementLogs,
+    recordedPatterns,
     references,
     mustAssess: true,
     isRepair: false,
@@ -106,10 +109,12 @@ export async function runWeeklySummary(
     mode: "weekly",
   };
   const user = buildUserContent(context);
+  // The weekly window is part of the request, so "7 days" is a supported figure.
+  const evidence = claimEvidence(weekLogs, [...recordedPatterns, `${WEEKLY_DAYS} days`], now);
 
   let parsed = parseModelOutput(
     await deps.provider.complete({ system: SYSTEM_PROMPT, user, context }),
-    { mustAssess: true, hasReferences },
+    { mustAssess: true, hasReferences, evidence },
   );
   if (!parsed.ok) {
     parsed = parseModelOutput(
@@ -118,7 +123,7 @@ export async function runWeeklySummary(
         user: user + buildRepairInstruction(parsed.problems, parsed.quotes),
         context: { ...context, isRepair: true },
       }),
-      { mustAssess: true, hasReferences },
+      { mustAssess: true, hasReferences, evidence },
     );
     if (!parsed.ok) throw new AiUnavailableError(`invalid weekly output after repair (${parsed.problems.join("; ")})`);
   }
@@ -127,7 +132,9 @@ export async function runWeeklySummary(
   if (output.status !== "assessment" || !output.assessment) {
     throw new AiUnavailableError("weekly output was not an assessment");
   }
-  const assessment = toContractAssessment(output.assessment, symptomLogs, references, measurementLogs, queryText);
+  const assessment = toContractAssessment(output.assessment, symptomLogs, references, measurementLogs, queryText, {
+    recordedFacts: recordedPatterns,
+  });
 
   return {
     status: "summary",
