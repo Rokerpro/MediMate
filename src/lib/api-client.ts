@@ -85,9 +85,11 @@ async function requestJson<T>(
   schema: { parse: (value: unknown) => T },
   expectedStatus: number,
   timeoutMs = REQUEST_TIMEOUT_MS,
+  /** false: throw ApiClientError(status 401) and let the caller show a sign-in prompt. */
+  redirectOnUnauthenticated = true,
 ): Promise<T> {
   return trackApiRequest(() =>
-    requestJsonWithoutTracking(input, init, schema, expectedStatus, timeoutMs),
+    requestJsonWithoutTracking(input, init, schema, expectedStatus, timeoutMs, redirectOnUnauthenticated),
   );
 }
 
@@ -97,6 +99,7 @@ async function requestJsonWithoutTracking<T>(
   schema: { parse: (value: unknown) => T },
   expectedStatus: number,
   timeoutMs: number,
+  redirectOnUnauthenticated: boolean,
 ): Promise<T> {
   let response: Response;
   try {
@@ -124,8 +127,8 @@ async function requestJsonWithoutTracking<T>(
   }
 
   if (response.status === 401) {
-    redirectToLogin();
-    throw new ApiClientError("Your session has ended. Please sign in again.", false, 401);
+    if (redirectOnUnauthenticated) redirectToLogin();
+    throw new ApiClientError("Please sign in to continue.", false, 401);
   }
 
   if (!response.ok) {
@@ -185,6 +188,36 @@ export async function generateWeeklySummary(): Promise<WeeklySummaryResponse> {
 /** GET /api/auth/me — the signed-in user, or `{ user: null }`. Never redirects. */
 export async function getCurrentUser(): Promise<CurrentUserResponse> {
   return requestJson("/api/auth/me", { cache: "no-store" }, currentUserResponseSchema, 200);
+}
+
+/** Fired on window after the profile is saved, so the header name can refresh. */
+export const PROFILE_SAVED_EVENT = "medimate:profile-saved";
+
+/**
+ * DELETE /api/auth/account — permanently deletes the signed-in account and its data,
+ * clears this browser's chats, then goes to the landing page. Throws ApiClientError on failure.
+ */
+export async function deleteAccount(): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch("/api/auth/account", {
+      method: "DELETE",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch {
+    throw new ApiClientError("We could not reach the server. Please try again.", true);
+  }
+  if (response.status === 401) {
+    redirectToLogin();
+    throw new ApiClientError("Your session has ended. Please sign in again.", false, 401);
+  }
+  if (response.status !== 204) {
+    throw new ApiClientError("We could not delete your account. Please try again.", true, response.status);
+  }
+  clearLocalAccountData();
+  // Full page load on purpose: drops the deleted account's in-memory state.
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+  window.location.assign("/?accountDeleted=1");
 }
 
 /** POST /api/auth/signout, clear this browser's chats, then go to the login page. */
@@ -272,6 +305,10 @@ export async function createHealthLog(
   );
 }
 
+/**
+ * POST /api/assistant/chat. Does not redirect when signed out: it throws
+ * ApiClientError with status 401, and the chat should show a sign-in prompt.
+ */
 export async function sendAssistantMessage(input: ChatRequest): Promise<ChatResponse> {
   const validatedInput = chatRequestSchema.parse(input);
   try {
@@ -285,6 +322,8 @@ export async function sendAssistantMessage(input: ChatRequest): Promise<ChatResp
       chatResponseSchema,
       200,
       CHAT_REQUEST_TIMEOUT_MS,
+      // The chat shows an inline "Sign in to chat" prompt instead of leaving the page.
+      false,
     );
   } catch (error) {
     if (error instanceof ApiClientError && error.status === 404 && validatedInput.sessionId !== null) {

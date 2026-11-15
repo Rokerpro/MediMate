@@ -5,7 +5,7 @@ import {
   profileUpdateSchema,
   type Profile,
 } from "@/lib/validations";
-import { getProfile, updateProfile } from "@/lib/api-client";
+import { PROFILE_SAVED_EVENT, getProfile, updateProfile } from "@/lib/api-client";
 import { NEW_USER_NAME } from "@/lib/profile-onboarding";
 
 type FieldErrors = Record<string, string>;
@@ -134,6 +134,7 @@ export function ProfileForm({
       const response = await updateProfile(parsed.data);
       showProfile(response.profile);
       setSuccessMessage("Profile saved.");
+      window.dispatchEvent(new Event(PROFILE_SAVED_EVENT));
       onSaved?.();
     } catch {
       setSaveError("We could not save your profile. Please try again.");

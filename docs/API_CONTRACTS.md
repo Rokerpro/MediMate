@@ -20,7 +20,7 @@ Do not return stack traces, provider error bodies, API keys or database credenti
 Every data endpoint below requires a signed-in user. Sign-in is "Continue with Google" through Supabase Auth (PKCE). Session tokens are kept in httpOnly cookies (`mm_access`, `mm_refresh`), so browser JavaScript never sees them; `fetch` sends them automatically to same-origin routes.
 
 - The server takes the profile id from the session, never from the request. All data is the signed-in user's own (RLS: own profile only).
-- Without a usable session, every data endpoint returns **401** `{"error":{"code":"UNAUTHENTICATED","message":"Please sign in to continue."}}` before any validation, database read, rate-limit slot or AI call. The client should send the user to `/login?next=<current path>` (the shared `api-client.ts` does this).
+- Without a usable session, every data endpoint returns **401** `{"error":{"code":"UNAUTHENTICATED","message":"Please sign in to continue."}}` before any validation, database read, rate-limit slot or AI call. The client should send the user to `/login?next=<current path>` (the shared `api-client.ts` does this), except the assistant chat: `sendAssistantMessage` throws `ApiClientError` with `status: 401` and does not redirect, so the chat can show an inline "Sign in to chat" prompt.
 - App pages (`/dashboard`, `/logs`, `/profile`, `/assistant`, `/reminders`, `/summary`, `/prescriptions`) redirect to `/login?next=…` when there are no session cookies (`src/proxy.ts`). `/`, `/login` and `/auth/*` are public.
 - Only one configured demo Google account sees the synthetic demo profile ("Alex Demo"). Other accounts start with an empty profile (`displayName: "New user"`, `age: null`). Only the first 5 non-demo accounts can sign up.
 
@@ -30,6 +30,7 @@ Every data endpoint below requires a signed-in user. Sign-in is "Continue with G
 | `/auth/callback?code=…` | GET (browser navigation) | Finishes sign-in, sets cookies, redirects to `next` (default `/dashboard`). On failure → `/login?error=failed`; sign-ups full → `/login?error=closed`. |
 | `/api/auth/me` | GET | `{ "user": { "email": "…", "displayName": "…" } }` or `{ "user": null }` (200, never 401). Schema: `currentUserResponseSchema`. |
 | `/api/auth/signout` | POST | Ends the session, clears cookies. 204. The client also clears saved assistant chats in `localStorage`. |
+| `/api/auth/account` | DELETE | Permanently deletes the signed-in account: profile, logs, chats, reminders and the Google sign-in link (frees a sign-up place). The shared demo profile is only unlinked, never deleted. 204 and cookies cleared; 401 if signed out. Client: `deleteAccount()` clears saved chats and goes to `/?accountDeleted=1`. Needs migration `0005_delete_account.sql`. |
 
 `/api/prescriptions/explain` stays public: it is deterministic, reads no user data and calls no AI.
 

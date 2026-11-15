@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { getCurrentUser, signOut } from "@/lib/api-client";
+import { PROFILE_SAVED_EVENT, getCurrentUser, signOut } from "@/lib/api-client";
 import type { CurrentUser } from "@/lib/validations";
 
 /** Signed-in user's name with a sign-out button. Shown in the app header. */
@@ -12,15 +12,21 @@ export function AccountMenu() {
 
   useEffect(() => {
     let cancelled = false;
-    getCurrentUser()
-      .then(({ user: current }) => {
-        if (!cancelled) setUser(current);
-      })
-      .catch(() => {
-        // The chip is optional; pages handle their own errors.
-      });
+    const load = () => {
+      getCurrentUser()
+        .then(({ user: current }) => {
+          if (!cancelled) setUser(current);
+        })
+        .catch(() => {
+          // The chip is optional; pages handle their own errors.
+        });
+    };
+    load();
+    // The header stays mounted across pages, so refresh the name after onboarding or a profile edit.
+    window.addEventListener(PROFILE_SAVED_EVENT, load);
     return () => {
       cancelled = true;
+      window.removeEventListener(PROFILE_SAVED_EVENT, load);
     };
   }, []);
 

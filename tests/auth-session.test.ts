@@ -116,6 +116,7 @@ describe("API routes authenticate first", () => {
     "src/app/api/assistant/sessions/route.ts",
     "src/app/api/assistant/chat/route.ts",
     "src/app/api/insights/weekly/route.ts",
+    "src/app/api/auth/account/route.ts",
   ];
 
   for (const file of dataRoutes) {
@@ -135,4 +136,24 @@ describe("API routes authenticate first", () => {
       assert.doesNotMatch(source, /DEMO_PROFILE_ID|profileId\s*[:=]\s*(body|parsed|query)/);
     });
   }
+});
+
+describe("delete_medimate_account migration", () => {
+  const sql = readFileSync("supabase/migrations/0005_delete_account.sql", "utf8");
+
+  it("only deletes the caller's own rows", () => {
+    for (const statement of sql.match(/(delete from|update) [^;]+;/g) ?? []) {
+      assert.match(statement, /= caller/, statement);
+    }
+  });
+
+  it("never deletes the shared demo profile, only unlinks it", () => {
+    assert.match(sql, /delete from public\.profiles where user_id = caller and id <> demo_id/);
+    assert.match(sql, /set user_id = null[^;]+where id = demo_id and user_id = caller/);
+  });
+
+  it("is callable by signed-in users only", () => {
+    assert.match(sql, /revoke all on function public\.delete_medimate_account\(\) from public, anon/);
+    assert.match(sql, /grant execute on function public\.delete_medimate_account\(\) to authenticated/);
+  });
 });

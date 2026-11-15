@@ -113,3 +113,5 @@ Pending:
 - Owner: run `supabase/reset-demo.sql` in the Supabase SQL editor right before the demo (restores Alex Demo, 14 logs re-dated to today, 2 reminders; deletes all chat sessions). Then rehearse and record the backup video.
 - Person B: treat 429 as retryable in `src/lib/api-client.ts` and show the wait message.
 - Any contract change: update `docs/API_CONTRACTS.md`, the Zod schema, tests and both AI context files together, and tell the other developer.
+
+- 2026-11-15: Delete account — `supabase/migrations/0005_delete_account.sql` (`delete_medimate_account()`, security definer, only `auth.uid()`; demo profile unlinked, never deleted; deletes the auth user, freeing a sign-up place), `src/app/api/auth/account/route.ts` (DELETE, 204), `deleteAccount()` in api-client, contract §0a. Chat 401 no longer redirects (`redirectOnUnauthenticated` param on `requestJson`). Header name refresh via `PROFILE_SAVED_EVENT` (header stays mounted across `router.replace`, so it showed "New user" after onboarding).
