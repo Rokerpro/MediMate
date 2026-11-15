@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Health summary · MediMate" };
 
 export default function SummaryPage() {
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="max-w-4xl">
       <HealthSummary />
       <RecentAssistantConversations />
     </div>

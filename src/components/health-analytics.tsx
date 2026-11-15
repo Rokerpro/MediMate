@@ -369,7 +369,7 @@ export function HealthAnalytics() {
   }, [days, retry]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 pb-8">
+    <div className="max-w-5xl space-y-8 pb-8">
       <PageHeader
         eyebrow="Your workspace / Insights"
         title="Health insights"

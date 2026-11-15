@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { WelcomeForm } from "@/components/welcome-form";
+
+export const metadata: Metadata = { title: "Welcome · MediMate" };
 
 export default function WelcomePage() {
   return (

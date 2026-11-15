@@ -1,11 +1,14 @@
+import type { Metadata } from "next";
 import { PageHeader } from "@/components/page-header";
 import { AccountDeletion } from "@/components/account-deletion";
 import { ProfileForm } from "@/components/profile-form";
 import { SignOutButton } from "@/components/sign-out-button";
 
+export const metadata: Metadata = { title: "Your profile · MediMate" };
+
 export default function ProfilePage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="max-w-3xl space-y-8">
       <PageHeader
         eyebrow="Personal profile"
         title="Your profile"
