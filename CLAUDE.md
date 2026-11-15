@@ -55,7 +55,7 @@ Build a web application where a user can:
 - Voice input.
 - Wearable integrations.
 - Native mobile application.
-- Weekly AI summaries and medication notifications.
+- Scheduled or emailed weekly summaries, and medication notifications. (An on-demand weekly AI summary of the user's own logs was added by the owner on 2026-11-15; it uses the same safety order and output checks as the chat.)
 - Large-scale medical web crawling.
 - A vector database unless a tested need arises and time remains.
 - Complex agent frameworks or multi-agent orchestration.

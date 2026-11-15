@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { HealthTrends } from "@/components/health-trends";
+import { WeeklySummary } from "@/components/weekly-summary";
 import { ApiClientError, getHealthLogs } from "@/lib/api-client";
 import type { HealthLog } from "@/lib/validations";
 import { TREND_DAYS, logsInWindow, summaryFigures } from "@/lib/health/trends";
@@ -269,6 +270,8 @@ export default function DashboardPage() {
           </div>
         ) : null}
       </section>
+
+      <WeeklySummary />
     </div>
   );
 }

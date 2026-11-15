@@ -284,6 +284,31 @@ Read-only. The signed-in user's **completed** assistant conversations, newest fi
 - `sessions` may be empty: show an empty state ("No completed assistant conversations yet").
 - Anything shown from an assessment must keep its `disclaimer`; label `initialConcern` as what the user reported, not a recorded fact.
 
+## 3d. Weekly AI summary (added 2026-11-15)
+
+### `POST /api/insights/weekly`
+
+Signed-in only. No request body (send `{}`). Generated on demand from the user's own logs of the last 7 days; nothing is stored, scheduled or emailed. Schema: `src/lib/validations/weekly-summary.ts` (`weeklySummaryResponseSchema`).
+
+```json
+{
+  "status": "summary",
+  "weekStart": "2026-11-08",
+  "weekEnd": "2026-11-15",
+  "logCount": 7,
+  "safety": { "level": "routine", "triggered": false, "message": null },
+  "assistantMessage": "Here is a brief summary of your week's health logs.",
+  "assessment": { "summary": "…", "possibleExplanations": [], "nextSteps": ["…"], "sources": [], "disclaimer": "…" }
+}
+```
+
+- `status: "no_data"`: no logs in the last 7 days. `logCount: 0`, `assessment: null`, and no AI call. Show `assistantMessage` with a prompt to add a log.
+- `status: "urgent"`: a log this week matched an urgent warning rule. `assessment: null`, no AI call. Show `safety.message` prominently, the same way as an urgent chat reply.
+- `status: "summary"`: same assessment shape and the same server checks as chat. `possibleExplanations` are patterns recorded together, with dated `supportingHistory`; they are associations, not causes. Sources are curated only, and the disclaimer is always present. When `safety.level` is `"prompt"`, show the GP / NHS 111 notice; the first next step is the fixed GP/111 step.
+- Errors: 401, 404 (no profile), 429 with `Retry-After` (shares the assistant limit), 503, 500.
+
+UI: the "This week's summary" card on `/dashboard` (`src/components/weekly-summary.tsx`).
+
 ## 4. Status and error behavior
 
 - `400`: malformed or invalid request.

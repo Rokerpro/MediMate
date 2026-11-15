@@ -7,6 +7,8 @@ import {
   chatResponseSchema,
   currentUserResponseSchema,
   type CurrentUserResponse,
+  weeklySummaryResponseSchema,
+  type WeeklySummaryResponse,
   healthLogCreateResponseSchema,
   healthLogCreateSchema,
   healthLogListQuerySchema,
@@ -167,6 +169,17 @@ export function clearLocalAccountData() {
   } catch {
     // Storage unavailable: nothing was saved.
   }
+}
+
+/** POST /api/insights/weekly — on-demand summary of the last 7 days of logs (contract §3d). */
+export async function generateWeeklySummary(): Promise<WeeklySummaryResponse> {
+  return requestJson(
+    "/api/insights/weekly",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+    weeklySummaryResponseSchema,
+    200,
+    CHAT_REQUEST_TIMEOUT_MS,
+  );
 }
 
 /** GET /api/auth/me — the signed-in user, or `{ user: null }`. Never redirects. */

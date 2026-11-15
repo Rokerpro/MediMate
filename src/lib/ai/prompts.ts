@@ -33,6 +33,16 @@ function list(values: readonly string[]): string {
   return values.length ? values.map(sanitize).join(", ") : "none recorded";
 }
 
+/** Stands in for the user's message in a weekly summary request (fixed text, no user input). */
+export const WEEKLY_REQUEST =
+  "The user asked for an educational summary of their own health logs from the last 7 days. There is no new symptom message.";
+
+const WEEKLY_TURN_INSTRUCTION =
+  'Summarise the user\'s health logs from the last 7 days. Return status "assessment" with "followUpQuestions": [] (do not ask questions). ' +
+  "In summary, say in 2 to 4 plain sentences what the logs recorded this week: which symptoms, on which dates, and any recorded sleep, fluid, activity or mood figures, stated as recorded values only. " +
+  "In possibleExplanations, list at most 3 observations that were recorded together, each written as an association to discuss with a clinician (never a cause), with the related entries cited in supportingLogIds and at least one item in unknowns (something the logs cannot show); use an empty list if no pattern is visible. " +
+  "assistantMessage is one short sentence introducing the weekly summary. nextSteps must say when to seek professional care.";
+
 export function buildUserContent(context: ModelContext): string {
   const { profile } = context;
 
@@ -69,9 +79,12 @@ export function buildUserContent(context: ModelContext): string {
       "Do not name any specific medical condition, syndrome or disease; describe each possibility in general terms " +
       '(for example "strain or overuse") as something to discuss with a clinician.';
 
-  const turnInstruction = context.mustAssess
-    ? 'Enough follow-up questions have been asked. Return status "assessment" now.'
-    : 'Return "follow_up" if important information is missing; otherwise return "assessment".';
+  const turnInstruction =
+    context.mode === "weekly"
+      ? WEEKLY_TURN_INSTRUCTION
+      : context.mustAssess
+        ? 'Enough follow-up questions have been asked. Return status "assessment" now.'
+        : 'Return "follow_up" if important information is missing; otherwise return "assessment".';
 
   const safetyResult = context.promptSign
     ? `A configured NHS rule matched (${sanitize(context.promptSign)}). The NHS advises asking for an urgent GP ` +

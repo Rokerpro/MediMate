@@ -73,7 +73,7 @@ export function summaryFigures(windowLogs: readonly HealthLog[]): SummaryFigures
 }
 
 /** Logs whose symptom text is not a "nothing reported" placeholder. */
-const isSymptomEntry = (log: HealthLog): boolean => !/^no (specific )?symptoms?( reported)?\.?$/i.test(log.symptoms.trim());
+export const isSymptomEntry = (log: HealthLog): boolean => !/^no (specific )?symptoms?( reported)?\.?$/i.test(log.symptoms.trim());
 
 export type RecurringSymptom = { symptom: string; count: number; firstDate: string; lastDate: string };
 

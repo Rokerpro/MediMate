@@ -115,6 +115,7 @@ describe("API routes authenticate first", () => {
     "src/app/api/reminders/[id]/route.ts",
     "src/app/api/assistant/sessions/route.ts",
     "src/app/api/assistant/chat/route.ts",
+    "src/app/api/insights/weekly/route.ts",
   ];
 
   for (const file of dataRoutes) {
