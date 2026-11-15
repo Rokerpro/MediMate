@@ -1,7 +1,11 @@
 // Deterministic warning-sign rules (AI_SAFETY_SPEC.md §2 step 4, §5, §9).
 //
-// Every rule below implements one item from an NHS "Call 999 or go to A&E if"
-// list, recorded with its URL and review date in docs/AI_SAFETY_SPEC.md §9.
+// SAFETY_RULES: each implements one item from an NHS "Call 999 or go to A&E if"
+// list (level "urgent": the model is never called).
+// PROMPT_RULES: each implements one item from an NHS "Ask for an urgent GP
+// appointment or get help from NHS 111 if" list (level "prompt": the model still
+// answers, and the server adds the fixed GP/111 advice).
+// All are recorded with URL and review date in docs/AI_SAFETY_SPEC.md §9.
 // Do not add rules without a recorded authoritative source and tests.
 //
 // Limits (must not be hidden): matching is keyword-based, so unusual wording
@@ -15,6 +19,8 @@ export type SafetyRule = {
   matches: (normalizedText: string) => boolean;
   /** Fixed escalation wording shown to the user. */
   message: string;
+  /** "<symptom> with <NHS item>", for the model's SAFETY_RESULT section. */
+  sign?: string;
   /** Source register entry in docs/AI_SAFETY_SPEC.md §9. */
   sourceUrl: string;
   reviewedOn: string;
@@ -82,6 +88,35 @@ function rule(id: string, context: RuleContext, nhsItem: string, signs: readonly
       `Call your local emergency number or go to the nearest emergency department now. ` +
       `MediMate cannot assess emergencies and this is not a diagnosis. ` +
       `Source: NHS, "${page}" (${sourceUrl}).`,
+    sign: `${noun} with ${nhsItem}`,
+    sourceUrl,
+    reviewedOn: reviewed,
+  };
+}
+
+/** Fixed sentence added to the chat reply when a PROMPT_RULES item matches. */
+export const PROMPT_ASSISTANT_NOTE =
+  "Based on what you described, the NHS advises asking for an urgent GP appointment or getting help from NHS 111 " +
+  "(or your local urgent medical advice service) today.";
+
+/** Fixed next step put first in the assessment when a PROMPT_RULES item matches. */
+export const PROMPT_NEXT_STEP =
+  "Ask for an urgent GP appointment or contact NHS 111 (or your local urgent medical advice service) today. " +
+  "If things get worse quickly, call your local emergency number.";
+
+function promptRule(id: string, context: Exclude<RuleContext, "chest">, nhsItem: string, signs: readonly RegExp[]): SafetyRule {
+  const { pattern: contextPattern, page, url: sourceUrl, reviewed, noun } = CONTEXTS[context];
+  return {
+    id,
+    matches: (text) => contextPattern.test(text) && signs.every((sign) => hasUnnegated(text, sign)),
+    message:
+      `Some of what you described is listed by the NHS as a reason to ask for an urgent GP appointment ` +
+      `or get help from NHS 111 (${noun} with ${nhsItem}). ` +
+      `Contact a GP surgery today, or call NHS 111 or your local urgent medical advice service. ` +
+      `If things get worse quickly, call your local emergency number. ` +
+      `MediMate cannot assess this and this is not a diagnosis. ` +
+      `Source: NHS, "${page}" (${sourceUrl}).`,
+    sign: `${noun} with ${nhsItem}`,
     sourceUrl,
     reviewedOn: reviewed,
   };
@@ -192,25 +227,81 @@ export const SAFETY_RULES: readonly SafetyRule[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Prompt-level rules. The Chest pain page has no "urgent GP / 111" list, so
+// there are none for chest pain. Not implemented (see AI_SAFETY_SPEC.md §9.1):
+// the child-only headache items and "any other symptoms you're worried about".
 
-export type SafetyEvaluation = { result: SafetyResult; ruleId: string | null };
+const SUDDEN = /\b(sudden\w*|all of a sudden|out of nowhere)\b/;
+const SEVERE = /\b(severe\w*|extreme\w*|excruciating|unbearable|agoni\w*|really bad|very bad)\b/;
+
+export const PROMPT_RULES: readonly SafetyRule[] = [
+  // NHS "Back pain": "Ask for an urgent GP appointment or get help from 111 if: You have back pain and: ..."
+  promptRule("back-unwell-fever", "back", "feeling hot, cold, shivery or generally unwell", [
+    /\b(shiver\w*|chills|feverish|fever|(a|high|running a) temperature|hot and cold|hot or cold|(feel|feeling|felt) (generally |really |very )?(unwell|ill|poorly)|generally unwell)\b/,
+  ]),
+  {
+    // One NHS item, two phrasings: severe pain that started suddenly, or pain getting worse quickly.
+    ...promptRule("back-sudden-or-rapidly-worse", "back", "severe pain that starts suddenly or is getting worse quickly", []),
+    matches: (text) =>
+      BACK_CONTEXT.test(text) &&
+      ((hasUnnegated(text, SUDDEN) && hasUnnegated(text, SEVERE)) ||
+        hasUnnegated(
+          text,
+          /\b(getting|got|gets|becoming|became|grown|growing) (much )?worse (very )?(quickly|rapidly|fast|by the hour)\b|\b(quickly|rapidly) (getting |got |becoming )?worse\b/,
+        )),
+  },
+
+  // NHS "Headaches": "Ask for an urgent GP appointment or get help from NHS 111 if: ..."
+  promptRule("headache-vision-eye", "headache", "vision or eye problems", [
+    /\b(blurr\w*|double vision|(vision|eyesight|sight) (problems?|changes?|is (blurry|strange|odd|funny))|visual (problems?|changes?|disturbances?)|eye (problems?|pain)|eyes? (hurts?|is painful|are painful|is red|are red)|painful eyes?|red eyes?|seeing (spots|flashing lights|zig-?zags?))\b/,
+  ]),
+  promptRule("headache-cough-strain", "headache", "a headache triggered or made worse by coughing, sneezing, bending down or exercising", [
+    near(
+      String.raw`\b(worse|trigger\w*|brought on|comes on|came on|starts?|started|hurts more)\b`,
+      String.raw`\b(cough\w*|sneez\w*|bend\w*|exercis\w*|working out|work out)\b`,
+    ),
+  ]),
+  promptRule("headache-vomiting", "headache", "being sick (vomiting)", [
+    /\b(vomit\w*|being sick|been sick|was sick|throwing up|threw up|thrown up)\b/,
+  ]),
+  promptRule("headache-jaw-scalp", "headache", "jaw pain when eating or a sore or tender scalp", [
+    new RegExp(
+      [
+        near(String.raw`\bjaw\b`, String.raw`\b(eat\w*|chew\w*)\b`).source,
+        near(String.raw`\bscalp\b`, String.raw`\b(sore|tender|hurts?|painful)\b`).source,
+      ].join("|"),
+    ),
+  ]),
+];
+
+// ---------------------------------------------------------------------------
+
+export type SafetyEvaluation = { result: SafetyResult; ruleId: string | null; sign?: string };
 
 const NO_RULE_MATCHED: SafetyResult = { level: "routine", triggered: false, message: null };
 
 /**
  * Evaluates the current message plus earlier user messages in the session.
- * The first matching rule wins; the LLM never sees or changes this decision.
+ * Urgent rules are checked first; the first matching rule wins. The LLM never
+ * changes this decision.
  */
 export function evaluateSafety(
   userTexts: readonly string[],
   rules: readonly SafetyRule[] = SAFETY_RULES,
+  promptRules: readonly SafetyRule[] = PROMPT_RULES,
 ): SafetyEvaluation {
   const normalized = userTexts.join("\n").toLowerCase().replace(/[’‘]/g, "'").replace(/\s+/g, " ");
-  for (const candidate of rules) {
-    if (candidate.matches(normalized)) {
+  const levels = [
+    ["urgent", rules],
+    ["prompt", promptRules],
+  ] as const;
+  for (const [level, list] of levels) {
+    const candidate = list.find((r) => r.matches(normalized));
+    if (candidate) {
       return {
-        result: { level: "urgent", triggered: true, message: candidate.message },
+        result: { level, triggered: true, message: candidate.message },
         ruleId: candidate.id,
+        sign: candidate.sign,
       };
     }
   }

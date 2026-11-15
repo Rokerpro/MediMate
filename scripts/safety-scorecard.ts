@@ -11,10 +11,11 @@ import { fileURLToPath } from "node:url";
 
 import { runAssistantTurn } from "../src/lib/ai/assistant.ts";
 import type { LlmProvider } from "../src/lib/ai/types.ts";
-import { SAFETY_RULES, evaluateSafety } from "../src/lib/health/safety-rules.ts";
+import { PROMPT_NEXT_STEP, PROMPT_RULES, SAFETY_RULES, evaluateSafety } from "../src/lib/health/safety-rules.ts";
 import type { Profile } from "../src/lib/validations/profile.ts";
 import {
   ORDINARY_MESSAGES,
+  PROMPT_RULE_CASES,
   RULE_CASES,
   SAFE_OUTPUTS,
   UNSAFE_FOLLOW_UPS,
@@ -106,7 +107,7 @@ export async function runScorecard(): Promise<Scorecard> {
   lines.push(
     line(
       "Safety rules with a cited NHS source and review date",
-      SAFETY_RULES.map((rule) => ({
+      [...SAFETY_RULES, ...PROMPT_RULES].map((rule) => ({
         name: rule.id,
         ok: /^https:\/\/www\.nhs\.uk\/conditions\//.test(rule.sourceUrl) && /^\d{4}-\d{2}-\d{2}$/.test(rule.reviewedOn),
       })),
@@ -133,10 +134,38 @@ export async function runScorecard(): Promise<Scorecard> {
   );
   lines.push(line("NHS warning signs escalated to urgent care (AI model never called)", urgentResults));
 
+  // Urgent-GP / 111 path: the model still answers, and the server adds the fixed GP/111 advice.
+  const promptSigns = PROMPT_RULE_CASES.flatMap((c) => c.positive.map((text) => ({ ruleId: c.ruleId, text })));
+  const promptResults = await Promise.all(
+    promptSigns.map(async ({ ruleId, text }) => {
+      const turn = await runAssistantTurn(
+        {
+          message: "It is about 5 out of 10.",
+          priorMessages: [
+            { role: "user", content: text },
+            { role: "assistant", content: "How strong is it?" },
+          ],
+          profile: PROFILE,
+          candidateLogs: [],
+        },
+        { provider: scriptedProvider(modelReply({ category: "", field: "summary", text: "You reported discomfort." })), evaluateSafety },
+      );
+      const ok =
+        turn.status === "assessment" &&
+        turn.safety.level === "prompt" &&
+        turn.safetyRuleId === ruleId &&
+        turn.assessment?.nextSteps[0] === PROMPT_NEXT_STEP &&
+        /NHS 111/.test(turn.assistantMessage);
+      return { ok, name: text };
+    }),
+  );
+  lines.push(line("NHS urgent-GP / 111 signs flagged, GP/111 advice added by the server", promptResults));
+
   const quiet = (texts: readonly string[]) =>
     texts.map((text) => ({ ok: !evaluateSafety([text]).result.triggered, name: text }));
-  lines.push(line("Negated warning signs (\"no numbness\") with no false alarm", quiet(RULE_CASES.flatMap((c) => c.negative))));
-  lines.push(line("Near-miss messages not on the NHS lists with no false alarm", quiet(RULE_CASES.flatMap((c) => c.ambiguous))));
+  const allCases = [...RULE_CASES, ...PROMPT_RULE_CASES];
+  lines.push(line("Negated warning signs (\"no numbness\") with no false alarm", quiet(allCases.flatMap((c) => c.negative))));
+  lines.push(line("Near-miss messages not on the NHS lists with no false alarm", quiet(allCases.flatMap((c) => c.ambiguous))));
   lines.push(line("Everyday messages with no false alarm", quiet(ORDINARY_MESSAGES)));
 
   const categories = [...new Set(UNSAFE_OUTPUTS.map((c) => c.category))];

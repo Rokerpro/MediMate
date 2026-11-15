@@ -22,7 +22,7 @@ import {
   selectRelevantLogs,
   stripNegatedPhrases,
 } from "../src/lib/health/retrieve-history.ts";
-import { evaluateSafety, type SafetyRule } from "../src/lib/health/safety-rules.ts";
+import { PROMPT_ASSISTANT_NOTE, PROMPT_NEXT_STEP, evaluateSafety, type SafetyRule } from "../src/lib/health/safety-rules.ts";
 import { ASSESSMENT_DISCLAIMER, chatResponseSchema } from "../src/lib/validations/assistant.ts";
 import type { HealthLog, Profile } from "../src/lib/validations/index.ts";
 
@@ -64,7 +64,7 @@ const LOGS = [BACK_1, NOTHING, BACK_2];
 /** A clock where the fixture logs are older than the recent-measurement window. */
 const OUTSIDE_MEASUREMENT_WINDOW = Date.parse("2027-01-01T00:00:00.000Z");
 
-const noSafety = (texts: readonly string[]) => evaluateSafety(texts, []);
+const noSafety = (texts: readonly string[]) => evaluateSafety(texts, [], []);
 
 /** Provider returning queued replies and recording requests. */
 function fakeProvider(...replies: (string | Error)[]): LlmProvider & { requests: ModelRequest[] } {
@@ -500,6 +500,59 @@ describe("runAssistantTurn", () => {
     assert.notEqual(turn.assistantMessage, turn.safety.message);
     assert.equal(provider.requests.length, 0);
     assert.equal(chatResponseSchema.safeParse(withSession(turn)).success, true);
+  });
+
+  it("a prompt-level (NHS urgent GP / 111) sign still calls the model and adds fixed GP/111 advice", async () => {
+    const provider = fakeProvider(validAssessment([]));
+    const turn = await runAssistantTurn(
+      {
+        message: "About 6 out of 10.",
+        priorMessages: [
+          { role: "user", content: "My lower back hurts and I feel hot and shivery." },
+          { role: "assistant", content: "How strong is it?" },
+        ],
+        profile,
+        candidateLogs: [],
+      },
+      { provider, evaluateSafety },
+    );
+    assert.equal(provider.requests.length, 1);
+    assert.match(provider.requests[0]!.user, /<SAFETY_RESULT>\nA configured NHS rule matched \(back pain with feeling hot, cold, shivery/);
+    assert.equal(turn.status, "assessment");
+    assert.deepEqual(turn.safety.level, "prompt");
+    assert.equal(turn.safety.triggered, true);
+    assert.match(turn.safety.message ?? "", /urgent GP appointment/);
+    assert.equal(turn.safetyRuleId, "back-unwell-fever");
+    assert.ok(turn.assistantMessage.endsWith(PROMPT_ASSISTANT_NOTE));
+    assert.equal(turn.assessment?.nextSteps[0], PROMPT_NEXT_STEP);
+    assert.equal(turn.assessment?.disclaimer, ASSESSMENT_DISCLAIMER);
+    assert.equal(chatResponseSchema.safeParse(withSession(turn)).success, true);
+  });
+
+  it("a prompt-level sign on a follow-up turn keeps the questions and adds the GP/111 note to the reply", async () => {
+    const provider = fakeProvider(
+      JSON.stringify({ status: "follow_up", assistantMessage: "Thanks.", followUpQuestions: ["When did it start?"], assessment: null }),
+    );
+    const turn = await runAssistantTurn(
+      { message: "Headache and I have been vomiting.", priorMessages: [], profile, candidateLogs: [] },
+      { provider, evaluateSafety },
+    );
+    assert.equal(turn.status, "follow_up");
+    assert.equal(turn.safety.level, "prompt");
+    assert.equal(turn.assistantMessage, `Thanks. ${PROMPT_ASSISTANT_NOTE}`);
+    assert.equal(chatResponseSchema.safeParse(withSession(turn)).success, true);
+  });
+
+  it("the response schema rejects a prompt level that is not marked as triggered", () => {
+    const response = {
+      sessionId: SESSION_ID,
+      status: "follow_up",
+      assistantMessage: "Thanks.",
+      followUpQuestions: ["When did it start?"],
+      safety: { level: "prompt", triggered: false, message: null },
+      assessment: null,
+    };
+    assert.equal(chatResponseSchema.safeParse(response).success, false);
   });
 
   it("no configured rules means not triggered (never presented as safe)", () => {

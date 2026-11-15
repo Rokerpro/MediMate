@@ -146,6 +146,12 @@ When sufficient information is available:
 
 If a safety rule triggers, return `status: "urgent"`, a non-null safety message and no ordinary LLM-generated reassurance. The exact urgency wording must come from the reviewed safety specification. Do not let an AI response override the deterministic safety result.
 
+`safety.level` values:
+
+- `"routine"`: no configured rule matched (`triggered: false`, `message: null`). This is **not** medical clearance; never show it as "safe".
+- `"urgent"`: an NHS "Call 999 / A&E" item matched. Always `status: "urgent"`.
+- `"prompt"`: an NHS "Ask for an urgent GP appointment or get help from NHS 111" item matched (`docs/AI_SAFETY_SPEC.md` §9.1a). `triggered: true`, `message` holds the fixed NHS wording, and `status` stays `"follow_up"` or `"assessment"`. The server has already added a GP/111 sentence to `assistantMessage` and, on an assessment, put the GP/111 step first in `nextSteps`. The UI should show `safety.message` in a prominent, non-red notice (amber), labelled e.g. "Contact a GP or NHS 111 today", alongside the normal reply. Once triggered, later turns in the session stay at least at `"prompt"`.
+
 ## 3a. Reminders
 
 Reminders are written and confirmed by the user. MediMate stores the user's own wording only: it never generates, suggests or checks reminder content, medication timing or doses. In-app list only; there are no push, SMS or email notifications. Schemas: `src/lib/validations/reminder.ts`. Table: `supabase/migrations/0002_reminders.sql`.
@@ -254,6 +260,7 @@ Read-only. The demo profile's **completed** assistant conversations, newest firs
 ```
 
 - `assessment` has the same shape as in §3 and is exactly what the user was shown then.
+- `urgencyLevel: "prompt"` means the conversation matched an NHS urgent-GP / 111 item; the assessment is present and its first next step is the GP/111 advice. Show it as "Urgent GP / NHS 111 advice was given".
 - `urgencyLevel: "urgent"` with `assessment: null` means the warning-sign rules fired and the user was told to seek urgent care. Show it as "Urgent-care guidance was given" — never as a diagnosis or a result.
 - `assessment` can also be `null` for a routine conversation if the stored data no longer matches the contract; show "Summary not available".
 - `sessions` may be empty: show an empty state ("No completed assistant conversations yet").

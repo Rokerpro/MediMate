@@ -73,6 +73,12 @@ export function buildUserContent(context: ModelContext): string {
     ? 'Enough follow-up questions have been asked. Return status "assessment" now.'
     : 'Return "follow_up" if important information is missing; otherwise return "assessment".';
 
+  const safetyResult = context.promptSign
+    ? `A configured NHS rule matched (${sanitize(context.promptSign)}). The NHS advises asking for an urgent GP ` +
+      "appointment or getting help from NHS 111 today. The server adds this advice to your reply and next steps. " +
+      "Do not contradict it, do not suggest waiting to see if it settles, and do not reassure the user."
+    : "No configured warning rule matched. This is NOT evidence that the user is safe.";
+
   return [
     `<CURRENT_USER_STATEMENT>\n${sanitize(context.currentMessage)}\n</CURRENT_USER_STATEMENT>`,
     `<CONVERSATION>\n${conversation}\n</CONVERSATION>`,
@@ -80,7 +86,7 @@ export function buildUserContent(context: ModelContext): string {
     `<RELEVANT_HISTORY>\n${history}\n</RELEVANT_HISTORY>`,
     `<RECENT_DAILY_MEASUREMENTS>\n${measurements}\n</RECENT_DAILY_MEASUREMENTS>`,
     `<MEDICAL_REFERENCES>\n${references}\n</MEDICAL_REFERENCES>`,
-    `<SAFETY_RESULT>\nNo configured warning rule matched. This is NOT evidence that the user is safe.\n</SAFETY_RESULT>`,
+    `<SAFETY_RESULT>\n${safetyResult}\n</SAFETY_RESULT>`,
     `<TURN_INSTRUCTION>\n${turnInstruction}\n</TURN_INSTRUCTION>`,
   ].join("\n\n");
 }

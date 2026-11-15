@@ -115,6 +115,7 @@ Done 2026-11-14: `0002_reminders.sql` applied in Supabase; the live Vercel site 
 1. Owner: run `supabase/reset-demo.sql` in the Supabase SQL editor just before the demo (restores Alex Demo, 14 logs dated up to today, 2 reminders; deletes all chat sessions). Then rehearse and record the backup video.
 2. Person B: "Recent assistant conversations" section on `/summary` from the new read-only `GET /api/assistant/sessions` (contract §3c; schemas in `src/lib/validations/assessment-history.ts`). Backend merged and tested.
 3. Person B: confirm the `/summary` print layout in a real browser print preview.
-4. Pitch: `npm run scorecard` prints the offline safety scorecard (137/137 fixed checks as of `feat/history-synonyms`; always quote the numbers it prints; see `docs/AI_SAFETY_SPEC.md` §4.1). Quote it with its scope: fixed examples, not comprehensive emergency detection.
+4. Pitch: `npm run scorecard` prints the offline safety scorecard (173/173 fixed checks as of `feat/nhs-111-rules`; always quote the numbers it prints; see `docs/AI_SAFETY_SPEC.md` §4.1). Quote it with its scope: fixed examples, not comprehensive emergency detection.
 5. Workflow: Person A builds the system side and hands Person B a UI prompt; neither edits the other's files without coordinating.
+7. Person B: show the new `safety.level: "prompt"` (NHS urgent GP / 111 advice, contract §3 and §3c) as an amber notice with `safety.message` beside the normal reply, and label `urgencyLevel: "prompt"` sessions "Urgent GP / NHS 111 advice was given". Backend merged; the reply text and first next step already carry the advice, so nothing breaks before the UI change.
 6. Keep this file and both AI-specific context files synchronized after meaningful decisions or contract changes.
