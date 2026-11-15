@@ -603,8 +603,23 @@ function MessageBubble({
 }) {
   const isUser = message.role === "user";
   const isUrgent = message.response?.status === "urgent";
+  const promptSafetyMessage =
+    message.response?.safety.level === "prompt" ? message.response.safety.message : null;
   return (
     <article className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
+      {!isUser && promptSafetyMessage && (
+        <aside
+          role="status"
+          className={`mb-3 max-w-[92%] rounded-xl border px-4 py-3 text-sm leading-6 sm:max-w-[85%] ${
+            dark
+              ? "border-amber-700 bg-amber-950 text-amber-100"
+              : "border-amber-300 bg-amber-50 text-amber-950"
+          }`}
+        >
+          <h2 className="font-semibold">Contact a GP or NHS 111 today</h2>
+          <p className="mt-1">{promptSafetyMessage}</p>
+        </aside>
+      )}
       {!isUrgent && (
         <div
           className={`max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-6 sm:max-w-[85%] ${
