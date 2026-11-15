@@ -165,7 +165,7 @@ export function RoutePreloader() {
       aria-live="polite"
       aria-label="Loading page"
       aria-hidden={!visible}
-      className={`fixed inset-0 z-[200] flex items-center justify-center bg-[#f7f5ed] transition-opacity duration-300 motion-reduce:transition-none ${
+      className={`fixed inset-0 z-[200] flex print:hidden items-center justify-center bg-[#f7f5ed] transition-opacity duration-300 motion-reduce:transition-none ${
         visible ? "opacity-100" : "pointer-events-none opacity-0"
       }`}
     >
