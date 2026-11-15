@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AccountMenu } from "@/components/account-menu";
+import { BrandMark } from "@/components/brand-mark";
 import { OnboardingGate } from "@/components/onboarding-gate";
 import { AssistantChatPopup } from "@/components/assistant-chat-popup";
 import { AssistantExperienceProvider } from "@/components/assistant-experience";
@@ -14,7 +15,7 @@ function Logo({ className = "" }: { className?: string }) {
       href="/"
       className={`display-font shrink-0 rounded-md text-2xl font-semibold tracking-[-0.04em] text-[#254a38] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] ${className}`}
     >
-      <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#bd7e3e] align-middle" />
+      <BrandMark className="mr-2 inline-block h-7 w-7 align-[-6px]" />
       MediMate
     </Link>
   );
