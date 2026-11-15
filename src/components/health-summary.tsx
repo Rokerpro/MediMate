@@ -2,7 +2,8 @@
 
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { PageHeader } from "@/components/page-header";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { downloadSummaryPdf } from "@/lib/summary-pdf";
 import type { HealthLog, Profile } from "@/lib/validations";
 import { getHealthLogs, getProfile } from "@/lib/api-client";
 import { TREND_DAYS, logsInWindow, recurringSymptoms, summaryFigures } from "@/lib/health/trends";
@@ -30,6 +31,20 @@ function listOrNone(values: readonly string[]): string {
 
 export function HealthSummary() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
+  const articleRef = useRef<HTMLElement>(null);
+  const [pdfStatus, setPdfStatus] = useState<"idle" | "working" | "error">("idle");
+
+  async function handleDownload() {
+    if (!articleRef.current || pdfStatus === "working") return;
+    setPdfStatus("working");
+    try {
+      const date = new Date().toISOString().slice(0, 10);
+      await downloadSummaryPdf(articleRef.current, `medimate-health-summary-${date}.pdf`);
+      setPdfStatus("idle");
+    } catch {
+      setPdfStatus("error");
+    }
+  }
 
   const load = useCallback(async () => {
     setState({ status: "loading" });
@@ -77,7 +92,7 @@ export function HealthSummary() {
   const recurring = recurringSymptoms(windowLogs);
 
   return (
-    <article className="space-y-6 print:space-y-4">
+    <article ref={articleRef} className="space-y-6 print:space-y-4">
       <PageHeader
         eyebrow="Patient-provided summary"
         title="Health summary for a clinician"
@@ -87,16 +102,35 @@ export function HealthSummary() {
           </p>
         }
         actions={
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#254a38] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1c3a2c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2"
-          >
-            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-4 w-4">
-              <path d="M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2M7 14h10v6H7v-6Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-            </svg>
-            Download / print PDF
-          </button>
+          <div data-pdf-exclude className="flex flex-col items-start gap-2 sm:items-end print:hidden">
+            <div className="inline-flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void handleDownload()}
+                disabled={pdfStatus === "working"}
+                aria-busy={pdfStatus === "working"}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#254a38] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1c3a2c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2 disabled:opacity-70"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+                  <path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {pdfStatus === "working" ? "Preparing PDF…" : "Download PDF"}
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[#cbd6c5] bg-[#fffdf8] px-5 py-2.5 text-sm font-semibold text-[#254a38] transition-colors hover:bg-[#eef0e5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+                  <path d="M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2M7 14h10v6H7v-6Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                </svg>
+                Print
+              </button>
+            </div>
+            <p role="status" aria-live="polite" className="text-xs text-[#7a3520]">
+              {pdfStatus === "error" ? "Could not create the PDF. Try again, or use Print and choose “Save as PDF”." : ""}
+            </p>
+          </div>
         }
       />
 

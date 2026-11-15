@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { ContinueWithGoogle } from "@/components/continue-with-google";
+import { SignedInRedirect } from "@/components/signed-in-redirect";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { safeNextPath } from "@/lib/auth/session";
 
@@ -27,7 +28,13 @@ async function LoginContent({ searchParams }: Pick<PageProps<"/login">, "searchP
   const errorMessage = ERROR_MESSAGES[pick(params.error) ?? ""] ?? null;
   const signedOut = pick(params.signedOut) === "1";
   const next = safeNextPath(pick(params.next));
-  return <LoginShell errorMessage={errorMessage} signedOut={signedOut} next={next} />;
+  return (
+    <>
+      {/* After sign-out or a sign-in error, stay here so the message is visible. */}
+      {!signedOut && !errorMessage && <SignedInRedirect next={next} />}
+      <LoginShell errorMessage={errorMessage} signedOut={signedOut} next={next} />
+    </>
+  );
 }
 
 function LoginShell({
