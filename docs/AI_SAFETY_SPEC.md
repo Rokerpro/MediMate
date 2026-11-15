@@ -208,6 +208,10 @@ Known limitations: keyword matching as for the 999 rules; `back-unwell-fever` ma
 
 Medication advice from these pages is deliberately excluded from the excerpts, because the assistant must not give medication guidance.
 
+### 9.2b AI medicine explainer (`src/lib/ai/medicine-explainer.ts`, owner decision 2026-11-15)
+
+`POST /api/prescriptions/medicine` explains what a named or described medicine is generally used for. Same order as the chat: the deterministic safety rules run first on the user's text, and a 999 match returns the urgent result without calling the model. The model sees only the user's text (no profile or logs) and must answer `not_recognised` rather than guess. Output checks (`checkMedicineReply`) reject banned diagnosis/probability wording (`findBannedInText`), URLs, and any dose, amount, strength, schedule, interval, maximum dose, personal "you can take" instruction or "safe to take" claim, in every field except the medicine name (which may repeat a strength the user typed). One repair attempt, then 503. Guidance, disclaimer and the source link (NHS Medicines A to Z, https://www.nhs.uk/medicines/, checked 2026-11-15) are fixed server text. The answer is general information only, not advice for the user, and the UI labels it as AI-generated. Tests: `tests/medicine-explainer.test.ts`.
+
 ### 9.3 Prescription abbreviation explainer (`src/lib/health/prescription-terms.ts`)
 
 `POST /api/prescriptions/explain` is deterministic: no AI model, and the text is neither stored nor logged. It expands only the abbreviations below, with meanings quoted from the Patient.info "Writing prescriptions" section. It never explains doses, drug names, what a medicine is for or when to take it, and always returns fixed guidance pointing to the pharmacist or prescriber.

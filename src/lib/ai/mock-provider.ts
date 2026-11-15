@@ -2,11 +2,26 @@
 // an API key (AI_PROVIDER=mock). Every text is visibly marked "[Mock]" so it can
 // never be mistaken for a real analysis. Returns raw JSON like a real model,
 // so it goes through the same validation path.
-import type { LlmProvider, ModelRequest } from "./types.ts";
+import type { LlmProvider, MedicineModelRequest, ModelRequest } from "./types.ts";
 
 export const mockProvider: LlmProvider = {
   name: "mock",
-  async complete({ context }: ModelRequest): Promise<string> {
+  async complete(request: ModelRequest | MedicineModelRequest): Promise<string> {
+    if (request.task === "medicine") {
+      return JSON.stringify({
+        status: "explained",
+        explanation: {
+          name: `[Mock] ${request.query.slice(0, 60)}`,
+          alsoKnownAs: [],
+          medicineType: "[Mock] Placeholder medicine type",
+          whatItIsFor: "[Mock] Placeholder description of what this medicine is generally used for.",
+          commonUses: ["[Mock] Placeholder use"],
+          howItWorks: "[Mock] Placeholder description of how it works.",
+          questionsToAsk: ["[Mock] Is this medicine suitable alongside my other medicines?"],
+        },
+      });
+    }
+    const { context } = request;
     const askFollowUp = !context.mustAssess && context.priorUserMessageCount === 0;
 
     if (askFollowUp) {

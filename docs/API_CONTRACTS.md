@@ -32,7 +32,7 @@ Every data endpoint below requires a signed-in user. Sign-in is "Continue with G
 | `/api/auth/signout` | POST | Ends the session, clears cookies. 204. The client also clears saved assistant chats in `localStorage`. |
 | `/api/auth/account` | DELETE | Permanently deletes the signed-in account: profile, logs, chats, reminders and the Google sign-in link (frees a sign-up place). The shared demo profile is only unlinked, never deleted. 204 and cookies cleared; 401 if signed out. Client: `deleteAccount()` clears saved chats and goes to `/?accountDeleted=1`. Needs migration `0005_delete_account.sql`. |
 
-`/api/prescriptions/explain` stays public: it is deterministic, reads no user data and calls no AI.
+`/api/prescriptions/explain` stays public: it is deterministic, reads no user data and calls no AI. `/api/prescriptions/medicine` (§3b2) calls the AI, so it requires sign-in.
 
 ## 1. Profile
 
@@ -249,6 +249,40 @@ Request: `{ "text": "Ibuprofen 200mg tds prn" }` (1–2000 chars, trimmed; unkno
 - `terms` may be empty: the UI must say no common abbreviations were recognised and still show `guidance`.
 - `caution` is non-null for `o.d.` (may mean right eye on eye prescriptions) and must be shown next to that term.
 - `guidance` and `source` must always be shown.
+
+## 3b2. AI medicine explainer (added 2026-11-15, owner decision)
+
+### `POST /api/prescriptions/medicine`
+
+Signed in (401 otherwise). The user types a medicine name or a short description; the AI explains in plain English what the medicine is and what it is generally used for. Nothing is stored and no user records are sent to the model. Never doses, amounts, timing, maximum doses or start/stop advice. Schemas: `src/lib/validations/medicine.ts`; logic: `src/lib/ai/medicine-explainer.ts`.
+
+Request: `{ "query": "Ibuprofen" }` (2–200 chars, trimmed; unknown fields rejected).
+
+`200` response:
+
+```json
+{
+  "status": "explained",
+  "safety": { "triggered": false, "level": "routine", "message": null },
+  "explanation": {
+    "name": "Ibuprofen",
+    "alsoKnownAs": ["Nurofen"],
+    "medicineType": "Non-steroidal anti-inflammatory drug (NSAID)",
+    "whatItIsFor": "It is generally used to ease pain and reduce inflammation and fever.",
+    "commonUses": ["Headaches", "Period pain"],
+    "howItWorks": "It reduces substances in the body that cause pain and swelling.",
+    "questionsToAsk": ["Is it suitable with my other medicines?"]
+  },
+  "guidance": "This is general information about the medicine, not advice for you. …",
+  "disclaimer": "<ASSESSMENT_DISCLAIMER>",
+  "source": { "title": "Medicines A to Z", "publisher": "NHS", "url": "https://www.nhs.uk/medicines/" }
+}
+```
+
+- `status`: `explained` (then `explanation` is set), `not_recognised` (not a medicine, too vague, or not confident; `explanation: null`), or `urgent` (a 999 warning sign in the text; the model is not called, `explanation: null`, `safety.triggered: true`).
+- A prompt-level (GP / NHS 111) sign is passed through in `safety` and shown, but general information is still returned.
+- `guidance`, `disclaimer` and `source` are fixed server text and must always be shown.
+- 429 `RATE_LIMITED` (shares the assistant limit), 503 `AI_UNAVAILABLE` when the provider fails or output stays invalid after one repair.
 
 ## 3c. Past assistant conversations
 

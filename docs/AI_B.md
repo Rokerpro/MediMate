@@ -43,6 +43,7 @@ Shapes: `docs/API_CONTRACTS.md` and `src/lib/validations/*` (exported from `@/li
 | `PATCH /api/reminders/{id}` | §3a | At least one field; non-UUID or unknown id → 404. |
 | `DELETE /api/reminders/{id}` | §3a | 204 with no body; repeat or unknown → 404. |
 | `POST /api/prescriptions/explain` | §3b | Deterministic, no AI, not stored or logged. `text` 1–2000 chars. |
+| `POST /api/prescriptions/medicine` | §3b2 | Signed in. AI explains what a medicine is for; safety rules first (999 → no model call), output checks block doses/timing/instructions, one repair, then 503. Shares the assistant rate limit. Nothing stored. |
 | `GET /api/assistant/sessions?limit=5` | §3c | Read-only, completed conversations newest first; `limit` 1–20. Urgent sessions → `assessment: null`; a stored assessment that fails the contract schema is returned as `null`, never unvalidated (`rowToPastAssessment`). |
 
 Reminder `nextDueAt` (`src/lib/reminders/schedule.ts`): one-off reminders keep `remindAt` even when past (UI shows "overdue"); daily/weekly roll forward in fixed 24 h / 7 day UTC steps; `null` when paused.

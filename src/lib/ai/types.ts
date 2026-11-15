@@ -27,12 +27,14 @@ export type ModelContext = {
   mode?: "chat" | "weekly";
 };
 
-export type ModelRequest = { system: string; user: string; context: ModelContext };
+export type ModelRequest = { system: string; user: string; context: ModelContext; task?: undefined };
+/** General information about one medicine (src/lib/ai/medicine-explainer.ts); no user data. */
+export type MedicineModelRequest = { system: string; user: string; task: "medicine"; query: string };
 
 export interface LlmProvider {
   readonly name: string;
   /** Returns the raw model text (expected to be one JSON object). */
-  complete(request: ModelRequest): Promise<string>;
+  complete(request: ModelRequest | MedicineModelRequest): Promise<string>;
 }
 
 /** The provider failed, timed out, is not configured, or produced unusable output. Maps to 503. */

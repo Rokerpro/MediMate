@@ -142,6 +142,13 @@ function changesMedication(text: string): boolean {
     .some((sentence) => MEDICATION_CHANGE.test(sentence) && !PROFESSIONAL.test(sentence));
 }
 
+/** The same banned-wording and medication-change checks, over plain text (used by the medicine explainer). */
+export function findBannedInText(text: string): string[] {
+  const found = BANNED_PATTERNS.filter(({ pattern }) => pattern.test(text)).map(({ label }) => label);
+  if (changesMedication(text)) found.push(MEDICATION_CHANGE_LABEL);
+  return found;
+}
+
 export function findBannedWording(output: ModelOutput): string[] {
   const joined = bannedSearchText(output);
   const found = BANNED_PATTERNS.filter(({ pattern }) => pattern.test(joined)).map(({ label }) => label);
