@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AccountMenu } from "@/components/account-menu";
+import { OnboardingGate } from "@/components/onboarding-gate";
 import { AssistantChatPopup } from "@/components/assistant-chat-popup";
 import { AssistantExperienceProvider } from "@/components/assistant-experience";
 import { PrimaryNavigation } from "@/components/primary-navigation";
@@ -34,6 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <main className="mx-auto w-full max-w-6xl px-4 py-8 print:py-4">{children}</main>
         <AssistantChatPopup />
+        <OnboardingGate />
       </div>
     </AssistantExperienceProvider>
   );

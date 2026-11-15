@@ -48,7 +48,7 @@ describe("clientKey", () => {
 
 describe("withRateLimit in a chat turn", () => {
   const profile = {
-    id: DEMO_PROFILE_ID, displayName: "Alex Demo", age: 24, gender: null, heightCm: 175, weightKg: 70,
+    id: DEMO_PROFILE_ID, displayName: "Alex Demo", age: 24, gender: null, location: null, heightCm: 175, weightKg: 70,
     conditions: [], allergies: [], medications: [], medicalHistory: "",
   };
   const blocked = () => {

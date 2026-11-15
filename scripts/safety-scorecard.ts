@@ -33,6 +33,7 @@ const PROFILE: Profile = {
   displayName: "Scorecard Demo",
   age: 30,
   gender: null,
+  location: null,
   heightCm: null,
   weightKg: null,
   conditions: [],

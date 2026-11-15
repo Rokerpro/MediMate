@@ -24,7 +24,7 @@ import {
 } from "../validations/profile.ts";
 
 export const PROFILE_COLUMNS =
-  "id,display_name,age,gender,height_cm,weight_kg,conditions,allergies,medications,medical_history";
+  "id,display_name,age,gender,location,height_cm,weight_kg,conditions,allergies,medications,medical_history";
 
 export const HEALTH_LOG_COLUMNS =
   "id,logged_at,symptoms,pain_location,pain_level,sleep_duration_minutes,sleep_quality,mood,water_ml,activity_minutes,notes";
@@ -41,6 +41,7 @@ const profileRowSchema = z.object({
   display_name: z.string(),
   age: z.number().nullable(),
   gender: z.string().nullable(),
+  location: z.string().nullable(),
   height_cm: numeric.nullable(),
   weight_kg: numeric.nullable(),
   conditions: z.array(z.string()),
@@ -87,6 +88,7 @@ export function rowToProfile(row: unknown): Profile {
     displayName: r.display_name,
     age: r.age,
     gender: r.gender,
+    location: r.location,
     heightCm: r.height_cm,
     weightKg: r.weight_kg,
     conditions: r.conditions,
@@ -126,6 +128,7 @@ export function profileUpdateToRow(
   if (update.displayName !== undefined) row.display_name = update.displayName;
   if (update.age !== undefined) row.age = update.age;
   if (update.gender !== undefined) row.gender = blankToNull(update.gender);
+  if (update.location !== undefined) row.location = blankToNull(update.location);
   if (update.heightCm !== undefined) row.height_cm = update.heightCm;
   if (update.weightKg !== undefined) row.weight_kg = update.weightKg;
   if (update.conditions !== undefined) row.conditions = update.conditions;

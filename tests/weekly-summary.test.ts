@@ -18,6 +18,7 @@ const profile: Profile = {
   displayName: "Weekly Test",
   age: null,
   gender: null,
+  location: null,
   heightCm: null,
   weightKg: null,
   conditions: [],

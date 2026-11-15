@@ -12,6 +12,8 @@ const editableProfileFields = {
   age: z.int().min(1).max(120),
   // Optional; must never be used for unsupported inferences.
   gender: shortText.nullable(),
+  // Optional town/region/country typed by the user. Shown on the profile and summary only; never sent to the AI.
+  location: z.string().trim().max(100).nullable(),
   heightCm: z.number().min(30).max(260).nullable(),
   weightKg: z.number().min(1).max(500).nullable(),
   conditions: textList,
