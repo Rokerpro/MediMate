@@ -7,7 +7,7 @@ import type { HealthLog } from "@/lib/validations";
 
 const PAIN_LEVELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 const SLEEP_OPTIONS = [
-  { label: "5h or less", minutes: 300 },
+  { label: "≤5h", minutes: 300 },
   { label: "6h", minutes: 360 },
   { label: "7h", minutes: 420 },
   { label: "8h", minutes: 480 },
