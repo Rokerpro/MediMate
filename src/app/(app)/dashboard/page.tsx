@@ -101,7 +101,7 @@ export default function DashboardPage() {
           <nav aria-label="Quick actions" className="mt-4 grid grid-cols-2 gap-2">
             {[
               { href: "/insights", label: "View insights" },
-              { href: "/summary", label: "Doctor summary" },
+              { href: "/summary", label: "Summary" },
               { href: "/reminders", label: "Reminders" },
               { href: "/profile", label: "Edit profile" },
             ].map((action) => (
