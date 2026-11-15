@@ -80,6 +80,9 @@ describe("notification wording", () => {
     assert.match(text, /https:\/\/app\.example\.com\/reminders\?dose=/);
     assert.match(text, /does not give advice about medicines or doses/);
     assert.doesNotMatch(text, /you should (take|stop|increase|reduce)/i);
+    assert.match(text, /\(due 5 minutes ago\)/);
+    assert.doesNotMatch(text, /UTC/);
+    assert.match(buildEmail(item(), "https://x.example").text, /\(due now\)/);
   });
 
   it("strips line breaks from titles (no email header injection)", () => {
