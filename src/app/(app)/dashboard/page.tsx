@@ -107,7 +107,7 @@ export default function DashboardPage() {
         <div className="grid gap-4 lg:grid-cols-12">
         <Link
           href="/profile"
-          className="group rounded-2xl border border-[#deded4] bg-[#fbfaf6] p-5 transition-colors duration-200 hover:border-[#aab49b] hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949] sm:p-6 lg:col-span-5 lg:col-start-8 lg:row-start-1"
+          className="group rounded-2xl border border-[#deded4] bg-[#fbfaf6] p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none hover:border-[#aab49b] hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949] sm:p-6 lg:col-span-5 lg:col-start-8 lg:row-start-1"
         >
           <div className="flex items-start justify-between gap-4">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e8eadf] text-[#536647]">
@@ -130,7 +130,7 @@ export default function DashboardPage() {
 
         <Link
           href="/logs"
-          className="group rounded-2xl border border-[#deded4] bg-[#f0eee3] p-5 transition-colors duration-200 hover:border-[#b8ac8c] hover:bg-[#f5f3e9] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949] sm:p-6 lg:col-span-5 lg:col-start-8 lg:row-start-2"
+          className="group rounded-2xl border border-[#deded4] bg-[#f0eee3] p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none hover:border-[#b8ac8c] hover:bg-[#f5f3e9] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949] sm:p-6 lg:col-span-5 lg:col-start-8 lg:row-start-2"
         >
           <div className="flex items-start justify-between gap-4">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e4e1d2] text-[#756344]">
@@ -153,7 +153,7 @@ export default function DashboardPage() {
 
         <Link
           href="/assistant"
-          className="group order-first relative overflow-hidden rounded-2xl border border-[#284537] bg-[#284537] p-6 text-[#f7f5ed] transition-colors duration-200 hover:bg-[#315440] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949] sm:p-8 lg:order-none lg:col-span-7 lg:row-span-2"
+          className="group order-first relative overflow-hidden rounded-2xl border border-[#284537] bg-[#284537] p-6 text-[#f7f5ed] transition duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none hover:bg-[#315440] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949] sm:p-8 lg:order-none lg:col-span-7 lg:row-span-2"
         >
           <div aria-hidden="true" className="absolute -right-20 -top-20 h-64 w-64 rounded-full border border-white/10" />
           <div aria-hidden="true" className="absolute -right-8 -top-8 h-40 w-40 rounded-full border border-white/10" />

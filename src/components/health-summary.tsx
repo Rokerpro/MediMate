@@ -154,41 +154,86 @@ export function HealthSummary() {
         {windowLogs.length === 0 ? (
           <p className="text-sm text-slate-600">No entries.</p>
         ) : (
-          <div className="overflow-x-auto print:overflow-visible">
-            <table className="w-full min-w-[40rem] table-fixed border-collapse text-left text-sm print:min-w-0 print:text-[9px]">
-              <thead>
-                <tr className="border-b border-slate-300 text-slate-700">
-                  <th scope="col" className="py-2 pr-3 font-semibold">Date</th>
-                  <th scope="col" className="py-2 pr-3 font-semibold">Symptoms</th>
-                  <th scope="col" className="py-2 pr-3 font-semibold">Pain</th>
-                  <th scope="col" className="py-2 pr-3 font-semibold">Sleep</th>
-                  <th scope="col" className="py-2 pr-3 font-semibold">Water</th>
-                  <th scope="col" className="py-2 pr-3 font-semibold">Activity</th>
-                  <th scope="col" className="py-2 font-semibold">Mood</th>
-                </tr>
-              </thead>
-              <tbody>
-                {windowLogs.map((log) => (
-                  <tr key={log.id} className="border-b border-slate-100 align-top print:break-inside-avoid">
-                    <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">{formatDate(log.loggedAt)}</td>
-                    <td className="py-2 pr-3 break-words">
-                      {log.symptoms}
-                      {log.painLocation && <span className="text-slate-500"> ({log.painLocation})</span>}
-                      {log.notes && <span className="block text-xs text-slate-500">{log.notes}</span>}
-                    </td>
-                    <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">{log.painLevel !== null ? `${log.painLevel}/10` : "—"}</td>
-                    <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">
-                      {sleepText(log.sleepDurationMinutes)}
-                      {log.sleepQuality !== null && <span className="text-slate-500"> ({log.sleepQuality}/5)</span>}
-                    </td>
-                    <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">{log.waterMl !== null ? `${log.waterMl} ml` : "—"}</td>
-                    <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">{log.activityMinutes !== null ? `${log.activityMinutes} min` : "—"}</td>
-                    <td className="py-2 break-words">{log.mood ?? "—"}</td>
+          <>
+            <ul className="space-y-3 sm:hidden print:hidden">
+              {windowLogs.map((log) => (
+                <li key={log.id} className="rounded-lg border border-slate-200 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Date</p>
+                  <time dateTime={log.loggedAt} className="mt-1 block text-sm font-medium text-slate-800">
+                    {formatDate(log.loggedAt)}
+                  </time>
+                  <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                    <div className="col-span-2 min-w-0">
+                      <dt className="text-xs font-semibold text-slate-600">Symptoms</dt>
+                      <dd className="break-words text-slate-800">
+                        {log.symptoms}
+                        {log.painLocation && <span className="text-slate-500"> ({log.painLocation})</span>}
+                        {log.notes && <span className="mt-1 block text-xs text-slate-500">{log.notes}</span>}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold text-slate-600">Pain</dt>
+                      <dd className="text-slate-800">{log.painLevel !== null ? `${log.painLevel}/10` : "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold text-slate-600">Sleep</dt>
+                      <dd className="text-slate-800">
+                        {sleepText(log.sleepDurationMinutes)}
+                        {log.sleepQuality !== null && <span className="text-slate-500"> ({log.sleepQuality}/5)</span>}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold text-slate-600">Water</dt>
+                      <dd className="text-slate-800">{log.waterMl !== null ? `${log.waterMl} ml` : "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold text-slate-600">Activity</dt>
+                      <dd className="text-slate-800">{log.activityMinutes !== null ? `${log.activityMinutes} min` : "—"}</dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="text-xs font-semibold text-slate-600">Mood</dt>
+                      <dd className="break-words text-slate-800">{log.mood ?? "—"}</dd>
+                    </div>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden overflow-x-auto sm:block print:block print:overflow-visible">
+              <table className="w-full min-w-[40rem] table-fixed border-collapse text-left text-sm print:min-w-0 print:text-[9px]">
+                <thead>
+                  <tr className="border-b border-slate-300 text-slate-700">
+                    <th scope="col" className="py-2 pr-3 font-semibold">Date</th>
+                    <th scope="col" className="py-2 pr-3 font-semibold">Symptoms</th>
+                    <th scope="col" className="py-2 pr-3 font-semibold">Pain</th>
+                    <th scope="col" className="py-2 pr-3 font-semibold">Sleep</th>
+                    <th scope="col" className="py-2 pr-3 font-semibold">Water</th>
+                    <th scope="col" className="py-2 pr-3 font-semibold">Activity</th>
+                    <th scope="col" className="py-2 font-semibold">Mood</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {windowLogs.map((log) => (
+                    <tr key={log.id} className="border-b border-slate-100 align-top print:break-inside-avoid">
+                      <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">{formatDate(log.loggedAt)}</td>
+                      <td className="py-2 pr-3 break-words">
+                        {log.symptoms}
+                        {log.painLocation && <span className="text-slate-500"> ({log.painLocation})</span>}
+                        {log.notes && <span className="block text-xs text-slate-500">{log.notes}</span>}
+                      </td>
+                      <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">{log.painLevel !== null ? `${log.painLevel}/10` : "—"}</td>
+                      <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">
+                        {sleepText(log.sleepDurationMinutes)}
+                        {log.sleepQuality !== null && <span className="text-slate-500"> ({log.sleepQuality}/5)</span>}
+                      </td>
+                      <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">{log.waterMl !== null ? `${log.waterMl} ml` : "—"}</td>
+                      <td className="py-2 pr-3 whitespace-nowrap print:whitespace-normal">{log.activityMinutes !== null ? `${log.activityMinutes} min` : "—"}</td>
+                      <td className="py-2 break-words">{log.mood ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </Section>
 

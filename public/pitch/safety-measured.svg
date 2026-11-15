@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="slide-title slide-description">
+  <title id="slide-title">Safety, measured</title>
+  <desc id="slide-description">MediMate's offline safety scorecard: 266 of 266 fixed checks passed, with counts for warning-sign guidance, false alarms, blocked unsafe replies, and dated NHS sources.</desc>
+  <rect width="1600" height="900" fill="#f5f2e8"/>
+  <circle cx="1500" cy="50" r="220" fill="#e9e3d3" opacity=".62"/>
+  <circle cx="90" cy="850" r="250" fill="#e9e3d3" opacity=".48"/>
+  <rect x="0" y="0" width="1600" height="14" fill="#bd7e3e"/>
+
+  <text x="88" y="70" fill="#52655a" font-family="Arial, sans-serif" font-size="17" font-weight="700" letter-spacing="3">MEDIMATE  /  FIXED SAFETY SCORECARD</text>
+  <text x="88" y="155" fill="#254a38" font-family="Georgia, serif" font-size="70" font-weight="700" letter-spacing="-2">Safety, measured</text>
+  <text x="92" y="194" fill="#5b6b61" font-family="Arial, sans-serif" font-size="21">A transparent check of fixed synthetic examples</text>
+
+  <text x="1510" y="115" text-anchor="end" fill="#254a38" font-family="Georgia, serif" font-size="54" font-weight="700">266/266</text>
+  <text x="1510" y="149" text-anchor="end" fill="#52655a" font-family="Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="1">CHECKS PASSED</text>
+  <text x="1510" y="178" text-anchor="end" fill="#718077" font-family="Arial, sans-serif" font-size="15">current offline scorecard run</text>
+
+  <g>
+    <rect x="88" y="245" width="696" height="220" rx="22" fill="#fffdf8" stroke="#ddd8ca" stroke-width="2"/>
+    <rect x="88" y="245" width="8" height="220" rx="4" fill="#bd7e3e"/>
+    <text x="124" y="316" fill="#254a38" font-family="Georgia, serif" font-size="56" font-weight="700">35/35</text>
+    <text x="124" y="358" fill="#26372e" font-family="Arial, sans-serif" font-size="23" font-weight="700">NHS warning-sign examples</text>
+    <text x="124" y="396" fill="#52655a" font-family="Arial, sans-serif" font-size="20">→ urgent-care guidance; AI model never called</text>
+  </g>
+
+  <g>
+    <rect x="816" y="245" width="696" height="220" rx="22" fill="#fffdf8" stroke="#ddd8ca" stroke-width="2"/>
+    <rect x="816" y="245" width="8" height="220" rx="4" fill="#68846b"/>
+    <text x="852" y="316" fill="#254a38" font-family="Georgia, serif" font-size="56" font-weight="700">0</text>
+    <text x="852" y="358" fill="#26372e" font-family="Arial, sans-serif" font-size="23" font-weight="700">false alarms</text>
+    <text x="852" y="396" fill="#52655a" font-family="Arial, sans-serif" font-size="19">Across 26 negated, 30 near-miss and 12 everyday</text>
+    <text x="852" y="424" fill="#52655a" font-family="Arial, sans-serif" font-size="19">messages</text>
+  </g>
+
+  <g>
+    <rect x="88" y="493" width="696" height="236" rx="22" fill="#fffdf8" stroke="#ddd8ca" stroke-width="2"/>
+    <rect x="88" y="493" width="8" height="236" rx="4" fill="#68846b"/>
+    <text x="124" y="564" fill="#254a38" font-family="Georgia, serif" font-size="56" font-weight="700">37/37</text>
+    <text x="124" y="606" fill="#26372e" font-family="Arial, sans-serif" font-size="23" font-weight="700">unsafe AI replies blocked</text>
+    <text x="124" y="644" fill="#52655a" font-family="Arial, sans-serif" font-size="18">Diagnosis, probabilities, false reassurance, medication changes,</text>
+    <text x="124" y="672" fill="#52655a" font-family="Arial, sans-serif" font-size="18">invented links or history, cause-from-correlation, unsourced norms/treatments</text>
+  </g>
+
+  <g>
+    <rect x="816" y="493" width="696" height="236" rx="22" fill="#fffdf8" stroke="#ddd8ca" stroke-width="2"/>
+    <rect x="816" y="493" width="8" height="236" rx="4" fill="#bd7e3e"/>
+    <text x="852" y="564" fill="#254a38" font-family="Georgia, serif" font-size="56" font-weight="700">25/25</text>
+    <text x="852" y="606" fill="#26372e" font-family="Arial, sans-serif" font-size="23" font-weight="700">rules cite a dated NHS source</text>
+    <text x="852" y="655" fill="#52655a" font-family="Arial, sans-serif" font-size="18">Also included in the 266 total:</text>
+    <text x="852" y="684" fill="#52655a" font-family="Arial, sans-serif" font-size="18">15/15 urgent-GP/111 flags, 3/3 dose follow-ups,</text>
+    <text x="852" y="712" fill="#52655a" font-family="Arial, sans-serif" font-size="18">72/72 weekly-summary checks, 11/11 careful replies</text>
+  </g>
+
+  <text x="88" y="798" fill="#354a3c" font-family="Arial, sans-serif" font-size="18" font-weight="700">Fixed synthetic examples with a scripted stand-in for the AI model;</text>
+  <text x="88" y="828" fill="#354a3c" font-family="Arial, sans-serif" font-size="18" font-weight="700">keyword rules, not comprehensive emergency detection.</text>
+  <text x="1512" y="840" text-anchor="end" fill="#718077" font-family="Arial, sans-serif" font-size="13" letter-spacing="1">MEDIMATE  ·  EDUCATIONAL PROTOTYPE</text>
+</svg>

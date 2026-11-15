@@ -14,6 +14,7 @@ import {
 import { z } from "zod";
 import { ASSISTANT_STORAGE_KEY, ApiClientError, sendAssistantMessage } from "@/lib/api-client";
 import { chatResponseSchema, type ChatResponse } from "@/lib/validations";
+import { useTheme } from "@/components/theme-provider";
 
 const STORAGE_KEY = ASSISTANT_STORAGE_KEY;
 
@@ -37,13 +38,11 @@ const conversationSchema = z.object({
 const experienceSchema = z.object({
   conversations: z.array(conversationSchema),
   activeConversationId: z.string().nullable(),
-  theme: z.enum(["light", "dark"]),
 });
 
 const emptyExperience: ExperienceState = {
   conversations: [],
   activeConversationId: null,
-  theme: "light",
 };
 
 export type AssistantChatMessage = z.infer<typeof chatMessageSchema>;
@@ -65,7 +64,6 @@ type AssistantExperienceContextValue = {
   renameConversation: (id: string, title: string) => void;
   deleteConversation: (id: string) => void;
   setFeedback: (messageId: string, feedback: "helpful" | "not-helpful") => void;
-  toggleTheme: () => void;
   sendMessage: (message: string, appendUserMessage?: boolean) => Promise<boolean>;
   retry: () => Promise<boolean>;
 };
@@ -120,6 +118,7 @@ function titleFromMessage(message: string): string {
 }
 
 export function AssistantExperienceProvider({ children }: { children: ReactNode }) {
+  const { theme } = useTheme();
   const [initialStorage] = useState(loadStoredExperience);
   const [state, setState] = useState<ExperienceState>(initialStorage.state);
   const [storageMessage, setStorageMessage] = useState<string | null>(initialStorage.message);
@@ -217,10 +216,6 @@ export function AssistantExperienceProvider({ children }: { children: ReactNode 
         ),
       })),
     }));
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setState((current) => ({ ...current, theme: current.theme === "light" ? "dark" : "light" }));
   }, []);
 
   const sendMessage = useCallback(async (
@@ -342,7 +337,7 @@ export function AssistantExperienceProvider({ children }: { children: ReactNode 
     ready,
     conversations: state.conversations,
     activeConversation,
-    theme: state.theme,
+    theme,
     isSending,
     errorMessage,
     retryAvailable,
@@ -353,7 +348,6 @@ export function AssistantExperienceProvider({ children }: { children: ReactNode 
     renameConversation,
     deleteConversation,
     setFeedback,
-    toggleTheme,
     sendMessage,
     retry,
   }), [
@@ -370,10 +364,9 @@ export function AssistantExperienceProvider({ children }: { children: ReactNode 
     selectConversation,
     sendMessage,
     setFeedback,
+    theme,
     state.conversations,
-    state.theme,
     storageMessage,
-    toggleTheme,
   ]);
 
   return (
