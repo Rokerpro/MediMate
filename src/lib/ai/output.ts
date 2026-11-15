@@ -23,7 +23,7 @@ export const modelOutputSchema = z
             z.object({
               title: text(200),
               whyItMayBeRelevant: text(1000),
-              supportingLogIds: z.array(z.string()).max(5),
+              supportingLogIds: z.array(z.string()).max(14), // unknown ids are dropped later; weekly may cite a week of logs
               unknowns: z.array(text(300)).min(1).max(6),
             }),
           )
@@ -78,10 +78,22 @@ const BANNED_PATTERNS: readonly { pattern: RegExp; label: string }[] = [
     pattern: /\b(water|fluids?|hydration|sleep|activity)(\s+(intake|levels?|amounts?|duration))?\s+(is|was|were|may be|might be|could be|seems?|appears?|looks?)\s+(\w+\s+)?(insufficient|inadequate|too (low|little|short)|not enough|low|lower)\b/i,
     label: "a judgement that a recorded amount is too low (no source supplies one)",
   },
+  {
+    // "low activity levels", "limited recorded activity", "poor hydration" (sleep quality is a user score, so not included).
+    pattern: /\b(low|lower|limited|little|poor|inadequate|insufficient|reduced)\s+(recorded\s+)?(activity|exercise|water|fluids?|fluid intake|water intake|hydration)\b/i,
+    label: "a judgement that a recorded amount is too low (no source supplies one)",
+  },
   { pattern: /\bnothing to worry about\b/i, label: '"nothing to worry about"' },
   { pattern: /\byou are (safe|fine)\b/i, label: '"you are safe/fine"' },
   { pattern: /\brul(e|es|ed|ing) out\b/i, label: '"rule out"' },
   { pattern: /\bconfirm(s|ed)? (that )?you have\b/i, label: '"confirms you have"' },
+  {
+    // "You have sciatica", "you may have a muscle strain", "you've got a migraine".
+    // Only a condition-type word after it, so "you have logged back pain" is still fine.
+    pattern:
+      /\b(you|you've|you're)\s+(may |might |could |probably |likely |possibly )?(have|got|have got|are suffering from|suffering from|are experiencing (a|an))\s+(a |an |some )?(mild |minor |acute |chronic |possible |tension[- ])?(\w+\s)?(sciatica|strain|sprain|migraine|infection|hernia|slipped disc|herniated disc|disc|arthritis|syndrome|disorder|disease|condition|injury|dehydration|insomnia|anxiety|depression|\w+itis|\w+osis|\w+algia|\w+pathy)\b/i,
+    label: '"you have <condition>" (a diagnosis)',
+  },
   { pattern: /https?:\/\/|www\./i, label: "a URL" },
   {
     pattern: /\b(higher|increas\w*|doubl\w*|lower|reduc\w*|decreas\w*|adjust\w*|chang\w*)\s+(the\s+|your\s+|a\s+)?(dose|dosage)\b|\b(dose|dosage)\b[^.]{0,40}\b(sufficient|insufficient|enough|too (high|low))\b/i,

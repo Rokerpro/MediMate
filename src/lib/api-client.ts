@@ -5,6 +5,10 @@ import {
   type AssessmentHistoryResponse,
   chatRequestSchema,
   chatResponseSchema,
+  currentUserResponseSchema,
+  type CurrentUserResponse,
+  weeklySummaryResponseSchema,
+  type WeeklySummaryResponse,
   healthLogCreateResponseSchema,
   healthLogCreateSchema,
   healthLogListQuerySchema,
@@ -119,6 +123,11 @@ async function requestJsonWithoutTracking<T>(
     );
   }
 
+  if (response.status === 401) {
+    redirectToLogin();
+    throw new ApiClientError("Your session has ended. Please sign in again.", false, 401);
+  }
+
   if (!response.ok) {
     const parsedError = apiErrorResponseSchema.safeParse(body);
     if (parsedError.success) {
@@ -140,6 +149,54 @@ async function requestJsonWithoutTracking<T>(
   }
 
   return schema.parse(body);
+}
+
+/** Sends a signed-out user to the login page, then back to where they were. */
+function redirectToLogin() {
+  if (typeof window === "undefined" || window.location.pathname === "/login") return;
+  const next = `${window.location.pathname}${window.location.search}`;
+  // Full page load on purpose: drops the previous session's in-memory state.
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+  window.location.assign(`/login?next=${encodeURIComponent(next)}`);
+}
+
+/** Chats are kept in this browser; clear them when the account changes on a shared device. */
+export const ASSISTANT_STORAGE_KEY = "medimate-assistant-experience-v1";
+
+export function clearLocalAccountData() {
+  try {
+    window.localStorage.removeItem(ASSISTANT_STORAGE_KEY);
+  } catch {
+    // Storage unavailable: nothing was saved.
+  }
+}
+
+/** POST /api/insights/weekly — on-demand summary of the last 7 days of logs (contract §3d). */
+export async function generateWeeklySummary(): Promise<WeeklySummaryResponse> {
+  return requestJson(
+    "/api/insights/weekly",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+    weeklySummaryResponseSchema,
+    200,
+    CHAT_REQUEST_TIMEOUT_MS,
+  );
+}
+
+/** GET /api/auth/me — the signed-in user, or `{ user: null }`. Never redirects. */
+export async function getCurrentUser(): Promise<CurrentUserResponse> {
+  return requestJson("/api/auth/me", { cache: "no-store" }, currentUserResponseSchema, 200);
+}
+
+/** POST /api/auth/signout, clear this browser's chats, then go to the login page. */
+export async function signOut(): Promise<void> {
+  try {
+    await fetch("/api/auth/signout", { method: "POST", signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+  } finally {
+    clearLocalAccountData();
+    // Full page load on purpose: drops the signed-out account's in-memory chats.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign("/login?signedOut=1");
+  }
 }
 
 export async function getProfile(): Promise<ProfileResponse> {

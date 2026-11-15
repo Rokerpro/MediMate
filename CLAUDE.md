@@ -52,10 +52,10 @@ Build a web application where a user can:
 - Training or fine-tuning a medical model.
 - Predicting or diagnosing diseases.
 - Medical image/rash analysis.
-- Voice input.
+- Voice input beyond the browser's built-in Web Speech API. (Dictation in the assistant via Web Speech was added on 2026-11-15. In Chrome the audio goes to Google's speech service, and Brave does not support it.)
 - Wearable integrations.
 - Native mobile application.
-- Weekly AI summaries and medication notifications.
+- Scheduled or emailed weekly summaries, and medication notifications. (An on-demand weekly AI summary of the user's own logs was added by the owner on 2026-11-15; it uses the same safety order and output checks as the chat.)
 - Large-scale medical web crawling.
 - A vector database unless a tested need arises and time remains.
 - Complex agent frameworks or multi-agent orchestration.
@@ -89,7 +89,7 @@ Do not add FastAPI or a second backend service for this hackathon. Do not introd
 - Return predictable error responses; never expose stack traces, secrets or provider errors to the browser.
 - Keep LLM API keys and Supabase privileged credentials server-side only.
 - Never commit `.env`, `.env.local`, API keys, access tokens or real health information.
-- For the public hackathon demo, use only the seeded synthetic profile and narrowly scoped Supabase RLS policies. Do not use a service-role key to serve unauthenticated public requests.
+- For the public hackathon demo, use synthetic data only. Since 2026-11-15 (owner decision) users sign in with Google; RLS limits each user to their own profile, only one configured demo account sees the seeded synthetic profile, and sign-ups are capped at 5. Do not use a service-role key to serve unauthenticated public requests.
 - Add loading, empty, error and retry states for user-facing async operations.
 - Use accessible labels, keyboard-operable controls and responsive layouts.
 - Do not claim a feature is complete until it has been exercised through the UI and the relevant API path.

@@ -1,3 +1,4 @@
+import { authenticate } from "@/app/api/_lib/auth";
 import { apiError, internalError, readJsonBody, validationError } from "@/app/api/_lib/responses";
 import { runAssistantTurn, type ChatTurnResult } from "@/lib/ai/assistant";
 import { getLlmProvider } from "@/lib/ai/client";
@@ -9,7 +10,7 @@ import {
   appendTurn,
   completeSession,
   createSession,
-  getDemoProfile,
+  getProfile,
   listRecentLogs,
   listRecentMessages,
   sessionExists,
@@ -33,6 +34,11 @@ function storedAssistantText(turn: ChatTurnResult): string {
  * the same request without leaving half-written sessions behind.
  */
 export async function POST(request: Request): Promise<Response> {
+  // Auth first: no database read, rate-limit slot or AI call for anonymous requests.
+  const auth = await authenticate("POST /api/assistant/chat");
+  if (!auth.ok) return auth.response;
+  const { ctx } = auth;
+
   const body = await readJsonBody(request);
   if (!body.ok) return body.response;
 
@@ -41,16 +47,16 @@ export async function POST(request: Request): Promise<Response> {
   const { sessionId: requestedSessionId, message } = parsed.data;
 
   try {
-    if (requestedSessionId !== null && !(await sessionExists(requestedSessionId))) {
+    if (requestedSessionId !== null && !(await sessionExists(ctx, requestedSessionId))) {
       return apiError("NOT_FOUND", "This conversation was not found. Please start a new one.");
     }
 
     const [profile, candidateLogs, priorMessages] = await Promise.all([
-      getDemoProfile(),
-      listRecentLogs(HISTORY_WINDOW_DAYS, HISTORY_CANDIDATE_LIMIT),
-      requestedSessionId ? listRecentMessages(requestedSessionId) : Promise.resolve([]),
+      getProfile(ctx),
+      listRecentLogs(ctx, HISTORY_WINDOW_DAYS, HISTORY_CANDIDATE_LIMIT),
+      requestedSessionId ? listRecentMessages(ctx, requestedSessionId) : Promise.resolve([]),
     ]);
-    if (!profile) return apiError("NOT_FOUND", "The demo profile was not found.");
+    if (!profile) return apiError("NOT_FOUND", "Your profile was not found.");
 
     const turn = await runAssistantTurn(
       { message, priorMessages, profile, candidateLogs },
@@ -60,10 +66,10 @@ export async function POST(request: Request): Promise<Response> {
       },
     );
 
-    const sessionId = requestedSessionId ?? (await createSession(message));
-    await appendTurn(sessionId, message, storedAssistantText(turn));
+    const sessionId = requestedSessionId ?? (await createSession(ctx, message));
+    await appendTurn(ctx, sessionId, message, storedAssistantText(turn));
     if (turn.status !== "follow_up") {
-      await completeSession(sessionId, turn.assessment, turn.safety.level);
+      await completeSession(ctx, sessionId, turn.assessment, turn.safety.level);
     }
 
     const { safetyRuleId, ...result } = turn;

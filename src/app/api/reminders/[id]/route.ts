@@ -1,8 +1,8 @@
+import { authenticate } from "@/app/api/_lib/auth";
 import { apiError, internalError, readJsonBody, validationError } from "@/app/api/_lib/responses";
 import { REMINDER_COLUMNS, firstRow, reminderUpdateToRow, rowToReminder } from "@/lib/supabase/mappers";
 import { supabaseRest } from "@/lib/supabase/server";
 import {
-  DEMO_PROFILE_ID,
   reminderIdSchema,
   reminderResponseSchema,
   reminderUpdateSchema,
@@ -16,10 +16,15 @@ async function reminderId(ctx: RouteContext<"/api/reminders/[id]">): Promise<str
   return parsed.success ? parsed.data : null;
 }
 
-const filter = (id: string) => `reminders?id=eq.${id}&profile_id=eq.${DEMO_PROFILE_ID}&select=${REMINDER_COLUMNS}`;
+const filter = (id: string, profileId: string) =>
+  `reminders?id=eq.${id}&profile_id=eq.${profileId}&select=${REMINDER_COLUMNS}`;
 
 /** PATCH /api/reminders/{id} — edit, pause/resume (active) or reschedule a reminder. */
 export async function PATCH(request: Request, ctx: RouteContext<"/api/reminders/[id]">): Promise<Response> {
+  const auth = await authenticate("PATCH /api/reminders/{id}");
+  if (!auth.ok) return auth.response;
+  const { profileId, accessToken } = auth.ctx;
+
   const id = await reminderId(ctx);
   if (id === null) return apiError("NOT_FOUND", NOT_FOUND_MESSAGE);
 
@@ -29,7 +34,8 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reminders/
   if (!parsed.success) return validationError(parsed.error);
 
   try {
-    const rows = await supabaseRest(filter(id), {
+    const rows = await supabaseRest(filter(id, profileId), {
+      accessToken,
       method: "PATCH",
       body: reminderUpdateToRow(parsed.data),
       returnRepresentation: true,
@@ -44,11 +50,19 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reminders/
 
 /** DELETE /api/reminders/{id} — 204 on success, 404 if it does not exist. */
 export async function DELETE(_request: Request, ctx: RouteContext<"/api/reminders/[id]">): Promise<Response> {
+  const auth = await authenticate("DELETE /api/reminders/{id}");
+  if (!auth.ok) return auth.response;
+  const { profileId, accessToken } = auth.ctx;
+
   const id = await reminderId(ctx);
   if (id === null) return apiError("NOT_FOUND", NOT_FOUND_MESSAGE);
 
   try {
-    const rows = await supabaseRest(filter(id), { method: "DELETE", returnRepresentation: true });
+    const rows = await supabaseRest(filter(id, profileId), {
+      accessToken,
+      method: "DELETE",
+      returnRepresentation: true,
+    });
     if (firstRow(rows) === undefined) return apiError("NOT_FOUND", NOT_FOUND_MESSAGE);
     return new Response(null, { status: 204 });
   } catch (error) {

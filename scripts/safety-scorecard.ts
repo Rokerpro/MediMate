@@ -10,8 +10,10 @@
 import { fileURLToPath } from "node:url";
 
 import { runAssistantTurn } from "../src/lib/ai/assistant.ts";
+import { runWeeklySummary } from "../src/lib/ai/weekly-summary.ts";
 import type { LlmProvider } from "../src/lib/ai/types.ts";
 import { PROMPT_NEXT_STEP, PROMPT_RULES, SAFETY_RULES, evaluateSafety } from "../src/lib/health/safety-rules.ts";
+import type { HealthLog } from "../src/lib/validations/health-log.ts";
 import type { Profile } from "../src/lib/validations/profile.ts";
 import {
   ORDINARY_MESSAGES,
@@ -192,6 +194,46 @@ export async function runScorecard(): Promise<Scorecard> {
     }),
   );
   lines.push(line("Unsafe AI output blocked: dose follow-up question", followUpResults));
+
+  // Weekly summary reuses the same checks: every unsafe reply is blocked, and an urgent log skips the model.
+  const weekLog = (symptoms: string, notes: string | null = null): HealthLog => ({
+    id: "cccccccc-0000-4000-8000-000000000001",
+    loggedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    symptoms,
+    painLocation: null,
+    painLevel: null,
+    sleepDurationMinutes: null,
+    sleepQuality: null,
+    mood: null,
+    waterMl: null,
+    activityMinutes: null,
+    notes,
+  });
+  const weeklyBlocked = await Promise.all(
+    UNSAFE_OUTPUTS.map(async (c) => {
+      try {
+        const result = await runWeeklySummary(
+          { logs: [weekLog("Mild lower back discomfort")], profile: PROFILE },
+          { provider: scriptedProvider(modelReply(c)), evaluateSafety },
+        );
+        return { ok: result.status !== "summary", name: c.text };
+      } catch {
+        return { ok: true, name: c.text };
+      }
+    }),
+  );
+  lines.push(line("Weekly summary: unsafe AI output blocked", weeklyBlocked));
+  const weeklyUrgent = await Promise.all(
+    RULE_CASES.flatMap((c) => c.positive).map(async (text) => {
+      const provider = scriptedProvider(modelReply({ category: "", field: "summary", text: "You reported discomfort." }));
+      const result = await runWeeklySummary(
+        { logs: [weekLog("Logged symptom", text)], profile: PROFILE },
+        { provider, evaluateSafety },
+      );
+      return { ok: result.status === "urgent" && result.assessment === null && provider.calls === 0, name: text };
+    }),
+  );
+  lines.push(line("Weekly summary: warning sign in a log escalated (AI model never called)", weeklyUrgent));
 
   const safeResults = await Promise.all(
     SAFE_OUTPUTS.map(async (c) => ({ ok: await deliverModelReply(modelReply(c)), name: c.text })),

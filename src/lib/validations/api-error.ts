@@ -6,6 +6,7 @@ import { z } from "zod";
  */
 export const apiErrorCodeSchema = z.enum([
   "VALIDATION_ERROR", // 400
+  "UNAUTHENTICATED", // 401
   "NOT_FOUND", // 404
   "RATE_LIMITED", // 429
   "INTERNAL_ERROR", // 500
@@ -21,6 +22,7 @@ export const apiErrorResponseSchema = z.strictObject({
 
 export const API_ERROR_STATUS = {
   VALIDATION_ERROR: 400,
+  UNAUTHENTICATED: 401,
   NOT_FOUND: 404,
   RATE_LIMITED: 429,
   INTERNAL_ERROR: 500,

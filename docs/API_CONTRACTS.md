@@ -15,11 +15,29 @@ All endpoints return JSON. Validate inputs server-side. Use consistent error obj
 
 Do not return stack traces, provider error bodies, API keys or database credentials.
 
+## 0a. Sign-in and accounts (added 2026-11-15)
+
+Every data endpoint below requires a signed-in user. Sign-in is "Continue with Google" through Supabase Auth (PKCE). Session tokens are kept in httpOnly cookies (`mm_access`, `mm_refresh`), so browser JavaScript never sees them; `fetch` sends them automatically to same-origin routes.
+
+- The server takes the profile id from the session, never from the request. All data is the signed-in user's own (RLS: own profile only).
+- Without a usable session, every data endpoint returns **401** `{"error":{"code":"UNAUTHENTICATED","message":"Please sign in to continue."}}` before any validation, database read, rate-limit slot or AI call. The client should send the user to `/login?next=<current path>` (the shared `api-client.ts` does this).
+- App pages (`/dashboard`, `/logs`, `/profile`, `/assistant`, `/reminders`, `/summary`, `/prescriptions`) redirect to `/login?next=…` when there are no session cookies (`src/proxy.ts`). `/`, `/login` and `/auth/*` are public.
+- Only one configured demo Google account sees the synthetic demo profile ("Alex Demo"). Other accounts start with an empty profile (`displayName: "New user"`, `age: null`). Only the first 5 non-demo accounts can sign up.
+
+| Route | Method | Purpose |
+|---|---|---|
+| `/auth/login?next=/logs` | GET (browser navigation) | Redirects to Google via Supabase. |
+| `/auth/callback?code=…` | GET (browser navigation) | Finishes sign-in, sets cookies, redirects to `next` (default `/dashboard`). On failure → `/login?error=failed`; sign-ups full → `/login?error=closed`. |
+| `/api/auth/me` | GET | `{ "user": { "email": "…", "displayName": "…" } }` or `{ "user": null }` (200, never 401). Schema: `currentUserResponseSchema`. |
+| `/api/auth/signout` | POST | Ends the session, clears cookies. 204. The client also clears saved assistant chats in `localStorage`. |
+
+`/api/prescriptions/explain` stays public: it is deterministic, reads no user data and calls no AI.
+
 ## 1. Profile
 
 ### `GET /api/profile`
 
-Returns the seeded demo profile.
+Returns the signed-in user's profile. `age` is `null` for a new account until the user enters it (PATCH still requires an integer 1–120 when `age` is sent).
 
 ```json
 {
@@ -232,7 +250,7 @@ Request: `{ "text": "Ibuprofen 200mg tds prn" }` (1–2000 chars, trimmed; unkno
 
 ### `GET /api/assistant/sessions?limit=5`
 
-Read-only. The demo profile's **completed** assistant conversations, newest first (by `completedAt`). In-progress conversations (still at a follow-up question) are not returned. Schemas: `src/lib/validations/assessment-history.ts` (`assessmentHistoryResponseSchema`, type `PastAssessment`). `limit` is an integer 1–20 (default 5); any other query key → 400.
+Read-only. The signed-in user's **completed** assistant conversations, newest first (by `completedAt`). In-progress conversations (still at a follow-up question) are not returned. Schemas: `src/lib/validations/assessment-history.ts` (`assessmentHistoryResponseSchema`, type `PastAssessment`). `limit` is an integer 1–20 (default 5); any other query key → 400.
 
 `200` response:
 
@@ -266,9 +284,35 @@ Read-only. The demo profile's **completed** assistant conversations, newest firs
 - `sessions` may be empty: show an empty state ("No completed assistant conversations yet").
 - Anything shown from an assessment must keep its `disclaimer`; label `initialConcern` as what the user reported, not a recorded fact.
 
+## 3d. Weekly AI summary (added 2026-11-15)
+
+### `POST /api/insights/weekly`
+
+Signed-in only. No request body (send `{}`). Generated on demand from the user's own logs of the last 7 days; nothing is stored, scheduled or emailed. Schema: `src/lib/validations/weekly-summary.ts` (`weeklySummaryResponseSchema`).
+
+```json
+{
+  "status": "summary",
+  "weekStart": "2026-11-08",
+  "weekEnd": "2026-11-15",
+  "logCount": 7,
+  "safety": { "level": "routine", "triggered": false, "message": null },
+  "assistantMessage": "Here is a brief summary of your week's health logs.",
+  "assessment": { "summary": "…", "possibleExplanations": [], "nextSteps": ["…"], "sources": [], "disclaimer": "…" }
+}
+```
+
+- `status: "no_data"`: no logs in the last 7 days. `logCount: 0`, `assessment: null`, and no AI call. Show `assistantMessage` with a prompt to add a log.
+- `status: "urgent"`: a log this week matched an urgent warning rule. `assessment: null`, no AI call. Show `safety.message` prominently, the same way as an urgent chat reply.
+- `status: "summary"`: same assessment shape and the same server checks as chat. `possibleExplanations` are patterns recorded together, with dated `supportingHistory`; they are associations, not causes. Sources are curated only, and the disclaimer is always present. When `safety.level` is `"prompt"`, show the GP / NHS 111 notice; the first next step is the fixed GP/111 step.
+- Errors: 401, 404 (no profile), 429 with `Retry-After` (shares the assistant limit), 503, 500.
+
+UI: the "This week's summary" card on `/dashboard` (`src/components/weekly-summary.tsx`).
+
 ## 4. Status and error behavior
 
 - `400`: malformed or invalid request.
+- `401` (`UNAUTHENTICATED`): not signed in or the session expired; see §0a.
 - `404`: requested session/profile/log/reminder does not exist.
 - `429` (`RATE_LIMITED`): `POST /api/assistant/chat` only, when a turn would call the AI model and the limit is reached (6 turns per minute per client address, 20 per minute per server instance; best-effort, in memory). Includes a `Retry-After` header (seconds) and a message saying how long to wait. Nothing is saved. Urgent safety replies are never rate-limited. The UI should show the message and offer Retry.
 - `500`: generic unexpected server error; no internal details to client.

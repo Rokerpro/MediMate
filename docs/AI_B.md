@@ -86,6 +86,11 @@ Known limitations: rules use keyword matching with simple negation handling and 
 - Urgent-GP / 111 rules (`feat/nhs-111-rules`, 2026-11-15): 6 prompt rules with 15 positive, 6 negated and 10 near-miss cases. Scorecard 173/173, then 180/180 after the personal-needs wording fix (25/25 rules cited, 35/35 urgent, 15/15 prompt with the GP/111 step added, 0 false alarms on 26 negated, 30 near-miss and 12 everyday messages, 24/24 unsafe replies blocked, 6/6 careful replies delivered).
 - 2026-11-15: at the owner's request Person A built the `/summary` "Recent assistant conversations" section (frontend exception, noted in SHARED_CONTEXT). Checked with headless Brave at 375px against live Supabase data. Also widened `MENTIONS_NO_HISTORY` so "No prior related logs" does not get `NO_HISTORY_NOTE` appended twice. 244 tests pass.
 - 2026-11-15: "Save to my log" (frontend exception at the owner's request). Prefill never reads AI text. Headless Brave click-through with the mock provider at 390px: prefilled "Right knee", pain 5, saved row confirmed in Supabase, then deleted. 248 tests pass.
+- 2026-11-15: Google sign-in (`feat/google-auth`). PKCE over Supabase Auth REST, httpOnly cookies, `getRequestContext()` with token refresh, `authenticate()` first in every data route, `supabaseRest` now requires the user's `accessToken`, migration `0003_user_accounts.sql` (per-user RLS, private `medimate_settings.demo_owner_email`, `claim_medimate_profile()` with a 5-account cap raising `MMCAP`, owner-change trigger, `age` nullable). Local checks without the migration: protected pages → 307 `/login?next=…`; data APIs → 401 before any work; `/auth/login` → Supabase authorize with an S256 challenge; forged JWT cookie → Supabase 401 → our 401 with cookies cleared. 265 tests pass. Real Google sign-in is checked after the owner's setup.
+- 2026-11-15: weekly AI summary (`src/lib/ai/weekly-summary.ts`, `/api/insights/weekly`, contract §3d). It reuses `SYSTEM_PROMPT` and `buildUserContent` (`mode: "weekly"`), `parseModelOutput` with one repair, and `toContractAssessment`. Tests: 10 unit tests; scorecard lines "Weekly summary: unsafe AI output blocked" and "warning sign in a log escalated". Live Groq on the demo week:
+  - First run: 3/3 delivered, but they used "low/limited activity" wording, so a check now blocks low-amount judgements.
+  - Then 2 of 3 failed on structure: more than 5 cited ids, and empty unknowns. Fixed by raising the cited-id cap to 14 and having the weekly instruction require at least one unknown.
+  - Also new: a `"you have <condition>"` ban ("You have sciatica." was getting through when references were attached).
 - Still needed: browser walk-through of the full demo on the judging device; the prescription explainer UI once Person B builds it.
 
 ## 7. Decisions and pending work
@@ -97,6 +102,7 @@ Do not reverse these without agreeing first:
 - The prescription explainer stays deterministic (no LLM) and never explains doses, drug names, purpose or timing.
 - Reminders are user-written and in-app only: no notifications, no suggested content, `userConfirmed: true` required.
 - Charts use plain SVG (no Recharts dependency).
+- Data access: every Supabase data call uses the signed-in user's token plus the anon key; anon alone reaches no rows (since migration 0003).
 - Workflow: Person A builds the system side (schemas, routes, DB, AI/safety, contract, tests) and hands Person B a UI prompt; Person A does not edit frontend files.
 
 Pending:

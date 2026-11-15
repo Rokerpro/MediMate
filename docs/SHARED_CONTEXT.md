@@ -11,7 +11,8 @@ This is the combined source of truth for both coding AIs. Naming: `docs/AI_A.md`
 - PR #2 (`feat/health-insights-journey`: PR #1 review fixes `ad87a1f`, Personal Health Insights `09ebb8b`, Interactive Health Journey `bbfdd5e`) was reviewed and merged by Person A on 2026-11-14, together with the backend past-conversations endpoint (`cd73b88`), safety scorecard (`77e37a9`), security headers (`3962e9d`) and the dose-question fix (`1312d70`). Checks on the merged tree: lint, typecheck, build, 202 tests, scorecard 134/134.
 - The app is a Next.js 16.4.6 App Router application using React 19.3, TypeScript, Tailwind 4.3, Zod 4.6, Supabase PostgreSQL, and a server-side Groq-compatible AI provider.
 - Node.js `>=22.18` is required.
-- There is one synthetic demo profile and no authentication. Never add real health data.
+- **Weekly AI summary (2026-11-15, contract §3d):** `POST /api/insights/weekly` runs on demand over the last 7 days of logs. Safety rules run first; then the same output validation as chat, with one repair. It is never stored. The card is on `/dashboard` (`weekly-summary.tsx`, built by Person A at the owner's request).
+- **Google sign-in (2026-11-15, branch `feat/google-auth`, contract §0a):** everyone signs in; data routes return 401 `UNAUTHENTICATED` without a session; RLS limits each user to their own profile. Only one demo Google account (set privately in Supabase `medimate_settings`) sees the synthetic "Alex Demo" profile; other accounts start empty (`age: null`), capped at 5 sign-ups. Built by Person A at the owner's request, including the frontend pieces (`/login`, `continue-with-google.tsx`, `account-menu.tsx` in the app header, 401 → `/login` redirect and chat-storage clearing in `api-client.ts`). Needs the owner's Google/Supabase setup and migration `0003` before it can merge. Still synthetic data only.
 
 ## Product and safety invariants
 

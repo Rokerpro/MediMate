@@ -6,7 +6,9 @@ import "server-only";
 //
 // Security model (CLAUDE.md §5, nextjs-supabase skill §2):
 // - SUPABASE_URL / SUPABASE_ANON_KEY are server-only env vars (no NEXT_PUBLIC_ prefix).
-// - Only the anon/publishable key is used; RLS restricts access to the demo profile.
+// - Only the anon/publishable key is used as `apikey`. Every data call also sends
+//   the signed-in user's access token, so Supabase verifies it and RLS limits
+//   rows to that user's own profile (migration 0003).
 // - Never use the service-role key here.
 
 const REQUEST_TIMEOUT_MS = 8000;
@@ -33,6 +35,8 @@ export class SupabaseRequestError extends Error {
 }
 
 type SupabaseRestOptions = {
+  /** The signed-in user's Supabase access token (JWT). Required: no data call runs as anon. */
+  accessToken: string;
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   /** Ask PostgREST to return the written rows (inserts/updates). */
@@ -55,14 +59,15 @@ function readConfig(): { baseUrl: string; key: string } {
  */
 export async function supabaseRest(
   path: string,
-  { method = "GET", body, returnRepresentation = false }: SupabaseRestOptions = {},
+  { accessToken, method = "GET", body, returnRepresentation = false }: SupabaseRestOptions,
 ): Promise<unknown> {
   const { baseUrl, key } = readConfig();
 
-  const headers: Record<string, string> = { apikey: key, Accept: "application/json" };
-  // Legacy anon keys are JWTs and also go in Authorization. New publishable
-  // keys (sb_publishable_...) are not JWTs and must only be sent as `apikey`.
-  if (key.startsWith("eyJ")) headers.Authorization = `Bearer ${key}`;
+  const headers: Record<string, string> = {
+    apikey: key,
+    Accept: "application/json",
+    Authorization: `Bearer ${accessToken}`,
+  };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (returnRepresentation) headers.Prefer = "return=representation";
 
@@ -74,21 +79,55 @@ export async function supabaseRest(
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 
-  if (!response.ok) {
-    let code: string | undefined;
-    try {
-      const errorBody: unknown = await response.json();
-      if (errorBody && typeof errorBody === "object" && "code" in errorBody) {
-        const value = (errorBody as { code: unknown }).code;
-        if (typeof value === "string") code = value;
-      }
-    } catch {
-      // Ignore unparsable error bodies; never forward them to the client.
-    }
-    throw new SupabaseRequestError(response.status, code);
-  }
+  if (!response.ok) throw new SupabaseRequestError(response.status, await errorCode(response));
 
   // Writes without `returnRepresentation` come back with an empty body (201/204).
+  const text = await response.text();
+  return text.length === 0 ? null : (JSON.parse(text) as unknown);
+}
+
+/** Reads only the short error code from a failed Supabase response; the body is never forwarded. */
+async function errorCode(response: Response): Promise<string | undefined> {
+  try {
+    const errorBody: unknown = await response.json();
+    if (errorBody && typeof errorBody === "object") {
+      for (const field of ["code", "error_code", "error"]) {
+        const value = (errorBody as Record<string, unknown>)[field];
+        if (typeof value === "string") return value.slice(0, 64);
+      }
+    }
+  } catch {
+    // Ignore unparsable error bodies.
+  }
+  return undefined;
+}
+
+/** The Supabase project URL, for building the Google authorize redirect. */
+export function supabaseAuthUrl(path: string): string {
+  return `${readConfig().baseUrl}/auth/v1/${path}`;
+}
+
+/**
+ * Calls Supabase Auth (`/auth/v1/<path>`) with the anon key, and the user's
+ * token when given (logout). Returns parsed JSON or null for an empty body.
+ */
+export async function supabaseAuth(
+  path: string,
+  { body, accessToken }: { body?: unknown; accessToken?: string } = {},
+): Promise<unknown> {
+  const { baseUrl, key } = readConfig();
+  const headers: Record<string, string> = { apikey: key, Accept: "application/json" };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+
+  const response = await fetch(`${baseUrl}/auth/v1/${path}`, {
+    method: "POST",
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+    cache: "no-store",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!response.ok) throw new SupabaseRequestError(response.status, await errorCode(response));
   const text = await response.text();
   return text.length === 0 ? null : (JSON.parse(text) as unknown);
 }
