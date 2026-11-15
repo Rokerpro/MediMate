@@ -51,7 +51,25 @@ export async function createPkcePair(): Promise<{ verifier: string; challenge: s
   return { verifier, challenge: await pkceChallenge(verifier) };
 }
 
-export type JwtClaims = { sub: string; exp: number; email: string | null };
+export type JwtClaims = { sub: string; exp: number; email: string | null; avatarUrl: string | null };
+
+/**
+ * The Google profile photo from the token's user_metadata, only when it is an https URL on
+ * Google's photo host. Anything else (other hosts, http, javascript:, odd lengths) is dropped.
+ */
+export function googleAvatarUrl(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== "object") return null;
+  const { avatar_url: avatar, picture } = metadata as Record<string, unknown>;
+  const candidate = typeof avatar === "string" ? avatar : typeof picture === "string" ? picture : null;
+  if (!candidate || candidate.length > 500) return null;
+  try {
+    const url = new URL(candidate);
+    if (url.protocol !== "https:" || !/^lh\d\.googleusercontent\.com$/.test(url.hostname)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
 
 /** Reads the claims we route on. Returns null for anything that is not a well-formed JWT. */
 export function decodeJwtClaims(token: string): JwtClaims | null {
@@ -61,10 +79,15 @@ export function decodeJwtClaims(token: string): JwtClaims | null {
     const json = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
     const payload: unknown = JSON.parse(json);
     if (!payload || typeof payload !== "object") return null;
-    const { sub, exp, email } = payload as Record<string, unknown>;
+    const { sub, exp, email, user_metadata: metadata } = payload as Record<string, unknown>;
     if (typeof sub !== "string" || !/^[0-9a-f-]{36}$/i.test(sub)) return null;
     if (typeof exp !== "number" || !Number.isFinite(exp)) return null;
-    return { sub, exp, email: typeof email === "string" ? email : null };
+    return {
+      sub,
+      exp,
+      email: typeof email === "string" ? email : null,
+      avatarUrl: googleAvatarUrl(metadata),
+    };
   } catch {
     return null;
   }

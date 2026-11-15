@@ -28,7 +28,7 @@ Every data endpoint below requires a signed-in user. Sign-in is "Continue with G
 |---|---|---|
 | `/auth/login?next=/logs` | GET (browser navigation) | Redirects to Google via Supabase. |
 | `/auth/callback?code=…` | GET (browser navigation) | Finishes sign-in, sets cookies, redirects to `next` (default `/dashboard`). On failure → `/login?error=failed`; sign-ups full → `/login?error=closed`. |
-| `/api/auth/me` | GET | `{ "user": { "email": "…", "displayName": "…" } }` or `{ "user": null }` (200, never 401). Schema: `currentUserResponseSchema`. |
+| `/api/auth/me` | GET | `{ "user": { "email": "…", "displayName": "…", "avatarUrl": "https://lh3.googleusercontent.com/…" \| null } }` or `{ "user": null }` (200, never 401). `avatarUrl` is the Google profile photo (https on Google's photo host only, else null → show initials). Schema: `currentUserResponseSchema`. |
 | `/api/auth/signout` | POST | Ends the session, clears cookies. 204. The client also clears saved assistant chats in `localStorage`. |
 | `/api/auth/account` | DELETE | Permanently deletes the signed-in account: profile, logs, chats, reminders and the Google sign-in link (frees a sign-up place). The shared demo profile is only unlinked, never deleted. 204 and cookies cleared; 401 if signed out. Client: `deleteAccount()` clears saved chats and goes to `/?accountDeleted=1`. Needs migration `0005_delete_account.sql`. |
 

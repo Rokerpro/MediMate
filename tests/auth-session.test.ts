@@ -9,6 +9,7 @@ import {
   cookieOptions,
   createPkcePair,
   decodeJwtClaims,
+  googleAvatarUrl,
   isProtectedPath,
   needsRefresh,
   parseTokenResponse,
@@ -46,7 +47,15 @@ describe("decodeJwtClaims", () => {
       sub: USER_ID,
       exp: 2_000_000_000,
       email: "a@example.com",
+      avatarUrl: null,
     });
+  });
+
+  it("reads the Google photo from user_metadata", () => {
+    const claims = decodeJwtClaims(
+      fakeJwt({ sub: USER_ID, exp: 2_000_000_000, user_metadata: { avatar_url: "https://lh3.googleusercontent.com/a/x=s96-c" } }),
+    );
+    assert.equal(claims?.avatarUrl, "https://lh3.googleusercontent.com/a/x=s96-c");
   });
 
   it("rejects malformed tokens and missing claims", () => {
@@ -62,11 +71,11 @@ describe("needsRefresh", () => {
   const now = 1_700_000_000_000;
   it("refreshes missing, expired and nearly expired tokens", () => {
     assert.equal(needsRefresh(null, now), true);
-    assert.equal(needsRefresh({ sub: USER_ID, exp: now / 1000 - 10, email: null }, now), true);
-    assert.equal(needsRefresh({ sub: USER_ID, exp: now / 1000 + 30, email: null }, now), true);
+    assert.equal(needsRefresh({ sub: USER_ID, exp: now / 1000 - 10, email: null, avatarUrl: null }, now), true);
+    assert.equal(needsRefresh({ sub: USER_ID, exp: now / 1000 + 30, email: null, avatarUrl: null }, now), true);
   });
   it("keeps a token with more than a minute left", () => {
-    assert.equal(needsRefresh({ sub: USER_ID, exp: now / 1000 + 600, email: null }, now), false);
+    assert.equal(needsRefresh({ sub: USER_ID, exp: now / 1000 + 600, email: null, avatarUrl: null }, now), false);
   });
 });
 
@@ -155,5 +164,25 @@ describe("delete_medimate_account migration", () => {
   it("is callable by signed-in users only", () => {
     assert.match(sql, /revoke all on function public\.delete_medimate_account\(\) from public, anon/);
     assert.match(sql, /grant execute on function public\.delete_medimate_account\(\) to authenticated/);
+  });
+});
+
+describe("googleAvatarUrl", () => {
+  it("accepts https Google photo URLs (avatar_url or picture)", () => {
+    assert.equal(googleAvatarUrl({ picture: "https://lh5.googleusercontent.com/p" }), "https://lh5.googleusercontent.com/p");
+  });
+
+  it("drops other hosts, http, script URLs and non-objects", () => {
+    for (const bad of [
+      { avatar_url: "https://evil.example.com/a.png" },
+      { avatar_url: "http://lh3.googleusercontent.com/a" },
+      { avatar_url: "javascript:alert(1)" },
+      { avatar_url: "https://lh3.googleusercontent.com.evil.com/a" },
+      { avatar_url: 42 },
+      null,
+      "x",
+    ]) {
+      assert.equal(googleAvatarUrl(bad), null, JSON.stringify(bad));
+    }
   });
 });
