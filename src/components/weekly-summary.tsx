@@ -49,7 +49,7 @@ export function WeeklySummary() {
             This week&apos;s summary
           </h2>
           <p className="mt-2 text-sm leading-6 text-[#5b6b61]">
-            An educational look at what your logs from the last 7 days recorded. It is not a diagnosis and is not saved.
+            From your last 7 days of logs. Educational, not a diagnosis, and not saved.
           </p>
         </div>
         <button

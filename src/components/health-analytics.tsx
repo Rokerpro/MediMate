@@ -165,7 +165,6 @@ function TrendCharts({ data }: { data: AnalyticsResponse }) {
     <section aria-labelledby="daily-trends-heading" className="space-y-4">
       <div>
         <h2 id="daily-trends-heading" className="text-xl font-semibold text-[#304739]">Daily trends</h2>
-        <p className="mt-1 text-sm text-[#657168]">Only recorded values are plotted; missing values remain gaps.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <TrendChart
@@ -255,7 +254,6 @@ function AnalyticsResults({ data }: { data: AnalyticsResponse }) {
       <section aria-labelledby="symptom-frequency-heading" className="space-y-4">
         <div>
           <h2 id="symptom-frequency-heading" className="text-xl font-semibold text-[#304739]">Symptom frequency</h2>
-          <p className="mt-1 text-sm text-[#657168]">Topics are counted from the words in your logs.</p>
         </div>
         {data.symptoms.length === 0 ? (
           <p className="rounded-xl border border-dashed border-[#d8d6c9] p-4 text-sm text-[#657168]">
@@ -375,7 +373,6 @@ export function HealthAnalytics() {
       <PageHeader
         eyebrow="Your workspace / Insights"
         title="Health insights"
-        description="A descriptive view of patterns in your own logs, based only on what was recorded."
         actions={
           <fieldset>
             <legend className="mb-1.5 text-sm font-medium text-[#40564a]">Time period</legend>

@@ -92,13 +92,9 @@ export default function DashboardPage() {
                 <path d="M8 9h8M8 12.5h8M8 16h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
             </span>
-            <h2 className="text-sm font-semibold tracking-wide text-[#304739]">A thoughtful starting point</h2>
+            <h2 className="text-sm font-semibold tracking-wide text-[#304739]">Quick actions</h2>
           </div>
-          <p className="mt-4 text-sm leading-6 text-[#5e6b61]">
-            Keep dated observations together and review the relevant synthetic history used in a conversation.
-          </p>
-          <div className="mt-5 h-px bg-[#d4d3c7]" />
-          <nav aria-label="Quick actions" className="mt-4 grid grid-cols-2 gap-2">
+                    <nav aria-label="Quick actions" className="mt-5 grid grid-cols-2 gap-2">
             {[
               { href: "/insights", label: "View insights" },
               { href: "/summary", label: "Summary" },
@@ -126,9 +122,6 @@ export default function DashboardPage() {
               Choose a starting point
             </h2>
           </div>
-          <p className="max-w-md text-sm leading-6 text-[#6c756d]">
-            Each space helps you keep your own information organized.
-          </p>
         </div>
         <div className="grid gap-4 lg:grid-cols-12">
         <Link
@@ -145,9 +138,6 @@ export default function DashboardPage() {
             <span className="text-xs font-semibold tracking-[0.14em] text-[#9a8054]">02 / PROFILE</span>
           </div>
           <h3 className="mt-8 text-xl font-semibold tracking-[-0.025em] text-[#304739]">Personal profile</h3>
-          <p className="mt-2 max-w-sm text-sm leading-6 text-[#657168]">
-            Review and update your synthetic profile details.
-          </p>
           <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#3d6149]">
             Review profile
             <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
@@ -168,9 +158,6 @@ export default function DashboardPage() {
             <span className="text-xs font-semibold tracking-[0.14em] text-[#9a8054]">03 / DAILY LOGS</span>
           </div>
           <h3 className="mt-8 text-xl font-semibold tracking-[-0.025em] text-[#304739]">Daily observations</h3>
-          <p className="mt-2 max-w-sm text-sm leading-6 text-[#657168]">
-            Add an observation and revisit your dated timeline.
-          </p>
           <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#3d6149]">
             Open daily logs
             <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
@@ -198,9 +185,6 @@ export default function DashboardPage() {
               <h3 className="mt-3 text-3xl font-semibold leading-tight tracking-[-0.035em] sm:text-4xl">
                 Discuss a concern with context.
               </h3>
-              <p className="mt-4 max-w-md text-sm leading-6 text-[#e1e7df] sm:text-base">
-                Explore educational information with relevant synthetic history shown alongside the conversation.
-              </p>
               <span className="mt-7 dashboard-cta inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition-colors duration-200">
                 Open assistant
                 <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
@@ -221,9 +205,6 @@ export default function DashboardPage() {
               Personal health insights
             </h2>
           </div>
-          <p className="max-w-md text-sm leading-6 text-[#6c756d]">
-            User-reported measurements, not diagnostic indicators.
-          </p>
         </div>
 
         {insights.status === "loading" ? (
