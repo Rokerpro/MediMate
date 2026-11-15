@@ -20,7 +20,7 @@ Run: `npm run eval -- --write` (offline, scripted model).
 | Evidence accuracy | Displayed history that exists in the user's records | 125/125 (100.0%) | ≥ 100% | Met |
 | Unsupported-claim rate | Replies with unsupported medical claims or invented patient data that reached the user | 0/37 (0%) | ≤ 0% | Met |
 | Unsupported data in delivered replies | Delivered replies that state a date, pain level or count not in the records | 0/12 (0%) | ≤ 0% | Met |
-| User data isolation | Static checks that each user reaches only their own records | 48/48 (100%) | ≥ 100% | Met |
+| User data isolation | Static checks that each user reaches only their own records | 67/67 (100%) | ≥ 100% | Met |
 
 Live rows, when present, describe a small sample of real model replies before the server's checks; their targets are informational.
 

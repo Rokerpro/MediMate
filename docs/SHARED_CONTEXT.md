@@ -26,22 +26,9 @@ This is the combined source of truth for both coding AIs. Naming: `docs/AI_A.md`
 
 ## Ownership
 
-Person A owns:
+Since 2026-11-15 the owner has handed the whole repository (frontend and backend) to one assistant: Claude Code, working for Person A. Person B / Copilot no longer edits the repository; all of Person B's branches are merged into `main` and every other branch was deleted. The Person A / Person B split below this line and in older entries is history.
 
-- `src/app/api/**`
-- `src/lib/ai/**`
-- `src/lib/health/**`
-- `src/lib/reminders/**`
-- `src/lib/supabase/**`
-- `supabase/**`
-- Shared validation schemas and API contract changes
-
-Person B owns:
-
-- `src/components/**`
-- `src/app/(app)/**`
-- `src/lib/api-client.ts`
-- Frontend hooks, forms, UI state, and presentation assets
+GitHub now deletes a PR's branch automatically when it is merged. Keep using short-lived feature branches and PRs into `main`.
 
 Coordinate before editing:
 
@@ -140,9 +127,9 @@ Done 2026-11-14: `0002_reminders.sql` applied in Supabase; the live Vercel site 
 
 1. Owner: run `supabase/reset-demo.sql` in the Supabase SQL editor just before the demo (restores Alex Demo, 14 logs dated up to today, 2 reminders; deletes all chat sessions). Then rehearse and record the backup video.
 2. Done 2026-11-15 by Person A at the owner's request: "Recent assistant conversations" on `/summary` (`src/components/recent-assistant-conversations.tsx`, `listAssistantSessions` in `src/lib/api-client.ts`, rendered from `src/app/(app)/summary/page.tsx`, below Person B's `HealthSummary`). Shows the last 5 completed conversations with urgent / GP-111 badges, summary, possibilities, next steps, sources and disclaimer; loading, error/retry and empty states; prints. Person B may restyle it or move it above "Notes for the appointment". Assistant conversations are not written to the profile (they are user-reported, not recorded facts); "Save to my log" is done too (2026-11-15, Person A at the owner's request): `src/components/save-to-log.tsx`, shown under each completed assessment in `assistant-chat.tsx` (not for urgent or follow-up replies). It is prefilled only from the user's own messages (`draftLogFromUserMessages` in `src/lib/health/log-draft.ts`: symptoms text, body area typed, last "N/10" score), the user edits and confirms, then the existing `POST /api/health-logs` saves it with a note "Saved by the user from an assistant conversation (user-reported)".
-3. Person B: confirm the `/summary` print layout in a real browser print preview.
+3. Owner: confirm the `/summary` print layout in a real browser print preview, and check the signed-in pages in dark mode.
 4. Pitch: `npm run scorecard` currently prints 266/266 fixed checks. Its weekly-summary lines are 37/37 for unsafe AI output blocked and 35/35 for warning-sign escalation in logs. The slide `public/pitch/safety-measured.svg` (from Person B's `feat/summary-conversations`) shows these figures; update it whenever the scorecard changes. Keep the scope note: fixed examples, keyword matching, and not comprehensive emergency detection; output checks use a scripted AI stand-in.
-5. Workflow: Person A builds the system side and hands Person B a UI prompt; neither edits the other's files without coordinating.
+5. Workflow: one owner for the whole repository (see Ownership).
 6. Keep this file and both AI-specific context files synchronized after meaningful decisions or contract changes.
 
 - 2026-11-15 (A): `DELETE /api/auth/account` + `deleteAccount()` in api-client (needs migration 0005). Deletes the user's profile, logs, chats, reminders and sign-in; the demo profile is only unlinked. `sendAssistantMessage` no longer redirects on 401: it throws `ApiClientError` status 401 so the chat can show an inline sign-in prompt. `PROFILE_SAVED_EVENT` refreshes the header name after a profile save.
