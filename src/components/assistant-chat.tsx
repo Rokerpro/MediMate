@@ -35,6 +35,33 @@ type SpeechRecognitionWindow = Window & {
   webkitSpeechRecognition?: SpeechRecognitionConstructor;
 };
 
+/** English locales the browser speech services support; anything else falls back to en-US. */
+function speechLanguage(): string {
+  const language = navigator.language;
+  return /^en-(US|GB|AU|CA|IN|IE|NZ|ZA)$/i.test(language) ? language : "en-US";
+}
+
+/** User-facing text for a SpeechRecognition error code. */
+function speechErrorMessage(code: string): string {
+  switch (code) {
+    case "not-allowed":
+    case "service-not-allowed":
+      return "Microphone or speech service access was not allowed. Allow it in your browser settings, or type your message instead.";
+    case "network":
+      return "The browser's speech service could not be reached. Voice input needs an internet connection and works in Chrome or Edge; Brave and some privacy browsers block it. You can type your message instead.";
+    case "no-speech":
+      return "No speech was heard. Press the microphone and start speaking straight away, or type your message instead.";
+    case "audio-capture":
+      return "No audio was captured from your microphone. Check it is connected and selected, or type your message instead.";
+    case "language-not-supported":
+      return "Voice input does not support this language setting. You can type your message instead.";
+    case "aborted":
+      return "Voice input was stopped.";
+    default:
+      return "Voice input could not be completed. You can type your message instead.";
+  }
+}
+
 function microphonePermissionMessage(error: unknown) {
   if (error instanceof DOMException) {
     if (error.name === "NotAllowedError" || error.name === "SecurityError") {
@@ -163,7 +190,7 @@ export function AssistantChat({
     const recognition = new Recognition();
     let hasTranscript = false;
     let hasError = false;
-    recognition.lang = navigator.language;
+    recognition.lang = speechLanguage();
     recognition.interimResults = false;
     recognition.continuous = false;
     recognition.onresult = (event) => {
@@ -187,11 +214,9 @@ export function AssistantChat({
         recognitionRef.current = null;
         setIsListening(false);
       }
-      setVoiceStatus(
-        event.error === "not-allowed" || event.error === "service-not-allowed"
-          ? "Microphone access was not allowed. You can type your message instead."
-          : "Voice input could not be completed. You can type your message instead.",
-      );
+      // The error code only (never audio or text), to help diagnose browser support.
+      console.info(`[voice] speech recognition error: ${event.error}`);
+      setVoiceStatus(speechErrorMessage(event.error));
     };
     recognition.onend = () => {
       if (recognitionRef.current === recognition) {
