@@ -76,11 +76,13 @@ export function buildPushPayload(notification: Notification): PushPayload {
 /** Plain-text email for when no device is subscribed or every push failed. */
 export function buildEmail(notification: Notification, origin: string): { subject: string; text: string } {
   const link = `${origin}${dosePath(notification.doseId)}`;
-  const due = new Date(notification.dueAt).toISOString().replace("T", " ").slice(0, 16);
+  // Relative, so it reads right in any time zone (the server does not know the user's).
+  const minutesLate = (notification.attempt - 1) * 5;
+  const due = minutesLate === 0 ? "due now" : `due ${minutesLate} minutes ago`;
   return {
     subject: `Medicine reminder: ${oneLine(notification.title)}`.slice(0, 160),
     text: [
-      `This is the medicine reminder you set in MediMate: "${oneLine(notification.title)}" (due ${due} UTC).`,
+      `This is the medicine reminder you set in MediMate: "${oneLine(notification.title)}" (${due}).`,
       notification.notes ? `Your note: ${oneLine(notification.notes)}` : null,
       "",
       `Confirm you have taken it: ${link}`,
