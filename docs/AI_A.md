@@ -4,7 +4,7 @@ Last updated: 2026-11-15
 
 ## Role and current state
 
-This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, prescription explainer UI, assistant popup, and their frontend data-access methods are integrated. `main` at `050ae24` includes the prompt-level notice, inline chat sign-in, account deletion, and the nullable Google avatar field in `/api/auth/me`. The current branch, `feat/landing-profile-menu`, adds profile links to the landing and app-header avatar menus and moves sign-out to the Profile page.
+This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, prescription explainer UI, assistant popup, and their frontend data-access methods are integrated. `main` at `16a58f0` includes the prompt-level notice, inline chat sign-in, account deletion, nullable Google avatar field, and the Profile-only avatar menu with sign-out on the Profile page. The current branch, `feat/grounded-insights-ui`, adds deterministic health analytics and shows server-grounded records separately from interpretation in chat and weekly summaries.
 
 PR #2 (`feat/health-insights-journey`) was merged into `main`. Do not assume that a feature is deployed just because it is merged; verify the deployed app separately.
 
@@ -92,8 +92,7 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 
 - `AppShell` renders the global synthetic-data warning.
 - `PrimaryNavigation` uses `usePathname()` and `aria-current="page"` for active links. On mobile, it replaces the horizontal link list with a full-screen hamburger overlay with Escape handling, focus containment, scroll locking, and a close control; desktop navigation remains unchanged.
-- Navigation currently includes Dashboard, Profile, Daily logs, Assistant, Reminders, and Summary.
-- Navigation also includes Prescriptions, which links to the deterministic abbreviation explainer.
+- Navigation currently includes Dashboard, Insights, Daily logs, Assistant, Reminders, Prescriptions, and Summary. Profile is linked from the avatar menu instead of primary navigation.
 - Focus-visible rings and keyboard-operable controls are required.
 
 ### Route preloader
@@ -185,6 +184,13 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 - The explanatory label is `User-reported measurements, not diagnostic indicators`; the tiles use neutral styling and avoid cause/effect claims.
 - `/logs` groups entries by UTC date, newest first, labels the current and previous dates Today and Yesterday, and shows pain and sleep as small neutral indicators (for example `Pain 3/10` and `Sleep 7h 30m`). Other recorded details remain available.
 - The timeline links to `/summary`, including its loading, error, and empty states. No API, validation, or backend files were changed.
+
+### Grounded analytics and assessment presentation
+
+- `/insights` calls the signed-in user's `GET /api/insights/analytics` through `getHealthAnalytics(days)` with 7/14/30-day windows (30 by default). It displays symptom counts and recurrence, recorded pain summaries, SVG pain/sleep charts with null gaps, and "Recorded together" comparisons with dated evidence links. It shows loading, empty, retryable error, and invalid-response states.
+- `GroundedAssessment` renders server-calculated `recordedFacts` and `historyConsidered` separately from MediMate's interpretation. Chat and weekly summaries share it; older assessments with empty new fields hide those sections. It preserves sources, next steps, and the disclaimer.
+- The new `/insights` page is protected by the existing sign-in proxy and protected-path helper. The API client and validation schemas are unchanged.
+- Verification on this branch: lint, typecheck, all 305 tests, and production build pass. Synthetic browser responses exercised analytics and grounded chat/weekly-summary output; chat was checked at 375px. A fresh `/insights` navigation in the browser redirected to sign-in because that browser lacked a session cookie, so the authenticated live endpoint was not verified there.
 
 ### PR #1 review fixes
 

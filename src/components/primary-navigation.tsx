@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/insights", label: "Insights" },
   { href: "/logs", label: "Daily logs" },
   { href: "/assistant", label: "Assistant" },
   { href: "/reminders", label: "Reminders" },

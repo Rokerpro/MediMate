@@ -29,6 +29,7 @@ export const config = {
     "/reminders/:path*",
     "/summary/:path*",
     "/prescriptions/:path*",
+    "/insights/:path*",
     "/welcome/:path*",
   ],
 };

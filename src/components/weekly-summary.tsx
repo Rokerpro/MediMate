@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { ApiClientError, generateWeeklySummary } from "@/lib/api-client";
+import { GroundedAssessment } from "@/components/grounded-assessment";
 import type { WeeklySummaryResponse } from "@/lib/validations";
 
 type State =
@@ -112,74 +113,9 @@ export function WeeklySummary() {
 
             <div>
               <p className="text-sm text-[#40564a]">{result.assistantMessage}</p>
-              <p className="mt-2 leading-7">{result.assessment.summary}</p>
             </div>
 
-            {result.assessment.possibleExplanations.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-[#243b30]">Patterns in your logs to discuss with a clinician</h3>
-                <ul className="mt-3 space-y-3">
-                  {result.assessment.possibleExplanations.map((pattern, index) => (
-                    <li key={`${pattern.title}-${index}`} className="rounded-xl border border-[#e2e5da] bg-white p-4">
-                      <p className="font-medium">{pattern.title}</p>
-                      <p className="mt-1 text-sm text-[#5b6b61]">{pattern.whyItMayBeRelevant}</p>
-                      {pattern.supportingHistory.length > 0 && (
-                        <div className="mt-3 border-t border-[#eef0e8] pt-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-[#6b776f]">From your logs</p>
-                          <ul className="mt-1 space-y-1 text-sm text-[#5b6b61]">
-                            {pattern.supportingHistory.map((entry) => (
-                              <li key={entry.logId}>
-                                <time dateTime={entry.date} className="font-medium text-[#24352d]">
-                                  {formatDate(entry.date)}
-                                </time>
-                                : {entry.observation}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {pattern.unknowns.length > 0 && (
-                        <p className="mt-2 text-xs text-[#6b776f]">Not known yet: {pattern.unknowns.join("; ")}</p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <div>
-              <h3 className="font-semibold text-[#243b30]">Next steps</h3>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
-                {result.assessment.nextSteps.map((step) => (
-                  <li key={step}>{step}</li>
-                ))}
-              </ul>
-            </div>
-
-            {result.assessment.sources.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-[#243b30]">Sources</h3>
-                <ul className="mt-1 space-y-1 text-sm">
-                  {result.assessment.sources.map((source) => (
-                    <li key={source.url}>
-                      <a
-                        href={source.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#254a38] underline underline-offset-2 hover:text-[#1c3a2c]"
-                      >
-                        {source.title}
-                      </a>{" "}
-                      <span className="text-[#6b776f]">({source.publisher})</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <p className="rounded-xl bg-[#f5ead9] px-4 py-3 text-xs leading-5 text-[#654a2e]">
-              {result.assessment.disclaimer}
-            </p>
+            <GroundedAssessment assessment={result.assessment} />
           </div>
         )}
       </div>
