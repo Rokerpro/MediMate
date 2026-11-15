@@ -8,6 +8,8 @@ import {
   updateReminder,
   ApiClientError,
 } from "@/lib/api-client";
+import { ReminderDoses } from "@/components/reminder-doses";
+import { ReminderNotifications } from "@/components/reminder-notifications";
 import {
   REMINDER_CATEGORIES,
   REMINDER_REPEATS,
@@ -104,7 +106,13 @@ function validateForm(values: FormValues): { payload?: FormValues; errors: Field
   return { errors };
 }
 
-export function Reminders() {
+export function Reminders({
+  targetDoseId,
+  confirmFailed,
+}: {
+  targetDoseId?: string;
+  confirmFailed?: boolean;
+}) {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [loadError, setLoadError] = useState("");
@@ -287,8 +295,13 @@ export function Reminders() {
         <p className="mt-2 max-w-2xl text-slate-600">
           Reminders you set yourself. MediMate does not suggest or check medication timing or doses. Ask your pharmacist or prescriber about how to take a medicine.
         </p>
-        <p className="mt-2 text-sm text-slate-500">Reminders only appear inside this app. No notifications are sent.</p>
+        <p className="mt-2 text-sm text-slate-500">
+          Medication reminders can use notifications or your sign-in email; other reminders remain in-app only.
+        </p>
       </div>
+
+      <ReminderNotifications />
+      <ReminderDoses targetDoseId={targetDoseId} confirmFailed={confirmFailed} />
 
       <section aria-labelledby="reminder-form-heading" className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
         <h2 id="reminder-form-heading" className="text-xl font-semibold">
@@ -311,6 +324,11 @@ export function Reminders() {
               <select value={form.category} onChange={(event) => updateField("category", event.target.value as ReminderCategory)} className="w-full rounded-md border border-slate-300 px-3 py-2 font-normal focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200">
                 {REMINDER_CATEGORIES.map((category) => <option key={category} value={category}>{categoryLabels[category]}</option>)}
               </select>
+              {form.category === "medication" && (
+                <span className="block text-xs font-normal text-slate-600">
+                  You&apos;ll be notified until you confirm you took it.
+                </span>
+              )}
             </label>
             <label className="space-y-1 text-sm font-medium">
               Repeat

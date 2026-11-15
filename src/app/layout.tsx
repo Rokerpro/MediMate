@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import { RoutePreloader } from "@/components/route-preloader";
 import "./globals.css";
 
@@ -18,6 +19,10 @@ export const metadata: Metadata = {
   description: "A history-aware, non-diagnostic health information prototype built for clearer care conversations.",
 };
 
+export const viewport: Viewport = {
+  themeColor: "#254a38",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -28,6 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <RoutePreloader />
         {children}
+        <PwaInstallPrompt />
       </body>
     </html>
   );

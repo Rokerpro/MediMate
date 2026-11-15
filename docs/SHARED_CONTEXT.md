@@ -6,8 +6,8 @@ This is the combined source of truth for both coding AIs. Naming: `docs/AI_A.md`
 
 ## Current repository state
 
-- `main` at `16a58f0` includes Google sign-in, onboarding, weekly summary, account deletion, the nullable Google avatar field, and PR #7's Profile-only avatar menu with sign-out on the Profile page.
-- The current branch is `feat/grounded-insights-ui`, based on `16a58f0`; it adds health analytics and shared grounded-assessment presentation without changing API schemas or data-access methods.
+- `origin/main` at `4ef1665` includes Google sign-in, onboarding, weekly summary, account deletion, the nullable Google avatar field, the Profile-only avatar menu, grounded health analytics, and the reminder-notification backend.
+- The current branch is `feat/notifications-pwa-ui`, based on `4ef1665`; it adds PWA registration/install UI and medication-notification controls on `/reminders`.
 - PR #2 (`feat/health-insights-journey`: PR #1 review fixes `ad87a1f`, Personal Health Insights `09ebb8b`, Interactive Health Journey `bbfdd5e`) was reviewed and merged by Person A on 2026-11-14, together with the backend past-conversations endpoint (`cd73b88`), safety scorecard (`77e37a9`), security headers (`3962e9d`) and the dose-question fix (`1312d70`). Checks on the merged tree: lint, typecheck, build, 202 tests, scorecard 134/134.
 - The app is a Next.js 16.4.6 App Router application using React 19.3, TypeScript, Tailwind 4.3, Zod 4.6, Supabase PostgreSQL, and a server-side Groq-compatible AI provider.
 - Node.js `>=22.18` is required.
@@ -22,7 +22,7 @@ This is the combined source of truth for both coding AIs. Naming: `docs/AI_A.md`
 - Deterministic warning checks run before the LLM and cannot be overridden by model output.
 - No diagnosis claims, probabilities, confidence scores, medication timing/dose instructions, or reassurance based solely on a non-matching warning rule.
 - Every assessment shows uncertainty, sources returned by the server, next steps, and the fixed disclaimer.
-- Reminders are user-written, in-app-only records. They do not send notifications, suggest medication timing, or check doses.
+- Reminders are user-written. Medication reminders can notify by web push or email until confirmed; the app never suggests medicines, timing, or doses.
 - Every page shows: `Synthetic demo data — do not enter real health information.`
 
 ## Ownership
@@ -98,6 +98,7 @@ Required behavior:
 - `/reminders` contains a confirmation-before-create form, local-time conversion, active/paused list, Pause/Resume, Edit, inline Delete confirmation, and loading/empty/error/retry states.
 - Reminder UI uses the shared `Reminder` schemas and only talks through `src/lib/api-client.ts`.
 - The reminders page was tested at 375px with no horizontal overflow and through create → confirm → pause → resume → edit → delete. The temporary test reminder was deleted.
+- `/reminders` now includes notification configuration and per-device push controls, a 60-second refreshing dose list, status/confirmation feedback, and `?dose=<id>&confirm=failed` handling. Root layout registers the service worker and mounts a seven-day-dismissible PWA install prompt; viewport theme color is `#254a38`.
 - The prescription explainer page was tested at 375px with no horizontal overflow. It always shows the API guidance and source after a successful response, including when no terms are recognized.
 - Assistant `RATE_LIMITED` (429) is retryable; the chat retains the failed text, shows the server message, and retries without duplicating its transcript entry.
 - A `prompt` safety level on assistant follow-up or assessment responses appears above the reply in an amber `role="status"` notice titled “Contact a GP or NHS 111 today”; urgent responses retain their distinct red alert.
@@ -147,6 +148,7 @@ Done 2026-11-14: `0002_reminders.sql` applied in Supabase; the live Vercel site 
 - 2026-11-15 (A): `DELETE /api/auth/account` + `deleteAccount()` in api-client (needs migration 0005). Deletes the user's profile, logs, chats, reminders and sign-in; the demo profile is only unlinked. `sendAssistantMessage` no longer redirects on 401: it throws `ApiClientError` status 401 so the chat can show an inline sign-in prompt. `PROFILE_SAVED_EVENT` refreshes the header name after a profile save.
 - 2026-11-15 (B): prompt-level notices are shown in the shared assistant page/popup and `urgencyLevel: "prompt"` summaries use the contract label "Urgent GP / NHS 111 advice was given". The account UI uses mocked failures only; do not test successful deletion until the owner applies `supabase/migrations/0005_delete_account.sql`.
 - 2026-11-15 (B): the landing and app-header avatar menus link to the Profile page without displaying the account name or sign-out action; sign-out is available on Profile. The app header's standalone Profile navigation entry is removed.
+- 2026-11-15 (B): `feat/notifications-pwa-ui` adds the contract §3f reminder controls and PWA install prompt without changing shared API or backend files. Lint, typecheck, 317 tests, and production build pass after merging `4ef1665`. Browser checks cover the mocked install flow, standalone suppression, service-worker registration and viewport metadata. Authenticated `/reminders` UI and live notification delivery remain unverified in the unauthenticated browser; migration 0006 and server configuration are owner prerequisites.
 
 - 2026-11-15 (A): Grounded history + analytics + eval. Contract §3e: assessment gains `recordedFacts` (server-calculated) and `historyConsidered` (records given to the model, `matchedTerms`, `reason`, `cited`); supportingHistory items gain `matchedTerms`. New `GET /api/insights/analytics?days=7|14|30` + `getHealthAnalytics()`. Output checks now block dates/pain scores/counts not in the records. `npm run eval` writes docs/EVALUATION.md (synthetic; not proof of clinical safety).
 - 2026-11-15 (B): `/insights` and the shared grounded-assessment UI are implemented on `feat/grounded-insights-ui`. Lint, typecheck, all 305 tests, and production build pass. Synthetic browser responses exercised analytics and grounded chat output; chat was checked at 375px. Authenticated live `/insights` could not be checked because the browser lacked a session cookie.

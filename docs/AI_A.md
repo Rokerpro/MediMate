@@ -4,7 +4,7 @@ Last updated: 2026-11-15
 
 ## Role and current state
 
-This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, prescription explainer UI, assistant popup, and their frontend data-access methods are integrated. `main` at `16a58f0` includes the prompt-level notice, inline chat sign-in, account deletion, nullable Google avatar field, and the Profile-only avatar menu with sign-out on the Profile page. The current branch, `feat/grounded-insights-ui`, adds deterministic health analytics and shows server-grounded records separately from interpretation in chat and weekly summaries.
+This file records the context for the frontend/product AI (Person B). `origin/main` at `4ef1665` includes the prompt-level notice, inline chat sign-in, account deletion, nullable Google avatar field, Profile-only avatar menu, grounded health analytics, and the reminder-notification backend. The current branch, `feat/notifications-pwa-ui`, adds the PWA install flow and the notification/dose controls to `/reminders`.
 
 PR #2 (`feat/health-insights-journey`) was merged into `main`. Do not assume that a feature is deployed just because it is merged; verify the deployed app separately.
 
@@ -140,7 +140,11 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 - Supports Pause/Resume, Edit, and inline Delete confirmation. It never uses `window.confirm`.
 - A reminder 404 refreshes the list because another actor may have removed it.
 - Includes loading, empty (`No reminders yet`), error, retry, and success states.
-- Required safety copy states that reminders are user-set, medication timing/doses are not suggested or checked, pharmacists/prescribers should answer medication questions, and reminders are in-app only.
+- Medication notifications show server device status and use the existing push helpers; unsupported, denied, iOS-install-required, unconfigured, and retryable-failure results are surfaced.
+- Recent doses refresh every 60 seconds, show due/taken/missed status and confirmation eligibility, and support notification deep links with a highlighted dose and "I took it" action.
+- The form explains that user-written medication reminders notify until confirmed. The UI does not suggest medicines, timing, or doses; without a subscribed device the backend may use the user's sign-in email.
+- `PwaInstallPrompt` registers the service worker at the root and handles the Android/desktop install event, with a seven-day dismissal and standalone suppression.
+- Contract §3f's backend requires migration `0006_reminder_notifications.sql` and the documented server environment variables before live notifications can work.
 
 ### Assistant rate-limit retry
 
@@ -255,6 +259,8 @@ For the mobile navigation and route preloader, lint, typecheck, all 204 tests, a
 For `feat/assistant-experience`, lint, typecheck, all 204 tests, and the production build pass. Browser checks verified mocked follow-up rendering, persistence across reloads, rename, popup/page conversation continuity, desktop launcher alignment, mobile popup sizing, and mocked microphone permission/recognition behavior. Streaming, server-side history management, attachment upload, server feedback, and syntax highlighting are not supported by the current API and are intentionally absent.
 
 For `feat/account-ui`, lint, typecheck, all 285 tests, and the production build pass. Browser checks with mocked API responses verified the prompt notice and normal follow-up at desktop and 375px, inline 401 sign-in cards with preserved composer text on the assistant page and landing popup, and the profile deletion confirmation/error/retry flow without a successful deletion. The landing-page deletion notice appears and dismisses at desktop and 375px. No real account deletion or live Google sign-in was attempted; migration `0005_delete_account.sql` is still an owner prerequisite.
+
+For `feat/notifications-pwa-ui`, lint, typecheck, all 317 tests, and production build pass after merging the Windows-path fix from `main`. Mocked browser checks at 375px and desktop verified the install prompt's `Install` and `Not now` actions, seven-day dismissal storage, standalone suppression, one service-worker registration, and theme color `#254a38`, with no horizontal overflow. `/reminders` redirects to sign-in in the available browser, so authenticated notification/dose UI and live push/email delivery could not be exercised.
 
 ## Pending work and coordination
 
