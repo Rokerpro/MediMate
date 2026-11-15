@@ -243,7 +243,7 @@ export function MobileTabBar({ moreFooter }: { moreFooter?: ReactNode }) {
             id="mobile-more-navigation"
             aria-hidden={!isOpen}
             inert={!isOpen}
-            className={`fixed inset-0 z-[100] lg:hidden ${isOpen ? "" : "pointer-events-none"}`}
+            className={`fixed inset-0 z-[100] lg:hidden print:hidden ${isOpen ? "" : "pointer-events-none"}`}
           >
             <button
               type="button"

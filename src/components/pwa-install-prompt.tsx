@@ -73,7 +73,7 @@ export function PwaInstallPrompt() {
   return (
     <aside
       aria-labelledby="install-medi-mate-heading"
-      className="fixed inset-x-3 bottom-24 z-[90] mx-auto max-w-lg rounded-2xl border border-[#dfe3d6] bg-[#fffdf8] p-4 sm:inset-x-auto sm:left-5 sm:mx-0 sm:w-[22rem] text-[#24352d] shadow-xl sm:bottom-5 sm:p-5"
+      className="fixed inset-x-3 bottom-24 z-[90] mx-auto max-w-lg rounded-2xl border border-[#dfe3d6] bg-[#fffdf8] p-4 sm:inset-x-auto sm:left-5 sm:mx-0 sm:w-[22rem] text-[#24352d] shadow-xl sm:bottom-5 sm:p-5 print:hidden"
     >
       <div className="flex items-start justify-between gap-4">
         <div>
