@@ -89,7 +89,7 @@ Do not add FastAPI or a second backend service for this hackathon. Do not introd
 - Return predictable error responses; never expose stack traces, secrets or provider errors to the browser.
 - Keep LLM API keys and Supabase privileged credentials server-side only.
 - Never commit `.env`, `.env.local`, API keys, access tokens or real health information.
-- For the public hackathon demo, use only the seeded synthetic profile and narrowly scoped Supabase RLS policies. Do not use a service-role key to serve unauthenticated public requests.
+- For the public hackathon demo, use synthetic data only. Since 2026-11-15 (owner decision) users sign in with Google; RLS limits each user to their own profile, only one configured demo account sees the seeded synthetic profile, and sign-ups are capped at 5. Do not use a service-role key to serve unauthenticated public requests.
 - Add loading, empty, error and retry states for user-facing async operations.
 - Use accessible labels, keyboard-operable controls and responsive layouts.
 - Do not claim a feature is complete until it has been exercised through the UI and the relevant API path.

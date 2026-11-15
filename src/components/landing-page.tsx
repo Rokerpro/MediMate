@@ -62,8 +62,8 @@ export function LandingPage() {
           <a href="#how" className="transition-colors hover:text-[#254a38]">How it works</a>
           <a href="#questions" className="transition-colors hover:text-[#254a38]">Questions</a>
         </div>
-        <Link href="/dashboard" className="landing-pill landing-pill-dark">
-          Open the demo <ArrowUpRight />
+        <Link href="/login" className="landing-pill landing-pill-dark">
+          Sign in <ArrowUpRight />
         </Link>
       </nav>
 
@@ -79,8 +79,8 @@ export function LandingPage() {
             MediMate brings your daily observations and thoughtful conversations into one history-aware space — so you can arrive at care with a clearer, more useful story.
           </p>
           <div className="mt-10 flex flex-wrap items-center gap-4 reveal reveal-delay-3">
-            <Link href="/dashboard" className="landing-button landing-button-primary">
-              Explore the workspace <ArrowUpRight />
+            <Link href="/login" className="landing-button landing-button-primary">
+              Get started <ArrowUpRight />
             </Link>
             <a href="#how" className="landing-button landing-button-quiet">See the approach</a>
           </div>
@@ -247,7 +247,7 @@ export function LandingPage() {
             <LeafMark className="mx-auto h-10 w-10 text-[#527158]" />
             <h2 className="display-font mx-auto mt-6 max-w-2xl text-5xl leading-[.92] tracking-[-.06em] text-[#254a38] sm:text-7xl">Your health story deserves room to breathe.</h2>
             <p className="mx-auto mt-6 max-w-xl leading-7 text-[#5b6b61]">Step into the synthetic demo and see a more thoughtful way to organize what you notice.</p>
-            <Link href="/dashboard" className="landing-button landing-button-primary mt-9">Enter MediMate <ArrowUpRight /></Link>
+            <Link href="/login" className="landing-button landing-button-primary mt-9">Enter MediMate <ArrowUpRight /></Link>
           </div>
         </div>
       </section>
@@ -256,7 +256,7 @@ export function LandingPage() {
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 text-sm text-[#718078] sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
           <div className="flex items-center gap-2 text-[#254a38]"><LeafMark className="h-6 w-6" /><span className="display-font text-lg font-semibold">MediMate</span></div>
           <p>Synthetic demo data only. Educational information, not medical advice.</p>
-          <Link href="/dashboard" className="font-semibold text-[#527158] hover:text-[#254a38]">Open workspace <span aria-hidden="true">→</span></Link>
+          <Link href="/login" className="font-semibold text-[#527158] hover:text-[#254a38]">Open workspace <span aria-hidden="true">→</span></Link>
         </div>
       </footer>
     </main>

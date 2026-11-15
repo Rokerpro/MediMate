@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 
+import { authenticate } from "@/app/api/_lib/auth";
 import { internalError, readJsonBody, validationError } from "@/app/api/_lib/responses";
 import {
   REMINDER_COLUMNS,
@@ -10,7 +11,6 @@ import {
 } from "@/lib/supabase/mappers";
 import { supabaseRest } from "@/lib/supabase/server";
 import {
-  DEMO_PROFILE_ID,
   reminderCreateSchema,
   reminderListQuerySchema,
   reminderListResponseSchema,
@@ -19,17 +19,22 @@ import {
 
 const MAX_REMINDERS = 100;
 
-/** GET /api/reminders?includeInactive=false — the demo profile's reminders, next due first. */
+/** GET /api/reminders?includeInactive=false — the signed-in user's reminders, next due first. */
 export async function GET(request: NextRequest): Promise<Response> {
+  const auth = await authenticate("GET /api/reminders");
+  if (!auth.ok) return auth.response;
+  const { profileId, accessToken } = auth.ctx;
+
   const query = reminderListQuerySchema.safeParse(Object.fromEntries(request.nextUrl.searchParams));
   if (!query.success) return validationError(query.error);
 
   try {
     const rows = await supabaseRest(
       `reminders?select=${REMINDER_COLUMNS}` +
-        `&profile_id=eq.${DEMO_PROFILE_ID}` +
+        `&profile_id=eq.${profileId}` +
         (query.data.includeInactive ? "" : "&active=is.true") +
         `&order=remind_at.asc&limit=${MAX_REMINDERS}`,
+      { accessToken },
     );
     if (!Array.isArray(rows)) throw new Error("Unexpected reminders response shape");
     const now = Date.now();
@@ -42,6 +47,10 @@ export async function GET(request: NextRequest): Promise<Response> {
 
 /** POST /api/reminders — save a reminder the user has confirmed. Returns 201. */
 export async function POST(request: Request): Promise<Response> {
+  const auth = await authenticate("POST /api/reminders");
+  if (!auth.ok) return auth.response;
+  const { profileId, accessToken } = auth.ctx;
+
   const body = await readJsonBody(request);
   if (!body.ok) return body.response;
 
@@ -50,8 +59,9 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     const rows = await supabaseRest(`reminders?select=${REMINDER_COLUMNS}`, {
+      accessToken,
       method: "POST",
-      body: reminderCreateToRow(parsed.data, DEMO_PROFILE_ID),
+      body: reminderCreateToRow(parsed.data, profileId),
       returnRepresentation: true,
     });
     const row = firstRow(rows);

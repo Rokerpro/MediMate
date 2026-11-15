@@ -12,10 +12,10 @@ import {
   type ReactNode,
 } from "react";
 import { z } from "zod";
-import { ApiClientError, sendAssistantMessage } from "@/lib/api-client";
+import { ASSISTANT_STORAGE_KEY, ApiClientError, sendAssistantMessage } from "@/lib/api-client";
 import { chatResponseSchema, type ChatResponse } from "@/lib/validations";
 
-const STORAGE_KEY = "medimate-assistant-experience-v1";
+const STORAGE_KEY = ASSISTANT_STORAGE_KEY;
 
 const chatMessageSchema = z.object({
   id: z.string().min(1),

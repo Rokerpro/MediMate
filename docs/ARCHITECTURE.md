@@ -151,6 +151,10 @@ Do not store unnecessary copies of full profile data in every message. Retrieve 
 - This hackathon build uses synthetic data only. Display a visible demo notice.
 - Never use real patient data in seed files, logs, screenshots or the public presentation.
 - Keep the LLM provider key server-side.
-- Use the Supabase anon key and RLS policies scoped to the one fixed synthetic demo profile. The demo profile and its logs may be publicly readable/writable; that is acceptable only because the data is fictional and disposable.
+- **Sign-in (since 2026-11-15, migration `0003_user_accounts.sql`):** "Continue with Google" through Supabase Auth, using the PKCE flow over Supabase's REST API (no extra dependency). Tokens live in httpOnly, SameSite=Lax cookies set by `/auth/callback`. `src/lib/supabase/auth.ts#getRequestContext` reads them, refreshes the access token when it is near expiry, and looks up the user's own profile id.
+- Every data call sends the anon key as `apikey` **and the user's access token** as `Authorization`. Supabase verifies the token and RLS limits every table to the caller's own profile (`is_medimate_demo_profile(id)` now means "profile.user_id = auth.uid()"). Signed-out requests (anon role) can read nothing.
+- `claim_medimate_profile()` (security definer) is the only way to create a profile. It links the synthetic demo profile to the one demo Google account named in the private `medimate_settings` table (set in the SQL editor; never committed), and otherwise creates an empty profile for the first 5 accounts, then refuses (`MMCAP`).
+- `src/proxy.ts` redirects signed-out visitors on app pages to `/login`; it only checks that cookies exist. The API (401) and RLS are the real checks.
+- Data is still synthetic only. Logged-in users must not enter real health information; the demo notice stays.
 - Do not use the Supabase service-role key in unauthenticated public request paths. Do not add unrestricted RLS policies.
 - Do not describe this prototype as suitable for storing real medical records.

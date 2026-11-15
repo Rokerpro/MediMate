@@ -39,7 +39,7 @@ const numeric = z.union([z.number(), z.string().regex(/^-?\d+(\.\d+)?$/).transfo
 const profileRowSchema = z.object({
   id: z.string(),
   display_name: z.string(),
-  age: z.number(),
+  age: z.number().nullable(),
   gender: z.string().nullable(),
   height_cm: numeric.nullable(),
   weight_kg: numeric.nullable(),
@@ -138,7 +138,7 @@ export function profileUpdateToRow(
 
 /**
  * Validated POST body -> DB insert payload. `profileId` always comes from the
- * server (DEMO_PROFILE_ID), never from the client. Omitted `loggedAt` lets the
+ * server (the signed-in user's profile id), never from the client. Omitted `loggedAt` lets the
  * database default to now().
  */
 export function healthLogCreateToRow(

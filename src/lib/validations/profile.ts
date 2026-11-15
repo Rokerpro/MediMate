@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Fixed synthetic demo profile (matches supabase/migrations + seed.sql RLS). */
+/** The synthetic demo profile's fixed id (seed.sql). Only the configured demo account is linked to it. */
 export const DEMO_PROFILE_ID = "00000000-0000-4000-8000-000000000001";
 
 const shortText = z.string().trim().max(200);
@@ -24,6 +24,8 @@ const editableProfileFields = {
 export const profileSchema = z.strictObject({
   id: z.uuid(),
   ...editableProfileFields,
+  // Null for a newly signed-up account until the user enters it (never invented).
+  age: editableProfileFields.age.nullable(),
 });
 
 /** GET /api/profile and PATCH /api/profile response. */

@@ -42,7 +42,7 @@ export function buildUserContent(context: ModelContext): string {
 
   // Gender is deliberately omitted: it must not drive unsupported inferences.
   const profileFacts = [
-    `age: ${profile.age}`,
+    `age: ${profile.age ?? "not recorded"}`,
     `conditions: ${list(profile.conditions)}`,
     `allergies: ${list(profile.allergies)}`,
     `medications: ${list(profile.medications)}`,

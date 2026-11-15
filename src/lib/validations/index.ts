@@ -7,3 +7,4 @@ export * from "./assistant";
 export * from "./reminder";
 export * from "./prescription";
 export * from "./assessment-history";
+export * from "./auth";

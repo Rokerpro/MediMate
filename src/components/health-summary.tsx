@@ -101,7 +101,7 @@ export function HealthSummary() {
       <Section title="Profile">
         <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <Item label="Name" value={profile.displayName} />
-          <Item label="Age" value={String(profile.age)} />
+          <Item label="Age" value={profile.age !== null ? String(profile.age) : "Not recorded"} />
           <Item label="Gender" value={profile.gender ?? "Not recorded"} />
           <Item label="Height" value={profile.heightCm !== null ? `${profile.heightCm} cm` : "Not recorded"} />
           <Item label="Weight" value={profile.weightKg !== null ? `${profile.weightKg} kg` : "Not recorded"} />
