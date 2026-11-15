@@ -1,3 +1,4 @@
+import { AccountDeletion } from "@/components/account-deletion";
 import { ProfileForm } from "@/components/profile-form";
 
 export default function ProfilePage() {
@@ -13,6 +14,7 @@ export default function ProfilePage() {
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
         <ProfileForm />
       </section>
+      <AccountDeletion />
     </div>
   );
 }
