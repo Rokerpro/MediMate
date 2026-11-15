@@ -83,7 +83,8 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 
 ### Public landing page and visual language
 
-- `/` is now a public landing page; `/dashboard` remains the demo workspace entry point.
+- `/` is the public landing page (no `/home` route: a redirect would drop `?accountDeleted=1`); `/dashboard` remains the demo workspace entry point.
+- The app and landing-page headers remain pinned while visible, hide after scrolling down beyond 80px, and reappear after upward scrolling or keyboard focus. Both logos link to `/`.
 - `src/components/landing-page.tsx` uses real MediMate features and safe product copy across hero, benefits, workflow, showcase, technology, roadmap, FAQ, CTA, and footer sections.
 - `src/app/globals.css` provides the organic/luxurious visual foundation: earthy colors, serif display typography, subtle grain, organic motion, hover states, and reduced-motion handling.
 - `AppShell`, `PrimaryNavigation`, and the dashboard entry card use the shared warm palette without changing data behavior.
