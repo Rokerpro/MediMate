@@ -245,9 +245,10 @@ const MALFORMED = [
 // Static data-isolation checks
 // ---------------------------------------------------------------------------
 
+/** Files under `dir`, always with "/" separators so path checks work on Windows too. */
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
-    const path = join(dir, name);
+    const path = join(dir, name).replace(/\\/g, "/");
     return statSync(path).isDirectory() ? walk(path) : [path];
   });
 }
