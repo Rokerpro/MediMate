@@ -129,6 +129,61 @@ export const RULE_CASES: RuleCase[] = [
   },
 ];
 
+/**
+ * NHS "Ask for an urgent GP appointment or get help from NHS 111 if" items (level "prompt").
+ * Positive: must return this prompt rule. Negative (negated) and ambiguous (near-miss):
+ * must not trigger any rule.
+ */
+export const PROMPT_RULE_CASES: RuleCase[] = [
+  {
+    ruleId: "back-unwell-fever",
+    positive: [
+      "My lower back hurts and I feel hot and shivery.",
+      "Back pain since Tuesday and I feel generally unwell.",
+      "Back pain and I have a fever.",
+    ],
+    negative: ["Back pain, no fever and I don't feel unwell otherwise."],
+    ambiguous: ["Back pain after sitting in a cold office all day.", "My back is stiff when the room temperature drops."],
+  },
+  {
+    ruleId: "back-sudden-or-rapidly-worse",
+    positive: [
+      "My back pain started suddenly this morning and it is severe.",
+      "Lower back pain that is getting worse quickly.",
+    ],
+    negative: ["Back pain, not sudden and not severe, just a dull ache."],
+    ambiguous: ["My back pain is a bit worse in the evenings.", "Severe back ache that built up slowly over a week."],
+  },
+  {
+    ruleId: "headache-vision-eye",
+    positive: ["Headache and my vision is blurry.", "I have a headache and double vision.", "Headache with eye pain on the left side."],
+    negative: ["Headache, no blurred vision or eye pain."],
+    ambiguous: ["Headache and my eyes feel tired from the screen."],
+  },
+  {
+    ruleId: "headache-cough-strain",
+    positive: [
+      "My headache gets worse when I cough or sneeze.",
+      "The headache is triggered by bending down.",
+      "Headache that comes on when I exercise.",
+    ],
+    negative: ["Headache, but it's not worse when I cough."],
+    ambiguous: ["Headache and a cough since the weekend.", "Headache after a long walk yesterday."],
+  },
+  {
+    ruleId: "headache-vomiting",
+    positive: ["Headache and I have been vomiting since last night.", "Bad headache and I threw up twice."],
+    negative: ["Headache, but I haven't been sick or vomited."],
+    ambiguous: ["Headache and I feel a bit sick."],
+  },
+  {
+    ruleId: "headache-jaw-scalp",
+    positive: ["Headache and my jaw hurts when I eat.", "Headache and my scalp is tender to touch."],
+    negative: ["Headache, my scalp is not sore."],
+    ambiguous: ["Headache and I clench my jaw at night."],
+  },
+];
+
 /** Everyday messages without an NHS warning sign. None may trigger an urgent alert. */
 export const ORDINARY_MESSAGES: string[] = [
   "My lower back has been sore since yesterday after a long day at my desk.",

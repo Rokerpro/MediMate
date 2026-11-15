@@ -67,7 +67,7 @@ On failure the model gets one repair attempt that quotes the exact offending phr
 
 ### 4.1 Safety scorecard
 
-`npm run scorecard` (`scripts/safety-scorecard.ts`) runs the fixed examples in `tests/fixtures/safety-cases.ts` through the real turn function, offline, with a scripted stand-in for the AI model: every NHS warning-sign example must return `urgent` from the right rule without calling the model; negated, near-miss and everyday messages must raise no alert; unsafe model replies (diagnosis, probabilities, false reassurance, medication changes, invented links, causal claims, unsourced norms or treatments) must never reach the user; careful wording must still be delivered. `tests/safety-scorecard.test.ts` keeps it at 100%. The numbers describe these fixed examples only; they are not a measure of real-world emergency detection.
+`npm run scorecard` (`scripts/safety-scorecard.ts`) runs the fixed examples in `tests/fixtures/safety-cases.ts` through the real turn function, offline, with a scripted stand-in for the AI model: every NHS 999 warning-sign example must return `urgent` from the right rule without calling the model; every urgent-GP / 111 example must return `prompt` from the right rule with the fixed GP/111 advice added by the server; negated, near-miss and everyday messages must raise no alert; unsafe model replies (diagnosis, probabilities, false reassurance, medication changes, invented links, causal claims, unsourced norms or treatments) must never reach the user; careful wording must still be delivered. `tests/safety-scorecard.test.ts` keeps it at 100%. The numbers describe these fixed examples only; they are not a measure of real-world emergency detection.
 
 ## 5. Deterministic safety rules
 
@@ -120,7 +120,7 @@ Do not use visual labels such as “diagnosed,” “disease detected,” “95%
 
 Before demo, add the exact authoritative source URLs used for each implemented safety rule and medical-reference item. Do not invent or leave placeholder source URLs in the deployed assessment.
 
-Sources approved by Person A on 2026-11-14 and checked (fetched and quoted) the same day. Both are UK NHS pages; the escalation message tells users to call their **local** emergency number rather than the UK-specific 999/111.
+Sources approved by Person A on 2026-11-14 and checked (fetched and quoted) the same day. Both are UK NHS pages; the escalation message tells users to call their **local** emergency number rather than the UK-specific 999/111. The prompt-level messages (§9.1a) name NHS 111 "or your local urgent medical advice service".
 
 | Source | URL | Page last reviewed | Used for |
 |---|---|---|---|
@@ -162,10 +162,40 @@ Each rule has positive, negative (negated) and ambiguous test cases in `tests/sa
 - Matching is keyword-based with simple negation handling ("no", "not", "without" in the same clause). Unusual wording can be missed, and these rules are **not** comprehensive emergency detection.
 - `headache-head-injury` does not check the "within the last 3 months" time limit; any mentioned head injury escalates (errs towards escalation).
 - `headache-drowsy-confused` matches any non-negated "confused", which can over-escalate.
-- The pages' "urgent GP appointment / 111" items are not implemented yet.
 - Chest pain on its own does not trigger a rule (the NHS page lists it as "see a GP if it comes and goes"). `chest-squeezing-pressure` fires on "burning"/"indigestion" with chest pain because the NHS lists them, which can escalate heartburn-like descriptions.
 - Once a rule fires in a session, later turns in that session also return `urgent`.
 - Topics with no curated reference (e.g. knee) still get possible explanations, so the dated history stays visible. A check rejects named conditions ("syndrome", "-itis", "often called", "known as") for those topics, but it cannot catch every specific term. Decision (Person A, 2026-11-14): keep this behaviour and keep the demo on back pain and headaches.
+
+### 9.1a Prompt-level rules: urgent GP / NHS 111 (`PROMPT_RULES` in `src/lib/health/safety-rules.ts`)
+
+Approved by Person A on 2026-11-15 ("go ahead with the 111 urgent GP rules"). The wording was fetched and quoted from the same NHS pages on 2026-11-15. Each rule implements one item from the page's **"Ask for an urgent GP appointment or get help from 111 if"** list (Headaches: "…from NHS 111 if") and needs the matching symptom context (back pain or headache).
+
+Unlike the 999 rules, a prompt-level rule does **not** stop the conversation. Urgent rules are checked first and always win. When only a prompt rule matches:
+
+- `safety` is `{ "level": "prompt", "triggered": true, "message": <fixed NHS wording> }` and `status` stays `follow_up` or `assessment`;
+- the model is still called, and its `SAFETY_RESULT` section names the matched sign and tells it not to contradict the advice, suggest waiting or reassure;
+- the server appends `PROMPT_ASSISTANT_NOTE` to the chat reply and puts `PROMPT_NEXT_STEP` first in `assessment.nextSteps`, so the advice never depends on the model;
+- the session is stored with `urgency_level = 'prompt'`.
+
+| Rule id | Page | NHS item (quoted) |
+|---|---|---|
+| `back-unwell-fever` | Back pain | "you feel hot, cold, shivery or generally unwell" |
+| `back-sudden-or-rapidly-worse` | Back pain | "it's severe pain that starts suddenly, or it's getting worse quickly" |
+| `headache-vision-eye` | Headaches | "you or a child has a headache and vision or eye problems" |
+| `headache-cough-strain` | Headaches | "you or a child has a headache triggered or made worse by coughing, sneezing, bending down or exercising" |
+| `headache-vomiting` | Headaches | "you or a child has a headache and is being sick (vomiting)" |
+| `headache-jaw-scalp` | Headaches | "you have a headache and jaw pain when eating or a sore or tender scalp" |
+
+Not implemented, deliberately:
+
+- **Chest pain:** the page has no urgent-GP / 111 list (only "See a GP if" and "Call 999 if").
+- **Headaches, "a child has a headache that's getting worse or wakes them at night":** child-only; the demo profile is an adult.
+- **Headaches, "any other symptoms you're worried about":** cannot be matched by keywords. The prompt's rule 8 and the disclaimer cover care-seeking instead.
+- The pages' non-urgent "See a GP if" items (e.g. back pain "worse at night", headaches "regularly") are left to the model's ordinary next steps and the curated reference excerpts.
+
+Cases: `PROMPT_RULE_CASES` in `tests/fixtures/safety-cases.ts` (positive, negated and near-miss for each rule), tested in `tests/safety-rules.test.ts` and `tests/assistant.test.ts` and counted by the scorecard.
+
+Known limitations: keyword matching as for the 999 rules; `back-unwell-fever` matches "fever"/"a temperature"/"chills" as plain-language forms of "hot, cold, shivery"; `headache-vision-eye` overlaps with the urgent `headache-vision-loss` and `headache-fever-stiff-neck-light` rules, which win.
 
 ### 9.2 Curated medical references (`src/lib/health/references.ts`)
 

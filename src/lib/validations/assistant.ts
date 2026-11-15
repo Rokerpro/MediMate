@@ -55,6 +55,7 @@ export const assessmentSchema = z.strictObject({
  * - follow_up: at least one follow-up question, no assessment.
  * - assessment: assessment present.
  * - urgent: deterministic safety result triggered with a message, no assessment.
+ * - safety.level "prompt" (NHS urgent-GP / 111 item) goes with follow_up or assessment.
  */
 export const chatResponseSchema = z
   .strictObject({
@@ -66,6 +67,13 @@ export const chatResponseSchema = z
     assessment: assessmentSchema.nullable(),
   })
   .superRefine((value, ctx) => {
+    if (value.safety.triggered !== (value.safety.level !== "routine")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["safety", "triggered"],
+        message: "triggered must be true exactly when the safety level is prompt or urgent.",
+      });
+    }
     if (value.safety.triggered && value.safety.message === null) {
       ctx.addIssue({
         code: "custom",

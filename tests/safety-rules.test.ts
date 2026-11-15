@@ -4,8 +4,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { SAFETY_RULES, evaluateSafety, hasUnnegated } from "../src/lib/health/safety-rules.ts";
-import { RULE_CASES } from "./fixtures/safety-cases.ts";
+import { PROMPT_RULES, SAFETY_RULES, evaluateSafety, hasUnnegated } from "../src/lib/health/safety-rules.ts";
+import { PROMPT_RULE_CASES, RULE_CASES } from "./fixtures/safety-cases.ts";
 
 const CASES = RULE_CASES;
 
@@ -43,7 +43,58 @@ for (const c of CASES) {
   });
 }
 
+describe("prompt-level (urgent GP / 111) rule register", () => {
+  it("every prompt rule has fixed test cases, and every case names a real rule", () => {
+    assert.deepEqual(PROMPT_RULE_CASES.map((c) => c.ruleId).sort(), PROMPT_RULES.map((r) => r.id).sort());
+  });
+
+  it("prompt rules cite the Back pain or Headaches page (Chest pain has no 111 list) and never send to emergency first", () => {
+    for (const rule of PROMPT_RULES) {
+      assert.match(rule.sourceUrl, /^https:\/\/www\.nhs\.uk\/conditions\/(back-pain|headaches)\/$/);
+      assert.match(rule.reviewedOn, /^\d{4}-\d{2}-\d{2}$/);
+      assert.match(rule.message, /urgent GP appointment/);
+      assert.match(rule.message, /NHS 111/);
+      assert.match(rule.message, /not a diagnosis/);
+    }
+  });
+
+  it("rule ids are unique across both levels", () => {
+    const ids = [...SAFETY_RULES, ...PROMPT_RULES].map((r) => r.id);
+    assert.equal(new Set(ids).size, ids.length);
+  });
+});
+
+for (const c of PROMPT_RULE_CASES) {
+  describe(`prompt rule ${c.ruleId}`, () => {
+    for (const text of c.positive) {
+      it(`fires at prompt level: "${text}"`, () => {
+        const { result, ruleId } = evaluateSafety([text]);
+        assert.equal(result.triggered, true);
+        assert.equal(result.level, "prompt");
+        assert.equal(ruleId, c.ruleId);
+      });
+    }
+    for (const text of [...c.negative, ...c.ambiguous]) {
+      it(`does not fire: "${text}"`, () => {
+        assert.equal(evaluateSafety([text]).result.triggered, false);
+      });
+    }
+  });
+}
+
 describe("evaluateSafety behaviour", () => {
+  it("an urgent (999) sign wins over a prompt (111) sign in the same conversation", () => {
+    const { result, ruleId } = evaluateSafety(["Headache and I have been vomiting.", "Now I feel drowsy and confused."]);
+    assert.equal(result.level, "urgent");
+    assert.equal(ruleId, "headache-drowsy-confused");
+  });
+
+  it("a prompt sign from an earlier message carries through later turns", () => {
+    const { result, ruleId } = evaluateSafety(["It is about 5 out of 10.", "My back pain started suddenly and it is severe."]);
+    assert.equal(result.level, "prompt");
+    assert.equal(ruleId, "back-sudden-or-rapidly-worse");
+  });
+
   it("requires the symptom context (warning sign alone does not fire a back/headache rule)", () => {
     assert.equal(evaluateSafety(["I have numbness in both legs."]).result.triggered, false);
   });

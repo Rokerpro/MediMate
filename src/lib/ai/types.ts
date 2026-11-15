@@ -19,6 +19,8 @@ export type ModelContext = {
   mustAssess: boolean;
   /** True on the single repair attempt after invalid output. */
   isRepair: boolean;
+  /** The matched NHS "urgent GP / 111" sign, or null when no prompt-level rule matched. */
+  promptSign?: string | null;
 };
 
 export type ModelRequest = { system: string; user: string; context: ModelContext };

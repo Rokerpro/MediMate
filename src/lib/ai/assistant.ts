@@ -4,7 +4,7 @@ import type { ChatResponse, HealthLog, Profile } from "@/lib/validations";
 
 import { selectReferences, type CuratedReference } from "../health/references.ts";
 import { extractTerms, selectRecentMeasurementLogs, selectRelevantLogs } from "../health/retrieve-history.ts";
-import type { SafetyEvaluation } from "../health/safety-rules.ts";
+import { PROMPT_ASSISTANT_NOTE, PROMPT_NEXT_STEP, type SafetyEvaluation } from "../health/safety-rules.ts";
 import { parseModelOutput, toContractAssessment } from "./output.ts";
 import { SYSTEM_PROMPT, buildRepairInstruction, buildUserContent } from "./prompts.ts";
 import { AiUnavailableError, type ChatMessage, type LlmProvider, type ModelContext } from "./types.ts";
@@ -44,7 +44,7 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
 
   // Deterministic safety first. A triggered rule returns immediately; the LLM is never called.
   const safety = deps.evaluateSafety([input.message, ...priorUserTexts]);
-  if (safety.result.triggered && safety.result.message) {
+  if (safety.result.level === "urgent" && safety.result.triggered && safety.result.message) {
     return {
       status: "urgent",
       // Fixed short reply; the reviewed safety wording is shown once, from safety.message.
@@ -77,6 +77,7 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
     references,
     mustAssess,
     isRepair: false,
+    promptSign: safety.result.level === "prompt" ? (safety.sign ?? "an NHS urgent-GP / 111 warning sign") : null,
   };
   const user = buildUserContent(context);
 
@@ -99,15 +100,20 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
   }
 
   const { output } = parsed;
+  const assessment =
+    output.status === "assessment" && output.assessment
+      ? toContractAssessment(output.assessment, relevantLogs, references, recentMeasurementLogs, queryText)
+      : null;
+  // Prompt level (NHS "urgent GP / 111" item): the model still answers, but the
+  // fixed advice is added by the server so it never depends on the model.
+  const isPrompt = safety.result.level === "prompt" && safety.result.triggered;
   return {
     status: output.status,
-    assistantMessage: output.assistantMessage,
+    assistantMessage: isPrompt ? `${output.assistantMessage} ${PROMPT_ASSISTANT_NOTE}` : output.assistantMessage,
     followUpQuestions: output.status === "follow_up" ? output.followUpQuestions : [],
     safety: safety.result,
     assessment:
-      output.status === "assessment" && output.assessment
-        ? toContractAssessment(output.assessment, relevantLogs, references, recentMeasurementLogs, queryText)
-        : null,
-    safetyRuleId: null,
+      assessment && isPrompt ? { ...assessment, nextSteps: [PROMPT_NEXT_STEP, ...assessment.nextSteps] } : assessment,
+    safetyRuleId: isPrompt ? safety.ruleId : null,
   };
 }
