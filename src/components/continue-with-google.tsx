@@ -17,6 +17,7 @@ export function ContinueWithGoogle({ next }: { next: string }) {
         setPending(true);
       }}
       aria-busy={pending}
+      data-preserve-color-scheme="light"
       className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-[#747775] bg-white px-5 text-[15px] font-medium text-[#1f1f1f] transition-colors hover:bg-[#f2f2f2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2 aria-busy:opacity-70"
     >
       <svg aria-hidden="true" viewBox="0 0 48 48" className="h-5 w-5">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { PROFILE_SAVED_EVENT, getCurrentUser } from "@/lib/api-client";
 import type { CurrentUser } from "@/lib/validations";
@@ -16,10 +16,7 @@ export function AccountMenu({ variant = "app" }: AccountMenuProps) {
   const [loaded, setLoaded] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,30 +45,6 @@ export function AccountMenu({ variant = "app" }: AccountMenuProps) {
       window.removeEventListener(PROFILE_SAVED_EVENT, load);
     };
   }, [retryCount]);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    function closeOnOutsideClick(event: PointerEvent) {
-      if (event.target instanceof Node && !containerRef.current?.contains(event.target)) {
-        setMenuOpen(false);
-      }
-    }
-
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setMenuOpen(false);
-        triggerRef.current?.focus();
-      }
-    }
-
-    document.addEventListener("pointerdown", closeOnOutsideClick);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("pointerdown", closeOnOutsideClick);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [menuOpen]);
 
   const initial = (user?.displayName.trim()[0] ?? "?").toUpperCase();
   const avatarUrl = user?.avatarUrl && failedAvatarUrl !== user.avatarUrl ? user.avatarUrl : null;
@@ -112,47 +85,28 @@ export function AccountMenu({ variant = "app" }: AccountMenuProps) {
     }
 
     return (
-      <div ref={containerRef} className="relative flex shrink-0">
-        <button
-          ref={triggerRef}
-          type="button"
-          aria-label="Open profile menu"
-          aria-expanded={menuOpen}
-          aria-controls="landing-account-menu"
-          onClick={() => setMenuOpen((open) => !open)}
-          className="inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[#bdc8bb] bg-white shadow-sm transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2"
-        >
-          {avatarUrl ? (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={avatarUrl}
-                alt=""
-                referrerPolicy="no-referrer"
-                onError={() => setFailedAvatarUrl(avatarUrl)}
-                className="h-full w-full object-cover"
-              />
-            </>
-          ) : (
-            <span aria-hidden="true" className="font-semibold text-[#254a38]">
-              {initial}
-            </span>
-          )}
-        </button>
-        <div
-          id="landing-account-menu"
-          hidden={!menuOpen}
-          className="absolute right-0 top-full z-30 mt-3 min-w-48 rounded-2xl border border-[#dfe3d6] bg-[#fbfaf5] p-3 text-[#24352d] shadow-xl"
-        >
-          <Link
-            href="/profile"
-            onClick={() => setMenuOpen(false)}
-            className="block rounded-xl px-3 py-2 text-sm font-medium text-[#254a38] transition-colors hover:bg-[#eef0e5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]"
-          >
-            Profile
-          </Link>
-        </div>
-      </div>
+      <Link
+        href="/profile"
+        aria-label="Open profile"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#bdc8bb] bg-white shadow-sm transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2"
+      >
+        {avatarUrl ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={avatarUrl}
+              alt=""
+              referrerPolicy="no-referrer"
+              onError={() => setFailedAvatarUrl(avatarUrl)}
+              className="h-full w-full object-cover"
+            />
+          </>
+        ) : (
+          <span aria-hidden="true" className="font-semibold text-[#254a38]">
+            {initial}
+          </span>
+        )}
+      </Link>
     );
   }
 
@@ -185,46 +139,27 @@ export function AccountMenu({ variant = "app" }: AccountMenuProps) {
   if (!user) return null;
 
   return (
-    <div ref={containerRef} className="relative flex shrink-0">
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-label="Open profile menu"
-        aria-expanded={menuOpen}
-        aria-controls="app-account-menu"
-        onClick={() => setMenuOpen((open) => !open)}
-        className="inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#bdc8bb] bg-white shadow-sm transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2"
-      >
-        {avatarUrl ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={avatarUrl}
-              alt=""
-              referrerPolicy="no-referrer"
-              onError={() => setFailedAvatarUrl(avatarUrl)}
-              className="h-full w-full object-cover"
-            />
-          </>
-        ) : (
-          <span aria-hidden="true" className="text-xs font-semibold text-[#254a38]">
-            {initial}
-          </span>
-        )}
-      </button>
-      <div
-        id="app-account-menu"
-        hidden={!menuOpen}
-        className="absolute right-0 top-full z-30 mt-3 min-w-40 rounded-2xl border border-[#dfe3d6] bg-[#fbfaf5] p-2 text-[#24352d] shadow-xl"
-      >
-        <Link
-          href="/profile"
-          onClick={() => setMenuOpen(false)}
-          className="block rounded-xl px-3 py-2 text-sm font-medium text-[#254a38] transition-colors hover:bg-[#eef0e5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]"
-        >
-          Profile
-        </Link>
-      </div>
-    </div>
+    <Link
+      href="/profile"
+      aria-label="Open profile"
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#bdc8bb] bg-white shadow-sm transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2"
+    >
+      {avatarUrl ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={avatarUrl}
+            alt=""
+            referrerPolicy="no-referrer"
+            onError={() => setFailedAvatarUrl(avatarUrl)}
+            className="h-full w-full object-cover"
+          />
+        </>
+      ) : (
+        <span aria-hidden="true" className="text-xs font-semibold text-[#254a38]">
+          {initial}
+        </span>
+      )}
+    </Link>
   );
 }

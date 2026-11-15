@@ -4,7 +4,7 @@ Last updated: 2026-11-15
 
 ## Role and current state
 
-This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, prescription explainer UI, assistant popup, and their frontend data-access methods are integrated. `main` at `16a58f0` includes the prompt-level notice, inline chat sign-in, account deletion, nullable Google avatar field, and the Profile-only avatar menu with sign-out on the Profile page. The current branch, `feat/grounded-insights-ui`, adds deterministic health analytics and shows server-grounded records separately from interpretation in chat and weekly summaries.
+This file records the context for the frontend/product AI (Person B). `main` at `67f0db0` includes the prompt-level notice, inline chat sign-in, account deletion, nullable Google avatar field, and the Profile-only avatar link with sign-out on the Profile page. The current branch, `feat/global-theme-toggle`, is based on that commit and adds a persistent site-wide theme switch, removes the chat-only switch, and makes the account avatar navigate directly to `/profile`.
 
 PR #2 (`feat/health-insights-journey`) was merged into `main`. Do not assume that a feature is deployed just because it is merged; verify the deployed app separately.
 
@@ -118,7 +118,7 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 - On assistant-chat 401, the shared page/popup UI preserves the typed message and shows an inline "Sign in to chat with MediMate" card with a URL-encoded `/auth/login?next=<current path>` link instead of generic retry UI.
 - `/profile` has a danger zone with an in-page confirmation; the user must type `DELETE`, receives focus in the confirmation input, and sees pending/error/retry states. The existing `deleteAccount()` API client owns the success redirect.
 - `/?accountDeleted=1` shows a dismissible confirmation notice. It reads the query after client mount so the notice is not held inside a hidden streamed Suspense boundary.
-- The landing navigation uses `AccountMenu`'s `landing` variant: signed-out visitors see a Sign in link; signed-in users see their Google avatar or initials and a popover linking to `/profile`. In the app header, a 32px avatar button opens the same Profile link; neither header shows the account name or a sign-out button. The Profile page has the sign-out action.
+- The landing navigation uses `AccountMenu`'s `landing` variant: signed-out visitors see a Sign in link; signed-in users see their Google avatar or initials as a direct link to `/profile`. In the app header, a 32px avatar link navigates directly to `/profile`; neither header shows the account name or a sign-out button. The Profile page has the sign-out action.
 - A real deletion has not been tested; the owner must apply `supabase/migrations/0005_delete_account.sql` before the endpoint can succeed.
 
 ### Prescription explainer UI
@@ -160,9 +160,9 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 
 ### Shared assistant experience
 
-- `src/components/assistant-experience.tsx` provides conversation state, local persistence, theme, and chat actions to both the full-page assistant and popup. The app shell shares one provider instance between both modes; `/` mounts the provider for its own landing-page popup. Conversation state is persisted in this browser under `medimate-assistant-experience-v1`.
+- `src/components/assistant-experience.tsx` provides conversation state, local persistence, the global theme value, and chat actions to both the full-page assistant and popup. The app shell shares one provider instance between both modes; `/` mounts the provider for its own landing-page popup. Conversation state is persisted in this browser under `medimate-assistant-experience-v1`.
 - Users can create, search, switch, rename, and locally remove conversations. Saved conversations can continue through the existing synchronous chat API using their session IDs. Rename/removal are browser-local; removing a chat does not delete server records.
-- The UI includes light/dark theme selection, copy, local response feedback, loading/error/retry behavior, and basic safe Markdown for headings, lists, inline formatting, and fenced code. It does not provide syntax highlighting.
+- The assistant reads the site-wide light/dark theme; theme preference is managed by the root provider rather than stored with chat state. The UI also includes copy, local response feedback, loading/error/retry behavior, and basic safe Markdown for headings, lists, inline formatting, and fenced code. It does not provide syntax highlighting.
 - The existing API does not support streaming/cancellation, transcript retrieval or server-side session management, attachments, true edit/regenerate, or server-side feedback. No controls claim those capabilities. The sessions endpoint remains a read-only list of completed assessments and is not used as transcript storage.
 - Assessment cards continue to render the existing validated response fields. Urgent guidance remains prominent; routine output retains relevant history, sources, unknowns, next steps, and the disclaimer.
 
@@ -255,6 +255,8 @@ For the mobile navigation and route preloader, lint, typecheck, all 204 tests, a
 For `feat/assistant-experience`, lint, typecheck, all 204 tests, and the production build pass. Browser checks verified mocked follow-up rendering, persistence across reloads, rename, popup/page conversation continuity, desktop launcher alignment, mobile popup sizing, and mocked microphone permission/recognition behavior. Streaming, server-side history management, attachment upload, server feedback, and syntax highlighting are not supported by the current API and are intentionally absent.
 
 For `feat/account-ui`, lint, typecheck, all 285 tests, and the production build pass. Browser checks with mocked API responses verified the prompt notice and normal follow-up at desktop and 375px, inline 401 sign-in cards with preserved composer text on the assistant page and landing popup, and the profile deletion confirmation/error/retry flow without a successful deletion. The landing-page deletion notice appears and dismisses at desktop and 375px. No real account deletion or live Google sign-in was attempted; migration `0005_delete_account.sql` is still an owner prerequisite.
+
+For `feat/global-theme-toggle`, browser checks verified the site-wide switch on the landing and login pages, dark-theme persistence after reload, one theme switch on the landing page (none in the chat), and no horizontal overflow at phone width. With a mocked signed-in landing response, the avatar is a direct `/profile` link; without a real session, the protected route correctly redirects to `/login?next=%2Fprofile`. The initial development-server context error did not recur after reloading the landing page; an authenticated app route was not browser-tested.
 
 ## Pending work and coordination
 

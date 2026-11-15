@@ -5,6 +5,7 @@ import { OnboardingGate } from "@/components/onboarding-gate";
 import { AssistantChatPopup } from "@/components/assistant-chat-popup";
 import { AssistantExperienceProvider } from "@/components/assistant-experience";
 import { PrimaryNavigation } from "@/components/primary-navigation";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -19,8 +20,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#bd7e3e] align-middle" />
               MediMate
             </Link>
-            <div className="flex min-w-0 items-center gap-3">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               <PrimaryNavigation />
+              <ThemeToggle />
               <AccountMenu />
             </div>
           </div>

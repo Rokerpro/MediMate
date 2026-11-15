@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { ContinueWithGoogle } from "@/components/continue-with-google";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { safeNextPath } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Sign in · MediMate" };
@@ -41,13 +42,16 @@ function LoginShell({
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f7f5ed] px-4 py-12 text-[#24352d]">
       <div className="w-full max-w-md">
-        <Link
-          href="/"
-          className="display-font mb-8 inline-flex items-center rounded-md text-2xl font-semibold tracking-[-0.04em] text-[#254a38] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]"
-        >
-          <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#bd7e3e]" />
-          MediMate
-        </Link>
+        <div className="mb-8 flex items-center justify-between gap-4">
+          <Link
+            href="/"
+            className="display-font inline-flex items-center rounded-md text-2xl font-semibold tracking-[-0.04em] text-[#254a38] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]"
+          >
+            <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#bd7e3e]" />
+            MediMate
+          </Link>
+          <ThemeToggle />
+        </div>
 
         <section
           aria-labelledby="login-heading"
