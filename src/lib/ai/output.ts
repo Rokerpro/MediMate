@@ -317,23 +317,46 @@ const USER_MENTIONS_MEDICINE =
   /\b(medications?|medicines?|meds|tablets?|pills?|prescriptions?|doses?|dosage|painkillers?|ibuprofen|paracetamol|acetaminophen|aspirin|naproxen|codeine)\b/i;
 const REFERS_TO_PHARMACIST = /\b(pharmacist|prescriber|prescribing)\b/i;
 
+/** Server-calculated grounding added to the assessment (never written by the model). */
+export type Grounding = {
+  /** Terms each retrieved log shares with the user's concern, by log id. */
+  matchedTerms?: ReadonlyMap<string, readonly string[]>;
+  /** Recorded facts from src/lib/health/analytics.ts. */
+  recordedFacts?: readonly string[];
+};
+
 export function toContractAssessment(
   output: NonNullable<ModelOutput["assessment"]>,
   relevantLogs: readonly HealthLog[],
   sources: readonly Source[],
   recentMeasurementLogs: readonly HealthLog[] = [],
   userText = "",
+  grounding: Grounding = {},
 ): Assessment {
   const logsById = new Map([...relevantLogs, ...recentMeasurementLogs].map((log) => [log.id, log]));
+  const termsOf = (id: string): string[] => [...(grounding.matchedTerms?.get(id) ?? [])];
   const possibleExplanations = output.possibleExplanations.map((explanation) => ({
     title: explanation.title,
     whyItMayBeRelevant: explanation.whyItMayBeRelevant,
     supportingHistory: [...new Set(explanation.supportingLogIds)]
       .map((id) => logsById.get(id))
       .filter((log): log is HealthLog => log !== undefined)
-      .map((log) => ({ logId: log.id, date: logDate(log), observation: describeLog(log) })),
+      .map((log) => ({ logId: log.id, date: logDate(log), observation: describeLog(log), matchedTerms: termsOf(log.id) })),
     unknowns: explanation.unknowns,
   }));
+  const citedIds = new Set(possibleExplanations.flatMap((e) => e.supportingHistory.map((h) => h.logId)));
+  const relevantIds = new Set(relevantLogs.map((log) => log.id));
+  const historyConsidered = [...logsById.values()]
+    .sort((a, b) => b.loggedAt.localeCompare(a.loggedAt))
+    .map((log) => ({
+      logId: log.id,
+      date: logDate(log),
+      observation: describeLog(log),
+      matchedTerms: termsOf(log.id),
+      reason: relevantIds.has(log.id) ? ("symptom_match" as const) : ("recent_measurement" as const),
+      cited: citedIds.has(log.id),
+    }))
+    .slice(0, 20);
   const citedAnyHistory = possibleExplanations.some((e) => e.supportingHistory.length > 0);
   const summary =
     relevantLogs.length === 0 && !citedAnyHistory && !MENTIONS_NO_HISTORY.test(output.summary)
@@ -348,5 +371,7 @@ export function toContractAssessment(
         : output.nextSteps,
     sources: sources.map(({ title, publisher, url }) => ({ title, publisher, url })),
     disclaimer: ASSESSMENT_DISCLAIMER,
+    recordedFacts: [...(grounding.recordedFacts ?? [])].slice(0, 10),
+    historyConsidered,
   };
 }

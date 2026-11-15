@@ -105,6 +105,7 @@ export const mockChatAssessmentResponse: ChatResponse = {
             logId: "11111111-1111-4111-8111-111111111111",
             date: "2026-11-13",
             observation: "Mild lower back discomfort (pain 3/10) after a long period of sitting.",
+            matchedTerms: ["back"],
           },
         ],
         unknowns: ["Whether the discomfort changes with movement or rest."],
@@ -119,6 +120,28 @@ export const mockChatAssessmentResponse: ChatResponse = {
       },
     ],
     disclaimer: ASSESSMENT_DISCLAIMER,
+    recordedFacts: [
+      'Logs mentioning "back": 6 logs on 6 days in the last 30 days, between 2026-11-02 and 2026-11-13 (3 separate stretches of days; the longest was 2 days in a row).',
+      "Recorded pain on those logs: 2–4/10, average 2.8/10 (6 logs with a pain level).",
+    ],
+    historyConsidered: [
+      {
+        logId: "11111111-1111-4111-8111-111111111111",
+        date: "2026-11-13",
+        observation: 'symptoms: "Mild lower back discomfort"; pain location: Lower back; pain level 3/10',
+        matchedTerms: ["back"],
+        reason: "symptom_match",
+        cited: true,
+      },
+      {
+        logId: "22222222-2222-4222-8222-222222222222",
+        date: "2026-11-12",
+        observation: "sleep 6h; sleep quality 2/5; mood: tired",
+        matchedTerms: [],
+        reason: "recent_measurement",
+        cited: false,
+      },
+    ],
   },
 };
 

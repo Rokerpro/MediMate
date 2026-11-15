@@ -24,7 +24,25 @@ export const safetyResultSchema = z.strictObject({
 export const supportingHistorySchema = z.strictObject({
   logId: z.uuid(),
   date: z.iso.date(), // YYYY-MM-DD
+  /** Recorded facts from the log, written by the server (never by the model). */
   observation: z.string().min(1),
+  /** Words shared between the user's concern and this log ("back", "sleep"). Empty for routine measurements. */
+  matchedTerms: z.array(z.string().min(1)).max(20).default([]),
+});
+
+/** Why the server gave a record to the model (contract §3, "historyConsidered"). */
+export const historyReasonSchema = z.enum(["symptom_match", "recent_measurement"]);
+
+/** A record the server retrieved and gave to the model for this answer, cited or not. */
+export const consideredRecordSchema = z.strictObject({
+  logId: z.uuid(),
+  date: z.iso.date(),
+  /** Recorded facts from the log, written by the server. */
+  observation: z.string().min(1),
+  matchedTerms: z.array(z.string().min(1)).max(20),
+  reason: historyReasonSchema,
+  /** True when the model cited this record in a possible explanation. */
+  cited: z.boolean(),
 });
 
 export const possibleExplanationSchema = z.strictObject({
@@ -42,11 +60,20 @@ export const sourceSchema = z.strictObject({
 });
 
 export const assessmentSchema = z.strictObject({
+  /** Model-written interpretation (checked by the server). */
   summary: z.string().min(1),
   possibleExplanations: z.array(possibleExplanationSchema),
   nextSteps: z.array(z.string().min(1)),
   sources: z.array(sourceSchema),
   disclaimer: z.string().min(1),
+  /**
+   * Recorded facts calculated by the server from the user's logs (counts, dates, recorded
+   * pain ranges). Never written by the model; show separately from the interpretation.
+   * Defaults to [] for assessments saved before 2026-11-15.
+   */
+  recordedFacts: z.array(z.string().min(1)).max(10).default([]),
+  /** Every record retrieved for this answer, newest first. Defaults to [] for older assessments. */
+  historyConsidered: z.array(consideredRecordSchema).max(20).default([]),
 });
 
 /**
@@ -127,6 +154,7 @@ export type ChatStatus = z.infer<typeof chatStatusSchema>;
 export type SafetyLevel = z.infer<typeof safetyLevelSchema>;
 export type SafetyResult = z.infer<typeof safetyResultSchema>;
 export type SupportingHistory = z.infer<typeof supportingHistorySchema>;
+export type ConsideredRecord = z.infer<typeof consideredRecordSchema>;
 export type PossibleExplanation = z.infer<typeof possibleExplanationSchema>;
 export type Source = z.infer<typeof sourceSchema>;
 export type Assessment = z.infer<typeof assessmentSchema>;

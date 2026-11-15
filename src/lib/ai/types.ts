@@ -21,6 +21,8 @@ export type ModelContext = {
   isRepair: boolean;
   /** The matched NHS "urgent GP / 111" sign, or null when no prompt-level rule matched. */
   promptSign?: string | null;
+  /** Server-calculated recorded facts (src/lib/health/analytics.ts) the model may restate but never recalculate. */
+  recordedPatterns?: readonly string[];
   /** "weekly": an on-demand summary of the last 7 days of logs instead of a chat turn. */
   mode?: "chat" | "weekly";
 };
