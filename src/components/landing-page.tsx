@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AccountMenu } from "@/components/account-menu";
+import { WorkspaceLink } from "@/components/workspace-link";
 import { ScrollAwareHeader } from "@/components/scroll-aware-header";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -90,9 +91,12 @@ export function LandingPage() {
             MediMate brings your daily observations and thoughtful conversations into one history-aware space — so you can arrive at care with a clearer, more useful story.
           </p>
           <div className="mt-10 flex flex-wrap items-center gap-4 reveal reveal-delay-3">
-            <Link href="/login" className="landing-button landing-button-primary">
-              Get started <ArrowUpRight />
-            </Link>
+            <WorkspaceLink
+              className="landing-button landing-button-primary"
+              signedOutLabel="Get started"
+              signedInLabel="Open your dashboard"
+              icon={<> <ArrowUpRight /></>}
+            />
             <a href="#how" className="landing-button landing-button-quiet">See the approach</a>
           </div>
           <p className="mt-6 max-w-md text-xs leading-5 text-[#77857c] reveal reveal-delay-3">
@@ -112,13 +116,18 @@ export function LandingPage() {
             <path d="M258 344c-44-31-76-28-97-12 26 30 55 35 97 12Zm7-35c39-30 70-27 92-10-24 29-52 35-92 10Z" fill="#8ca17e" />
             <path d="M203 418c-41-12-68-2-82 17 30 17 55 13 82-17Zm112 5c39-14 67-5 82 14-30 19-56 16-82-14Z" fill="#8ca17e" />
           </svg>
-          <div className="absolute bottom-[13%] right-[4%] w-48 rounded-2xl border border-white/70 bg-white/80 p-4 shadow-[0_20px_50px_rgba(54,75,60,.13)] backdrop-blur-md float-card">
+          <div aria-hidden="true" className="absolute bottom-[10%] right-[2%] w-60 rounded-3xl border border-white/70 bg-[#fffdf8]/90 p-4 shadow-[0_20px_50px_rgba(54,75,60,.15)] backdrop-blur-md float-card">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-[.15em] text-[#789078]">Today</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[.15em] text-[#789078]">Today&apos;s check-in</span>
               <span className="h-2 w-2 rounded-full bg-[#c98b48]" />
             </div>
-            <p className="display-font mt-3 text-xl leading-tight text-[#254a38]">A small note can become a useful pattern.</p>
-            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#e5e8dc]"><div className="h-full w-2/3 rounded-full bg-[#789078]" /></div>
+            <p className="mt-3 text-[11px] font-semibold uppercase tracking-[.12em] text-[#8a978d]">Pain</p>
+            <div className="mt-1.5 flex gap-1">
+              {[0, 1, 2, 3, 4, 5].map((level) => (
+                <span key={level} className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs font-semibold ${level === 2 ? "border-[#254a38] bg-[#254a38] text-[#fbfaf5]" : "border-[#cbd6c5] text-[#40564a]"}`}>{level}</span>
+              ))}
+            </div>
+            <p className="mt-3 rounded-xl border border-[#dfe3d6] bg-white/80 px-3 py-2 text-xs text-[#5b6b61]">Back stiff after a long desk day</p>
           </div>
         </div>
       </section>
@@ -176,13 +185,37 @@ export function LandingPage() {
               <p className="landing-kicker landing-kicker-light">Inside the workspace</p>
               <h2 className="display-font mt-5 text-5xl leading-[.92] tracking-[-.06em] sm:text-6xl">A quieter dashboard for a noisy world.</h2>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {["Profile & background", "Daily observations", "History-aware chat"].map((item, index) => (
-                <div key={item} className="rounded-2xl border border-white/15 bg-white/[.08] p-5 backdrop-blur-sm transition-transform duration-300 hover:-translate-y-1">
-                  <span className="text-xs text-[#d2a06c]">0{index + 1}</span>
-                  <p className="mt-12 font-medium leading-6">{item}</p>
+            <div aria-hidden="true" className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/15 bg-white/[.08] p-5 backdrop-blur-sm">
+                <p className="text-xs font-semibold uppercase tracking-[.14em] text-[#d2a06c]">Today</p>
+                <p className="display-font mt-2 text-2xl">Good morning</p>
+                <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                  {[["Avg pain", "3.3"], ["Avg sleep", "6h 50m"], ["Logs", "7"]].map(([label, value]) => (
+                    <div key={label} className="rounded-xl bg-white/10 px-2 py-3">
+                      <p className="text-[10px] text-[#d9c99f]">{label}</p>
+                      <p className="display-font mt-1 text-lg">{value}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+                <div className="mt-4 flex h-12 items-end gap-1.5">
+                  {[30, 55, 20, 70, 40, 50, 60].map((height, index) => (
+                    <span key={index} className={`flex-1 rounded-t ${index === 6 ? "bg-[#d9c99f]" : "bg-[#c8d4bf]/80"}`} style={{ height: `${height}%` }} />
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/15 bg-white/[.08] p-5 backdrop-blur-sm">
+                <p className="text-xs font-semibold uppercase tracking-[.14em] text-[#d2a06c]">History used</p>
+                <p className="mt-2 font-medium">2 records informed this answer</p>
+                <ul className="mt-4 space-y-2 text-sm">
+                  {[["Log · 11 Nov", "Back stiffness, eased after a walk"], ["Log · 15 Nov", "Lower back stiff after desk day"]].map(([date, text]) => (
+                    <li key={date} className="rounded-xl bg-white/10 px-3 py-2.5">
+                      <p className="text-[10px] font-bold uppercase tracking-[.08em] text-[#d9c99f]">{date}</p>
+                      <p className="mt-0.5 leading-5 text-[#eef0e5]">{text}</p>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-xs text-[#cfe0d2]">Associations, not causes.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -258,7 +291,12 @@ export function LandingPage() {
             <LeafMark className="mx-auto h-10 w-10 text-[#527158]" />
             <h2 className="display-font mx-auto mt-6 max-w-2xl text-5xl leading-[.92] tracking-[-.06em] text-[#254a38] sm:text-7xl">Your health story deserves room to breathe.</h2>
             <p className="mx-auto mt-6 max-w-xl leading-7 text-[#5b6b61]">Step into the synthetic demo and see a more thoughtful way to organize what you notice.</p>
-            <Link href="/login" className="landing-button landing-button-primary mt-9">Enter MediMate <ArrowUpRight /></Link>
+            <WorkspaceLink
+              className="landing-button landing-button-primary mt-9"
+              signedOutLabel="Enter MediMate"
+              signedInLabel="Open your dashboard"
+              icon={<> <ArrowUpRight /></>}
+            />
           </div>
         </div>
       </section>
@@ -267,7 +305,12 @@ export function LandingPage() {
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 text-sm text-[#718078] sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
           <div className="flex items-center gap-2 text-[#254a38]"><LeafMark className="h-6 w-6" /><span className="display-font text-lg font-semibold">MediMate</span></div>
           <p>Synthetic demo data only. Educational information, not medical advice.</p>
-          <Link href="/login" className="font-semibold text-[#527158] hover:text-[#254a38]">Open workspace <span aria-hidden="true">→</span></Link>
+          <WorkspaceLink
+            className="font-semibold text-[#527158] hover:text-[#254a38]"
+            signedOutLabel="Open workspace"
+            signedInLabel="Open your dashboard"
+            icon={<span aria-hidden="true"> →</span>}
+          />
         </div>
       </footer>
     </main>
