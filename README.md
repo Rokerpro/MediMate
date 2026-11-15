@@ -8,7 +8,7 @@ MediMate is a history-aware health-information assistant. Before it answers a he
 
 Live demo: https://medi-mate-mauve.vercel.app
 
-**Signing in:** use **Continue with Google**. Only one configured demo Google account sees the synthetic patient "Alex Demo" (14 days of logs). Any other account starts with an empty profile and a short welcome form. Sign-ups are capped at the first 5 accounts, so new sign-ins may be closed when you visit; the demo video shows the full flow.
+**Signing in:** use **Continue with Google**. Only one configured demo Google account sees the synthetic patient "Alex Demo" (30 days of logs). Any other account starts with an empty profile and a short welcome form. Sign-ups are capped at the first 5 accounts, so new sign-ins may be closed when you visit; the demo video shows the full flow.
 
 ## What it does
 
@@ -62,7 +62,7 @@ Environment variables (server-side only; never prefix them with `NEXT_PUBLIC_`):
 | `GROQ_API_KEY` | Groq API key, when `AI_PROVIDER=groq` |
 | `GROQ_MODEL` | Optional model override |
 
-Database: in the Supabase SQL editor, run `supabase/migrations/0001_initial_schema.sql`, `supabase/seed.sql`, then migrations `0002` to `0006` in order (0006 needs the pg_cron and pg_net extensions, which it enables, and two rows in `medimate_settings`; see the comment at the top of the file). The seed creates the synthetic profile "Alex Demo" and 14 days of logs (recurring lower-back discomfort after long sitting, variable sleep).
+Database: in the Supabase SQL editor, run `supabase/migrations/0001_initial_schema.sql`, `supabase/seed.sql`, then migrations `0002` to `0006` in order (0006 needs the pg_cron and pg_net extensions, which it enables, and two rows in `medimate_settings`; see the comment at the top of the file). The seed creates the synthetic profile "Alex Demo" and 30 days of logs (recurring lower-back discomfort on long desk days, headaches on short-sleep days, a knee ache after runs, one cold).
 
 Sign-in setup:
 

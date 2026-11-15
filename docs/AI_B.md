@@ -52,7 +52,7 @@ Reminder `nextDueAt` (`src/lib/reminders/schedule.ts`): one-off reminders keep `
 
 - `supabase/migrations/0001_initial_schema.sql`: `profiles`, `health_logs`, `symptom_sessions`, `symptom_messages`, CHECK constraints matching the Zod ranges, indexes, demo-only RLS.
 - `supabase/migrations/0002_reminders.sql`: `reminders` (title 1–120, category `medication|appointment|health_log|other`, notes ≤ 500, `remind_at`, repeat `none|daily|weekly`, `active`), index on `(profile_id, remind_at)`, RLS policy "demo reminders access", 2 synthetic seed reminders (fixed ids `…0a1`, `…0a2`, `on conflict do nothing`).
-- `supabase/seed.sql`: profile "Alex Demo" and 14 days of logs (recurring lower-back discomfort after long sitting, variable sleep).
+- `supabase/seed.sql`: profile "Alex Demo" and 30 days of logs (recurring lower-back discomfort on long desk days, headaches on short-sleep days, a knee ache after runs, one cold).
 - The live profile currently reads "Alex Demo Updated" (age 24) from UI testing. **Run `supabase/reset-demo.sql` just before the demo**, not earlier. It is destructive for the demo profile only.
 - Test data hygiene: backend tests create rows only with "Synthetic … test" wording and delete them afterwards (messages first, then sessions).
 
@@ -114,7 +114,7 @@ Pending:
 - Person B: "Recent assistant conversations" section on `/summary` using `GET /api/assistant/sessions` (contract §3c).
 
 - Person B: prescription explainer UI (contract §3b; ClickUp "Prescription abbreviation explainer UI").
-- Owner: run `supabase/reset-demo.sql` in the Supabase SQL editor right before the demo (restores Alex Demo, 14 logs re-dated to today, 2 reminders; deletes all chat sessions). Then rehearse and record the backup video.
+- Owner: run `supabase/reset-demo.sql` in the Supabase SQL editor right before the demo (restores Alex Demo, 30 logs re-dated to today, 2 reminders; deletes all chat sessions). Then rehearse and record the backup video.
 - Person B: treat 429 as retryable in `src/lib/api-client.ts` and show the wait message.
 - Any contract change: update `docs/API_CONTRACTS.md`, the Zod schema, tests and both AI context files together, and tell the other developer.
 
