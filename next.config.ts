@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       // API responses carry (synthetic) health data: never store them in shared or browser caches.
       { source: "/api/:path*", headers: [{ key: "Cache-Control", value: "no-store" }] },
+      // Always check for a new service worker so fixes reach installed apps quickly.
+      { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache" }] },
     ];
   },
   cacheComponents: true,

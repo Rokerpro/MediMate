@@ -131,3 +131,22 @@ export async function supabaseAuth(
   const text = await response.text();
   return text.length === 0 ? null : (JSON.parse(text) as unknown);
 }
+
+/**
+ * Calls a database function as the anon role, with no user token. Only for
+ * functions that check their own secret (prune_push_subscriptions, called by
+ * the secret-protected notification dispatch route). Never for user data.
+ */
+export async function supabaseAnonRpc(fn: string, body: unknown): Promise<unknown> {
+  const { baseUrl, key } = readConfig();
+  const response = await fetch(`${baseUrl}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: { apikey: key, Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!response.ok) throw new SupabaseRequestError(response.status, await errorCode(response));
+  const text = await response.text();
+  return text.length === 0 ? null : (JSON.parse(text) as unknown);
+}

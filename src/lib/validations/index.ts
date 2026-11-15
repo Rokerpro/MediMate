@@ -10,3 +10,4 @@ export * from "./assessment-history";
 export * from "./auth";
 export * from "./weekly-summary";
 export * from "./analytics";
+export * from "./notifications";

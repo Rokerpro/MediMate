@@ -55,7 +55,7 @@ Build a web application where a user can:
 - Voice input beyond the browser's built-in Web Speech API. (Dictation in the assistant via Web Speech was added on 2026-11-15. In Chrome the audio goes to Google's speech service, and Brave does not support it.)
 - Wearable integrations.
 - Native mobile application.
-- Scheduled or emailed weekly summaries, and medication notifications. (An on-demand weekly AI summary of the user's own logs was added by the owner on 2026-11-15; it uses the same safety order and output checks as the chat.)
+- Scheduled or emailed weekly summaries. (An on-demand weekly AI summary of the user's own logs was added by the owner on 2026-11-15; it uses the same safety order and output checks as the chat.) Medication-reminder notifications were added by the owner on 2026-11-15 (web push, else email, every 5 minutes up to 3 times until the user confirms; see `docs/API_CONTRACTS.md` §3f). They repeat only the user's own reminder wording and never advise on medicines or doses.
 - Large-scale medical web crawling.
 - A vector database unless a tested need arises and time remains.
 - Complex agent frameworks or multi-agent orchestration.

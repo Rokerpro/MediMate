@@ -1,4 +1,14 @@
 import {
+  doseListResponseSchema,
+  doseResponseSchema,
+  notificationConfigSchema,
+  pushSubscriptionResultSchema,
+  pushSubscriptionSchema,
+  pushUnsubscribeSchema,
+  type DoseListResponse,
+  type DoseResponse,
+  type NotificationConfig,
+  type PushSubscriptionResult,
   analyticsQuerySchema,
   analyticsResponseSchema,
   type AnalyticsResponse,
@@ -423,6 +433,49 @@ export async function deleteReminder(id: string): Promise<void> {
 
     throw new ApiClientError(`The server returned status ${response.status}. Please try again.`);
   });
+}
+
+/** Contract §3f: what this browser needs to turn on medicine-reminder notifications. */
+export async function getNotificationConfig(): Promise<NotificationConfig> {
+  return requestJson("/api/notifications/config", { method: "GET" }, notificationConfigSchema, 200);
+}
+
+/** Contract §3f: save this browser's push subscription (`subscription.toJSON()`). */
+export async function savePushSubscription(subscription: unknown): Promise<PushSubscriptionResult> {
+  const validated = pushSubscriptionSchema.parse(subscription);
+  return requestJson(
+    "/api/notifications/subscriptions",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(validated) },
+    pushSubscriptionResultSchema,
+    201,
+  );
+}
+
+/** Contract §3f: forget this browser's push subscription. */
+export async function removePushSubscription(endpoint: string): Promise<PushSubscriptionResult> {
+  const validated = pushUnsubscribeSchema.parse({ endpoint });
+  return requestJson(
+    "/api/notifications/subscriptions",
+    { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify(validated) },
+    pushSubscriptionResultSchema,
+    200,
+  );
+}
+
+/** Contract §3f: recent medicine doses (default last 24 hours), newest first. */
+export async function listReminderDoses(hours = 24): Promise<DoseListResponse> {
+  const params = new URLSearchParams({ hours: String(hours) });
+  return requestJson(`/api/reminders/doses?${params.toString()}`, { method: "GET" }, doseListResponseSchema, 200);
+}
+
+/** Contract §3f: confirm a dose was taken. 409 (ApiClientError.status) when more than 1 hour late. */
+export async function confirmReminderDose(doseId: string): Promise<DoseResponse> {
+  return requestJson(
+    `/api/reminders/doses/${encodeURIComponent(doseId)}/confirm`,
+    { method: "POST" },
+    doseResponseSchema,
+    200,
+  );
 }
 
 export async function explainPrescription(
