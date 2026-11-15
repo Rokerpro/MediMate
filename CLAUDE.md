@@ -52,7 +52,7 @@ Build a web application where a user can:
 - Training or fine-tuning a medical model.
 - Predicting or diagnosing diseases.
 - Medical image/rash analysis.
-- Voice input.
+- Voice input beyond the browser's built-in Web Speech API. (Dictation in the assistant via Web Speech was added on 2026-11-15. In Chrome the audio goes to Google's speech service, and Brave does not support it.)
 - Wearable integrations.
 - Native mobile application.
 - Scheduled or emailed weekly summaries, and medication notifications. (An on-demand weekly AI summary of the user's own logs was added by the owner on 2026-11-15; it uses the same safety order and output checks as the chat.)
