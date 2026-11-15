@@ -137,7 +137,7 @@ export function ProfileForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className={onboarding ? "space-y-7" : "space-y-6"}>
       {saveError && (
         <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-900">
           {saveError}
@@ -154,6 +154,7 @@ export function ProfileForm({
           label={onboarding ? "Full name" : "Display name"}
           value={profile.displayName}
           error={fieldErrors.displayName}
+          onboarding={onboarding}
           onChange={(value) => updateField("displayName", value)}
         />
         <NumberField
@@ -161,6 +162,7 @@ export function ProfileForm({
           label="Age"
           value={profile.age}
           error={fieldErrors.age}
+          onboarding={onboarding}
           onChange={(value) => updateField("age", value)}
         />
         <SelectField
@@ -169,6 +171,7 @@ export function ProfileForm({
           value={profile.gender ?? ""}
           error={fieldErrors.gender}
           options={["Male", "Female", "Other"]}
+          onboarding={onboarding}
           onChange={(value) => updateField("gender", value || null)}
         />
         <TextField
@@ -176,6 +179,7 @@ export function ProfileForm({
           label="Location (town or country, optional)"
           value={profile.location ?? ""}
           error={fieldErrors.location}
+          onboarding={onboarding}
           onChange={(value) => updateField("location", value || null)}
         />
         <NumberField
@@ -183,6 +187,7 @@ export function ProfileForm({
           label="Height (cm)"
           value={profile.heightCm}
           error={fieldErrors.heightCm}
+          onboarding={onboarding}
           onChange={(value) => updateField("heightCm", value)}
         />
         <NumberField
@@ -190,6 +195,7 @@ export function ProfileForm({
           label="Weight (kg)"
           value={profile.weightKg}
           error={fieldErrors.weightKg}
+          onboarding={onboarding}
           onChange={(value) => updateField("weightKg", value)}
         />
       </div>
@@ -198,6 +204,7 @@ export function ProfileForm({
         label="Conditions (comma-separated)"
         value={profile.conditions.join(", ")}
         error={fieldErrors.conditions}
+        onboarding={onboarding}
         onChange={(value) => updateField("conditions", parseList(value))}
       />
       <TextField
@@ -205,6 +212,7 @@ export function ProfileForm({
         label="Allergies (comma-separated)"
         value={profile.allergies.join(", ")}
         error={fieldErrors.allergies}
+        onboarding={onboarding}
         onChange={(value) => updateField("allergies", parseList(value))}
       />
       <TextField
@@ -212,6 +220,7 @@ export function ProfileForm({
         label="Medications (comma-separated)"
         value={profile.medications.join(", ")}
         error={fieldErrors.medications}
+        onboarding={onboarding}
         onChange={(value) => updateField("medications", parseList(value))}
       />
       <TextAreaField
@@ -219,12 +228,15 @@ export function ProfileForm({
         label="Relevant medical history"
         value={profile.medicalHistory}
         error={fieldErrors.medicalHistory}
+        onboarding={onboarding}
         onChange={(value) => updateField("medicalHistory", value)}
       />
       <button
         type="submit"
         disabled={saving}
-        className="rounded-md bg-blue-700 px-4 py-2.5 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-600"
+        className={onboarding
+          ? "min-h-11 rounded-full bg-[#254a38] px-6 py-2.5 font-semibold text-white transition-colors hover:bg-[#1c3a2c] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2"
+          : "rounded-md bg-blue-700 px-4 py-2.5 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-600"}
       >
         {saving ? "Saving…" : onboarding ? "Continue to MediMate" : "Save profile"}
       </button>
@@ -232,10 +244,18 @@ export function ProfileForm({
   );
 }
 
-function fieldClass(error?: string) {
-  return `mt-1 w-full rounded-md border bg-white px-3 py-2 text-slate-950 shadow-sm outline-none focus:ring-2 ${
-    error ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-blue-600"
-  }`;
+function fieldClass(error?: string, onboarding = false) {
+  const base = onboarding
+    ? "mt-1 w-full rounded-xl border bg-white px-3.5 py-3 text-[#24352d] shadow-sm outline-none transition focus:ring-2"
+    : "mt-1 w-full rounded-md border bg-white px-3 py-2 text-slate-950 shadow-sm outline-none focus:ring-2";
+  const color = error
+    ? onboarding
+      ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+      : "border-red-500 focus:ring-red-500"
+    : onboarding
+      ? "border-[#cbd6c5] focus:border-[#789078] focus:ring-[#d8e1cf]"
+      : "border-slate-300 focus:ring-blue-600";
+  return `${base} ${color}`;
 }
 
 function TextField({
@@ -243,17 +263,19 @@ function TextField({
   label,
   value,
   error,
+  onboarding,
   onChange,
 }: {
   id: string;
   label: string;
   value: string;
   error?: string;
+  onboarding: boolean;
   onChange: (value: string) => void;
 }) {
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-800">
+      <label htmlFor={id} className={`block text-sm font-medium ${onboarding ? "text-[#40564a]" : "text-slate-800"}`}>
         {label}
       </label>
       <input
@@ -262,7 +284,7 @@ function TextField({
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
-        className={fieldClass(error)}
+        className={fieldClass(error, onboarding)}
       />
       {error && <p id={`${id}-error`} className="mt-1 text-sm text-red-700">{error}</p>}
     </div>
@@ -275,6 +297,7 @@ function SelectField({
   value,
   options,
   error,
+  onboarding,
   onChange,
 }: {
   id: string;
@@ -282,11 +305,12 @@ function SelectField({
   value: string;
   options: string[];
   error?: string;
+  onboarding: boolean;
   onChange: (value: string) => void;
 }) {
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-800">
+      <label htmlFor={id} className={`block text-sm font-medium ${onboarding ? "text-[#40564a]" : "text-slate-800"}`}>
         {label}
       </label>
       <select
@@ -295,7 +319,7 @@ function SelectField({
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
-        className={fieldClass(error)}
+        className={fieldClass(error, onboarding)}
       >
         <option value="">Select an option</option>
         {options.map((option) => (
@@ -314,17 +338,19 @@ function NumberField({
   label,
   value,
   error,
+  onboarding,
   onChange,
 }: {
   id: string;
   label: string;
   value: number | null;
   error?: string;
+  onboarding: boolean;
   onChange: (value: number | null) => void;
 }) {
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-800">{label}</label>
+      <label htmlFor={id} className={`block text-sm font-medium ${onboarding ? "text-[#40564a]" : "text-slate-800"}`}>{label}</label>
       <input
         id={id}
         type="number"
@@ -332,7 +358,7 @@ function NumberField({
         onChange={(event) => onChange(event.target.value === "" ? null : Number(event.target.value))}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
-        className={fieldClass(error)}
+        className={fieldClass(error, onboarding)}
       />
       {error && <p id={`${id}-error`} className="mt-1 text-sm text-red-700">{error}</p>}
     </div>
@@ -344,17 +370,19 @@ function TextAreaField({
   label,
   value,
   error,
+  onboarding,
   onChange,
 }: {
   id: string;
   label: string;
   value: string;
   error?: string;
+  onboarding: boolean;
   onChange: (value: string) => void;
 }) {
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-800">{label}</label>
+      <label htmlFor={id} className={`block text-sm font-medium ${onboarding ? "text-[#40564a]" : "text-slate-800"}`}>{label}</label>
       <textarea
         id={id}
         rows={4}
@@ -362,7 +390,7 @@ function TextAreaField({
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
-        className={fieldClass(error)}
+        className={fieldClass(error, onboarding)}
       />
       {error && <p id={`${id}-error`} className="mt-1 text-sm text-red-700">{error}</p>}
     </div>

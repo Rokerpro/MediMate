@@ -491,14 +491,14 @@ export function AssistantChat({
         {latestResponse?.status === "follow_up" && (
           <div className={`shrink-0 border-t px-3 py-3 sm:px-5 ${dark ? "border-[#35443a]" : "border-[#e7e4da]"}`}>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Follow-up prompts</p>
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="flex flex-wrap gap-2">
               {latestResponse.followUpQuestions.map((question) => (
                 <button
                   key={question}
                   type="button"
                   onClick={() => selectFollowUpQuestion(question)}
                   disabled={loading}
-                  className="shrink-0 rounded-full border border-[#bdc8bb] px-3 py-2 text-left text-xs hover:bg-[#eff1e9] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
+                  className="max-w-full min-w-0 rounded-xl border border-[#bdc8bb] px-3 py-2 text-left text-xs leading-5 break-words hover:bg-[#eff1e9] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#bd7e3e]"
                 >
                   {question}
                 </button>

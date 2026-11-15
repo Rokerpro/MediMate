@@ -30,7 +30,7 @@ export function AccountMenu() {
     <div className="flex shrink-0 items-center gap-2">
       {user && (
         <span
-          className="hidden items-center gap-2 text-sm text-[#40564a] lg:inline-flex"
+          className="hidden items-center gap-2 rounded-full border border-[#dfe3d6] bg-[#f7f5ed] py-1 pl-1.5 pr-3 text-sm text-[#40564a] lg:inline-flex"
           title={user.email ?? undefined}
         >
           <span
@@ -49,7 +49,7 @@ export function AccountMenu() {
           void signOut();
         }}
         disabled={signingOut}
-        className="rounded-full border border-[#dfe3d6] px-3 py-1.5 text-sm font-medium text-[#254a38] transition-colors hover:bg-[#eef0e5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] disabled:opacity-60"
+        className="min-h-10 rounded-full border border-[#d6ddcf] bg-[#f7f5ed] px-4 py-2 text-sm font-semibold text-[#254a38] transition-colors hover:border-[#b8c5b2] hover:bg-[#eef0e5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fbfaf5] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {signingOut ? "Signing out…" : "Sign out"}
       </button>
