@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { getCurrentUser } from "@/lib/api-client";
@@ -17,7 +18,8 @@ function checkSignedIn(): Promise<boolean> {
 
 /**
  * Landing-page entry link: goes to the dashboard when the visitor is already
- * signed in, otherwise to the sign-in page. Defaults to /login until known.
+ * signed in, otherwise to the sign-in page. A click before the check has
+ * finished waits for it, so a signed-in visitor never lands on /login.
  */
 export function WorkspaceLink({
   className,
@@ -30,7 +32,8 @@ export function WorkspaceLink({
   signedInLabel: string;
   icon?: ReactNode;
 }) {
-  const [signedIn, setSignedIn] = useState(false);
+  const router = useRouter();
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -43,7 +46,15 @@ export function WorkspaceLink({
   }, []);
 
   return (
-    <Link href={signedIn ? "/dashboard" : "/login"} className={className}>
+    <Link
+      href={signedIn ? "/dashboard" : "/login"}
+      className={className}
+      onClick={(event) => {
+        if (signedIn !== null || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+        event.preventDefault();
+        void checkSignedIn().then((value) => router.push(value ? "/dashboard" : "/login"));
+      }}
+    >
       {signedIn ? signedInLabel : signedOutLabel}
       {icon}
     </Link>
