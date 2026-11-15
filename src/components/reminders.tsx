@@ -294,12 +294,7 @@ export function Reminders({
       <PageHeader
         eyebrow="In-app reminders"
         title="Reminders"
-        description={
-          <>
-            <p>Reminders you set yourself. MediMate does not suggest or check medication timing or doses. Ask your pharmacist or prescriber about how to take a medicine.</p>
-            <p className="mt-2 text-sm text-[#6b776f]">Medication reminders can use notifications or your sign-in email; other reminders remain in-app only.</p>
-          </>
-        }
+        description="You set these yourself. MediMate never advises on medicine timing or doses; ask your pharmacist or prescriber."
       />
 
       <ReminderNotifications />

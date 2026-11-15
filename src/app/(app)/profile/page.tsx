@@ -9,7 +9,6 @@ export default function ProfilePage() {
       <PageHeader
         eyebrow="Personal profile"
         title="Your profile"
-        description="Keep this synthetic information current for the demo experience."
       />
       <section className="rounded-2xl border border-[#dfe3d6] bg-[#fffdf8] p-5 shadow-sm sm:p-8">
         <ProfileForm />
@@ -22,7 +21,6 @@ export default function ProfilePage() {
           <h2 id="account-actions-heading" className="text-lg font-semibold text-[#243b30]">
             Account
           </h2>
-          <p className="mt-1 text-sm text-[#5b6b61]">Sign out of your MediMate account.</p>
         </div>
         <SignOutButton />
       </section>

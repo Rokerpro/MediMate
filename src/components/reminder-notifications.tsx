@@ -127,7 +127,7 @@ export function ReminderNotifications() {
           Medicine notifications
         </h2>
         <p className="mt-2 text-sm text-[#5b6b61]">
-          Medication reminders notify you at the due time, then 5 and 10 minutes later, until you confirm. Without notifications on, they&apos;re sent to your sign-in email.
+          At the due time, then 5 and 10 minutes later until you confirm. Otherwise sent to your sign-in email.
         </p>
       </div>
 

@@ -100,7 +100,6 @@ export function ReminderDoses({
     <section aria-labelledby="recent-doses-heading" className="space-y-4">
       <div>
         <h2 id="recent-doses-heading" className="text-xl font-semibold">Recent medicine doses</h2>
-        <p className="mt-1 text-sm text-[#5b6b61]">Recent doses from your medication reminders.</p>
       </div>
 
       {confirmFailed && (
