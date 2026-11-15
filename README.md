@@ -58,7 +58,7 @@ Environment variables (server-side only; never prefix them with `NEXT_PUBLIC_`):
 | `GROQ_API_KEY` | Groq API key, when `AI_PROVIDER=groq` |
 | `GROQ_MODEL` | Optional model override |
 
-Database: in the Supabase SQL editor, run `supabase/migrations/0001_initial_schema.sql`, `supabase/seed.sql`, then migrations `0002` to `0005` in order. The seed creates the synthetic profile "Alex Demo" and 14 days of logs (recurring lower-back discomfort after long sitting, variable sleep).
+Database: in the Supabase SQL editor, run `supabase/migrations/0001_initial_schema.sql`, `supabase/seed.sql`, then migrations `0002` to `0006` in order (0006 needs the pg_cron and pg_net extensions, which it enables, and two rows in `medimate_settings`; see the comment at the top of the file). The seed creates the synthetic profile "Alex Demo" and 14 days of logs (recurring lower-back discomfort after long sitting, variable sleep).
 
 Sign-in setup:
 

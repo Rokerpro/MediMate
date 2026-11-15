@@ -176,7 +176,7 @@ If an **urgent** safety rule triggers, return `status: "urgent"`, a non-null saf
 
 ## 3a. Reminders
 
-Reminders are written and confirmed by the user. MediMate stores the user's own wording only: it never generates, suggests or checks reminder content, medication timing or doses. In-app list only; there are no push, SMS or email notifications. Schemas: `src/lib/validations/reminder.ts`. Table: `supabase/migrations/0002_reminders.sql`.
+Reminders are written and confirmed by the user. MediMate stores the user's own wording only: it never generates, suggests or checks reminder content, medication timing or doses. Since 2026-11-15, **medication** reminders also send notifications (web push, else email) until the user confirms the dose: see §3f. Other categories stay in-app only. Schemas: `src/lib/validations/reminder.ts`. Table: `supabase/migrations/0002_reminders.sql`.
 
 `Reminder`:
 
@@ -377,11 +377,62 @@ Signed-in only. `days` is 7, 14 or 30 (default 30); anything else gives 400. Det
 - `associations`: for the top 3 topics, the average sleep hours, sleep quality, activity or water on days with the topic vs other days. A measure appears only when each side has at least 2 days. **Show these as "recorded together", never as a cause or effect**, and always show `note`.
 - Errors: 400 (`days`), 401, 500.
 
+## 3f. Medicine-reminder notifications and PWA (added 2026-11-15, owner decision)
+
+Needs migration `supabase/migrations/0006_reminder_notifications.sql` and the env vars in `.env.example` (VAPID keys, `REMINDER_DISPATCH_SECRET`, Gmail). Schemas: `src/lib/validations/notifications.ts`. Client helpers: `src/lib/api-client.ts` (below) and `src/lib/push-client.ts` (browser push + PWA).
+
+**Flow.** Every minute a database job (pg_cron) checks active reminders with `category: "medication"`. When one becomes due it creates a **dose**. The user is notified at the due time, then 5 and 10 minutes later (3 notifications at most) until they confirm. 5 minutes after the 3rd (≈15 min) an unconfirmed dose becomes `missed`. A `pending` or `missed` dose can be confirmed until **1 hour after it was due** (`confirmBy`). Occurrences more than 10 minutes in the past are never back-filled (so creating a reminder for an earlier time today does not notify).
+
+**Channels.** Web push to every device the user turned notifications on for (Android Chrome, desktop Chrome/Edge/Firefox; iPhone only when installed to the home screen). If no device is subscribed, or every push failed, an email goes to the user's Google sign-in address instead. Notification text is only the user's own title and notes plus "Tap to confirm once you have taken it." MediMate never adds advice about medicines, timing or doses.
+
+**Tapping a notification** opens `/reminders?dose=<doseId>`; that page must show the dose with an **"I took it"** button (`confirmReminderDose`). The notification's own "I took it" action confirms directly; if that fails (signed out, too late, offline) the service worker opens `/reminders?dose=<id>&confirm=failed`. The email links to the same page.
+
+`ReminderDose`:
+
+```json
+{
+  "id": "uuid",
+  "reminderId": "uuid",
+  "title": "Evening tablet",
+  "dueAt": "2026-11-15T14:00:00.000Z",
+  "status": "pending | taken | missed",
+  "notificationsSent": 2,
+  "confirmedAt": "ISO or null",
+  "confirmBy": "2026-11-15T15:00:00.000Z",
+  "canConfirm": true
+}
+```
+
+### `GET /api/reminders/doses?hours=24`
+
+`hours` 1–168 (default 24). `200` → `{ "doses": ReminderDose[] }`, newest `dueAt` first, max 50. Client: `listReminderDoses(hours)`.
+
+### `POST /api/reminders/doses/{id}/confirm`
+
+No body. `200` → `{ "dose": ReminderDose }` with `status: "taken"`. Confirming an already-taken dose is fine (200). `404` unknown id; **`409` `CONFLICT`** when more than 1 hour has passed since `dueAt` (show the message; the dose stays missed). Client: `confirmReminderDose(id)`.
+
+### `GET /api/notifications/config`
+
+`200` → `{ "pushAvailable": boolean, "vapidPublicKey": string | null, "emailAvailable": boolean, "subscribedDevices": number }`. Only the VAPID public key is exposed. Client: `getNotificationConfig()`.
+
+### `POST` / `DELETE /api/notifications/subscriptions`
+
+POST body: the browser's `PushSubscription.toJSON()` (`{ endpoint (https), expirationTime?, keys: { p256dh, auth } }`) → `201 { "subscribed": true }`. DELETE body `{ "endpoint" }` → `200 { "subscribed": false }`. At most 5 devices per user (oldest dropped); a browser that switches accounts moves to the new account. Use `enablePushNotifications()` / `disablePushNotifications()` from `src/lib/push-client.ts` rather than calling these directly.
+
+### `POST /api/notifications/dispatch` (internal)
+
+Called only by the database job with `Authorization: Bearer <REMINDER_DISPATCH_SECRET>`; 401 otherwise. Never call it from the browser.
+
+### PWA
+
+`/manifest.webmanifest` (`src/app/manifest.ts`), icons in `public/icons/`, service worker `public/sw.js` (push, notification clicks, offline page `public/offline.html`; it caches nothing else, so no health data is stored offline). Register it on app load with `registerServiceWorker()`. The Android/desktop install prompt is the `beforeinstallprompt` event (`BeforeInstallPromptEvent` type in `push-client.ts`); `isStandalone()` tells whether the app is already installed.
+
 ## 4. Status and error behavior
 
 - `400`: malformed or invalid request.
 - `401` (`UNAUTHENTICATED`): not signed in or the session expired; see §0a.
-- `404`: requested session/profile/log/reminder does not exist.
+- `404`: requested session/profile/log/reminder/dose does not exist.
+- `409` (`CONFLICT`): `POST /api/reminders/doses/{id}/confirm` more than 1 hour after the dose was due.
 - `429` (`RATE_LIMITED`): `POST /api/assistant/chat` only, when a turn would call the AI model and the limit is reached (6 turns per minute per client address, 20 per minute per server instance; best-effort, in memory). Includes a `Retry-After` header (seconds) and a message saying how long to wait. Nothing is saved. Urgent safety replies are never rate-limited. The UI should show the message and offer Retry.
 - `500`: generic unexpected server error; no internal details to client.
 - `503`: configured AI provider unavailable or timed out; return a safe fallback message.

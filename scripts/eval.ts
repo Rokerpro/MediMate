@@ -279,8 +279,24 @@ function isolationCases(): Case[] {
     }
   }
 
+  // The database job's dispatch route has no user session: it must check the
+  // shared secret before anything else, and be the only anon (token-less) caller.
+  const dispatch = readFileSync("src/app/api/notifications/dispatch/route.ts", "utf8");
+  const handler = dispatch.slice(dispatch.indexOf("export async function POST"));
+  cases.push({
+    name: "notification dispatch route checks the shared secret before reading the body",
+    ok: handler.indexOf("secretMatches(") !== -1 && handler.indexOf("secretMatches(") < handler.indexOf("readJsonBody("),
+  });
+  const anonCallers = walk("src").filter(
+    (f) => /\.tsx?$/.test(f) && !f.endsWith("supabase/server.ts") && readFileSync(f, "utf8").includes("supabaseAnonRpc("),
+  );
+  cases.push({
+    name: "only the dispatch route calls the database without a user token",
+    ok: anonCallers.length === 1 && anonCallers[0]!.endsWith("notifications/dispatch/route.ts"),
+  });
+
   const migrations = walk("supabase/migrations").map((f) => readFileSync(f, "utf8")).join("\n");
-  for (const table of ["profiles", "health_logs", "symptom_sessions", "symptom_messages", "reminders"]) {
+  for (const table of ["profiles", "health_logs", "symptom_sessions", "symptom_messages", "reminders", "push_subscriptions", "reminder_doses"]) {
     cases.push({
       name: `row-level security enabled on ${table}`,
       ok: new RegExp(`alter table (public\\.)?${table} enable row level security`, "i").test(migrations),
