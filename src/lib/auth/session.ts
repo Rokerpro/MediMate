@@ -127,6 +127,7 @@ export const PROTECTED_PREFIXES = [
   "/reminders",
   "/summary",
   "/prescriptions",
+  "/insights",
   "/welcome",
 ] as const;
 

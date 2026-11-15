@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import type { ChatResponse } from "@/lib/validations";
+import { GroundedAssessment } from "@/components/grounded-assessment";
 import { SaveToLog } from "@/components/save-to-log";
 import {
   useAssistantExperience,
@@ -871,74 +872,10 @@ function AssistantResult({ response, dark = false }: { response: ChatResponse | 
     }`}>
       <div>
         <p className={`text-sm font-medium ${dark ? "text-blue-300" : "text-blue-700"}`}>Educational assessment</p>
-        <h2 className="mt-1 text-xl font-semibold">What the information may suggest</h2>
-        <p className={`mt-3 ${dark ? "text-slate-200" : "text-slate-700"}`}>{assessment.summary}</p>
+        <h2 className="mt-1 text-xl font-semibold">Assessment</h2>
       </div>
 
-      <section aria-label="Possible explanations">
-        <h3 className="font-semibold">Possible explanations to discuss with a clinician</h3>
-        <div className="mt-3 space-y-4">
-          {assessment.possibleExplanations.map((explanation, index) => (
-            <article key={`${explanation.title}-${index}`} className={`rounded-lg border p-4 ${dark ? "border-[#49574d]" : "border-slate-200"}`}>
-              <h4 className="font-medium">{explanation.title}</h4>
-              <p className={`mt-2 text-sm ${dark ? "text-slate-300" : "text-slate-600"}`}>{explanation.whyItMayBeRelevant}</p>
-              {explanation.supportingHistory.length > 0 && (
-                <div className={`mt-3 border-t pt-3 ${dark ? "border-[#35443a]" : "border-slate-100"}`}>
-                  <h5 className="text-sm font-semibold">Historical observations used</h5>
-                  <ul className={`mt-2 space-y-2 text-sm ${dark ? "text-slate-300" : "text-slate-600"}`}>
-                    {explanation.supportingHistory.map((history) => (
-                      <li key={`${history.logId}-${history.date}`}>
-                        <time dateTime={history.date} className={`font-medium ${dark ? "text-slate-100" : "text-slate-800"}`}>{history.date}</time>
-                        : {history.observation}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {explanation.unknowns.length > 0 && (
-                <div className="mt-3">
-                  <h5 className="text-sm font-semibold">Unknowns</h5>
-                  <ul className={`mt-1 list-disc space-y-1 pl-5 text-sm ${dark ? "text-slate-300" : "text-slate-600"}`}>
-                    {explanation.unknowns.map((unknown) => <li key={unknown}>{unknown}</li>)}
-                  </ul>
-                </div>
-              )}
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section aria-label="Next steps">
-        <h3 className="font-semibold">Next steps</h3>
-        <ul className={`mt-2 list-disc space-y-1 pl-5 text-sm ${dark ? "text-slate-200" : "text-slate-700"}`}>
-          {assessment.nextSteps.map((step) => <li key={step}>{step}</li>)}
-        </ul>
-      </section>
-
-      {assessment.sources.length > 0 && (
-        <section aria-label="References">
-          <h3 className="font-semibold">References</h3>
-          <ul className="mt-2 space-y-2 text-sm">
-            {assessment.sources.map((source) => (
-              <li key={source.url}>
-                <a
-                  href={source.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={dark ? "text-blue-300 underline hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-300" : "text-blue-700 underline hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-600"}
-                >
-                  {source.title}
-                </a>
-                <span className={dark ? "text-slate-300" : "text-slate-600"}> — {source.publisher}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <p className={`border-t pt-4 text-sm font-medium ${dark ? "border-[#49574d] text-slate-200" : "border-slate-200 text-slate-700"}`}>
-        {assessment.disclaimer}
-      </p>
+      <GroundedAssessment assessment={assessment} dark={dark} />
     </aside>
   );
 }
