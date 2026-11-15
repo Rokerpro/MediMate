@@ -8,10 +8,12 @@ import type { CurrentUser } from "@/lib/validations";
 
 type AccountMenuProps = {
   variant?: "app" | "landing";
+  /** App variant only: show the user's name next to the avatar (desktop sidebar). */
+  showName?: boolean;
 };
 
 /** Signed-in user's avatar with a link to their profile. */
-export function AccountMenu({ variant = "app" }: AccountMenuProps) {
+export function AccountMenu({ variant = "app", showName = false }: AccountMenuProps) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -137,6 +139,39 @@ export function AccountMenu({ variant = "app" }: AccountMenuProps) {
   }
 
   if (!user) return null;
+
+  if (showName) {
+    return (
+      <Link
+        href="/profile"
+        aria-label={`Open profile for ${user.displayName}`}
+        className="flex min-w-0 items-center gap-3 rounded-xl p-1 transition-colors hover:bg-[#eef0e5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]"
+      >
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#bdc8bb] bg-white">
+          {avatarUrl ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={avatarUrl}
+                alt=""
+                referrerPolicy="no-referrer"
+                onError={() => setFailedAvatarUrl(avatarUrl)}
+                className="h-full w-full object-cover"
+              />
+            </>
+          ) : (
+            <span aria-hidden="true" className="text-xs font-semibold text-[#254a38]">
+              {initial}
+            </span>
+          )}
+        </span>
+        <span className="min-w-0 text-xs leading-5 text-[#5b6b61]">
+          <span className="block truncate font-semibold text-[#24352d]">{user.displayName}</span>
+          <span className="block">Synthetic demo profile</span>
+        </span>
+      </Link>
+    );
+  }
 
   return (
     <Link

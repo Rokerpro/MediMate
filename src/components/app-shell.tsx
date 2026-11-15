@@ -30,13 +30,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <SidebarNavigation />
           <div className="mt-auto space-y-4 border-t border-[#dfe3d6] px-2 pt-4">
             <ThemeToggle />
-            <div className="flex items-center gap-3">
-              <AccountMenu />
-              <div className="min-w-0 text-xs leading-5 text-[#5b6b61]">
-                <p className="font-semibold text-[#24352d]">Your account</p>
-                <p>Synthetic demo profile</p>
-              </div>
-            </div>
+            <AccountMenu showName />
           </div>
         </aside>
 
