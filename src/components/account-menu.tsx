@@ -75,6 +75,7 @@ export function AccountMenu({ variant = "app" }: AccountMenuProps) {
   }, [menuOpen, variant]);
 
   const initial = (user?.displayName.trim()[0] ?? "?").toUpperCase();
+  const avatarUrl = user?.avatarUrl && failedAvatarUrl !== user.avatarUrl ? user.avatarUrl : null;
 
   if (variant === "landing") {
     if (!loaded) {
@@ -110,8 +111,6 @@ export function AccountMenu({ variant = "app" }: AccountMenuProps) {
         </Link>
       );
     }
-
-    const avatarUrl = user.avatarUrl && failedAvatarUrl !== user.avatarUrl ? user.avatarUrl : null;
 
     return (
       <div ref={containerRef} className="relative flex shrink-0">
@@ -172,12 +171,25 @@ export function AccountMenu({ variant = "app" }: AccountMenuProps) {
           className="hidden items-center gap-2 text-sm text-[#40564a] lg:inline-flex"
           title={user.email ?? undefined}
         >
-          <span
-            aria-hidden="true"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#254a38] text-xs font-semibold text-[#fbfaf5]"
-          >
-            {initial}
-          </span>
+          {avatarUrl ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={avatarUrl}
+                alt=""
+                referrerPolicy="no-referrer"
+                onError={() => setFailedAvatarUrl(avatarUrl)}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            </>
+          ) : (
+            <span
+              aria-hidden="true"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#254a38] text-xs font-semibold text-[#fbfaf5]"
+            >
+              {initial}
+            </span>
+          )}
           <span className="max-w-[10rem] truncate">{user.displayName}</span>
         </span>
       )}

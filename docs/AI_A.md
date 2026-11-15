@@ -119,7 +119,7 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 - On assistant-chat 401, the shared page/popup UI preserves the typed message and shows an inline "Sign in to chat with MediMate" card with a URL-encoded `/auth/login?next=<current path>` link instead of generic retry UI.
 - `/profile` has a danger zone with an in-page confirmation; the user must type `DELETE`, receives focus in the confirmation input, and sees pending/error/retry states. The existing `deleteAccount()` API client owns the success redirect.
 - `/?accountDeleted=1` shows a dismissible confirmation notice. It reads the query after client mount so the notice is not held inside a hidden streamed Suspense boundary.
-- The landing navigation uses `AccountMenu`'s `landing` variant: signed-out visitors see a Sign in link; signed-in users see their Google avatar, initials if the photo is unavailable, and a popover with their name and the existing sign-out action. The app-header account menu remains unchanged.
+- The landing navigation uses `AccountMenu`'s `landing` variant: signed-out visitors see a Sign in link; signed-in users see their Google avatar, initials if the photo is unavailable, and a popover with their name and the existing sign-out action. In the app header, a 32px avatar appears beside the display name, with the initials circle retained when the photo is absent or fails to load.
 - A real deletion has not been tested; the owner must apply `supabase/migrations/0005_delete_account.sql` before the endpoint can succeed.
 
 ### Prescription explainer UI

@@ -7,7 +7,7 @@ This is the combined source of truth for both coding AIs. Naming: `docs/AI_A.md`
 ## Current repository state
 
 - `main` at `8eaa26a` includes Google sign-in, onboarding, weekly summary, account-menu/profile refresh, account deletion, and the nullable Google avatar field in `/api/auth/me`, alongside the health summary, reminders, assistant, and navigation work.
-- The current branch is `feat/landing-profile-menu`, based on `8eaa26a`; it adds an avatar/sign-out popover to the public landing-page navigation and does not change the app-header account menu.
+- The current branch is `feat/landing-profile-menu`, based on `8eaa26a`; it adds an avatar/sign-out popover to the public landing-page navigation and displays the Google avatar beside the name in the app-header account menu, with an initials fallback.
 - PR #2 (`feat/health-insights-journey`: PR #1 review fixes `ad87a1f`, Personal Health Insights `09ebb8b`, Interactive Health Journey `bbfdd5e`) was reviewed and merged by Person A on 2026-11-14, together with the backend past-conversations endpoint (`cd73b88`), safety scorecard (`77e37a9`), security headers (`3962e9d`) and the dose-question fix (`1312d70`). Checks on the merged tree: lint, typecheck, build, 202 tests, scorecard 134/134.
 - The app is a Next.js 16.4.6 App Router application using React 19.3, TypeScript, Tailwind 4.3, Zod 4.6, Supabase PostgreSQL, and a server-side Groq-compatible AI provider.
 - Node.js `>=22.18` is required.
@@ -144,4 +144,4 @@ Done 2026-11-14: `0002_reminders.sql` applied in Supabase; the live Vercel site 
 
 - 2026-11-15 (A): `DELETE /api/auth/account` + `deleteAccount()` in api-client (needs migration 0005). Deletes the user's profile, logs, chats, reminders and sign-in; the demo profile is only unlinked. `sendAssistantMessage` no longer redirects on 401: it throws `ApiClientError` status 401 so the chat can show an inline sign-in prompt. `PROFILE_SAVED_EVENT` refreshes the header name after a profile save.
 - 2026-11-15 (B): prompt-level notices are shown in the shared assistant page/popup and `urgencyLevel: "prompt"` summaries use the contract label "Urgent GP / NHS 111 advice was given". The account UI uses mocked failures only; do not test successful deletion until the owner applies `supabase/migrations/0005_delete_account.sql`.
-- 2026-11-15 (B): the landing account menu uses the contract's `avatarUrl`, falls back to initials when the image is unavailable, and offers the existing sign-out flow. The app-header account menu behavior is unchanged.
+- 2026-11-15 (B): the landing account menu uses the contract's `avatarUrl`, falls back to initials when the image is unavailable, and offers the existing sign-out flow. The app-header account menu also shows the 32px Google avatar beside the name, falling back to initials.
