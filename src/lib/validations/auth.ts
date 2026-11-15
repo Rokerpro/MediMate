@@ -4,6 +4,8 @@ import { z } from "zod";
 export const currentUserSchema = z.strictObject({
   email: z.string().max(320).nullable(),
   displayName: z.string().min(1).max(100),
+  /** Google profile photo, or null (then show initials). */
+  avatarUrl: z.string().url().startsWith("https://").max(500).nullable(),
 });
 
 export const currentUserResponseSchema = z.strictObject({

@@ -24,6 +24,8 @@ export type RequestContext = {
   profileId: string;
   accessToken: string;
   email: string | null;
+  /** Google profile photo (https, Google's photo host only), or null. */
+  avatarUrl: string | null;
 };
 
 /** No usable session. Route handlers turn this into a 401. */
@@ -109,5 +111,5 @@ export async function getRequestContext(): Promise<RequestContext> {
     clearSessionCookies(store);
     throw new UnauthenticatedError();
   }
-  return { profileId, accessToken, email: claims.email };
+  return { profileId, accessToken, email: claims.email, avatarUrl: claims.avatarUrl };
 }
