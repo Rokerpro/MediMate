@@ -710,3 +710,11 @@ describe("repair quotes", () => {
     }
   });
 });
+
+describe("repair instruction for amount judgements", () => {
+  it("adds recorded-amount guidance only when an amount judgement was rejected", () => {
+    const withAmount = buildRepairInstruction(["it used disallowed wording (a comparison with a normal or recommended amount (no source supplies one))"]);
+    assert.match(withAmount, /your log on <date> recorded <amount>/);
+    assert.doesNotMatch(buildRepairInstruction(["a URL"]), /recorded <amount>/);
+  });
+});

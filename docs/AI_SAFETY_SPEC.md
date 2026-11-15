@@ -57,7 +57,8 @@ Server-side output checks (`src/lib/ai/output.ts`, `parseModelOutput`) enforce t
 
 - causal claims about something the user recorded or reported (sitting, posture, sleep, fluids, activity, stress), e.g. "strain from prolonged sitting", "caused by poor sleep" (`makesCausalClaim`);
 - "matches / fits / aligns with a common/typical X" diagnostic framing;
-- comparisons with a "normal", "typical" or "recommended" amount, which no curated source supplies.
+- comparisons with a "normal", "typical" or "recommended" amount, which no curated source supplies, and judgements of the user's own needs or of a recorded amount as "too low"/"not enough" ("lower than your personal needs", "less than you need");
+- hedged causal claims about a recorded factor in the same sentence ("water intake … could contribute to headache");
 - follow-up questions about how much of a medicine the user takes or how often (`DOSE_QUESTION`);
 - instructions to start, stop, skip or come off a medicine, unless the same sentence sends the user to a GP, pharmacist, prescriber, doctor or clinician (`changesMedication`).
 

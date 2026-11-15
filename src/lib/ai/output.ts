@@ -68,6 +68,16 @@ const BANNED_PATTERNS: readonly { pattern: RegExp; label: string }[] = [
     pattern: /\b(lower|less|below|higher|more|above|under|over)\s+(than\s+)?(the\s+)?(typical|recommended|normal|usual|average|healthy|ideal)\s+(daily\s+)?(needs?|intake|amounts?|levels?|ranges?|targets?|recommendations?|guidelines?)\b/i,
     label: "a comparison with a normal or recommended amount (no source supplies one)",
   },
+  {
+    // "lower than your personal needs", "less than you need", "may not meet your fluid needs".
+    pattern: /\b(lower|less|below|higher|more|above|under|over|short of|meets?|meeting|cover(s|ing)?|exceed(s|ing)?)\s+(than\s+)?(what\s+)?(you|your(\s+(body's|personal|individual|own|daily))?)\s+((fluid|water|hydration|sleep|activity|daily)\s+)?(needs?|needed|requirements?|requires?)\b/i,
+    label: "a judgement of the user's personal needs (no source supplies one)",
+  },
+  {
+    // "your water intake was too low", "sleep may be insufficient".
+    pattern: /\b(water|fluids?|hydration|sleep|activity)(\s+(intake|levels?|amounts?|duration))?\s+(is|was|were|may be|might be|could be|seems?|appears?|looks?)\s+(\w+\s+)?(insufficient|inadequate|too (low|little|short)|not enough|low|lower)\b/i,
+    label: "a judgement that a recorded amount is too low (no source supplies one)",
+  },
   { pattern: /\bnothing to worry about\b/i, label: '"nothing to worry about"' },
   { pattern: /\byou are (safe|fine)\b/i, label: '"you are safe/fine"' },
   { pattern: /\brul(e|es|ed|ing) out\b/i, label: '"rule out"' },
@@ -194,7 +204,9 @@ const FACTOR = String.raw`(sitting|posture|sleep|inactivity|activity|exercise|de
 const CAUSAL_CLAIM: readonly RegExp[] = [
   new RegExp(String.raw`\b(caused by|due to|because of|as a result of|result(s|ed|ing)? from|triggered by|brought on by)\s+(\w+\s+){0,3}?${FACTOR}\b`, "i"),
   new RegExp(String.raw`\bfrom (prolonged|long|extended|lots of|too much|too little|lack of|poor|not enough|excessive|reduced|low)\s+(\w+\s+){0,2}?${FACTOR}\b`, "i"),
-  new RegExp(String.raw`\b${FACTOR}\s+(is |was |may be |might be |could be |can be )?(caus\w*|trigger\w*|leading to|led to)\b`, "i"),
+  new RegExp(String.raw`\b${FACTOR}\s+(is |was |may be |might be |could be |can be )?(caus\w*|trigger\w*|leading to|led to|contribut\w*)\b`, "i"),
+  // "water intake ... which could contribute to headache": a recorded factor, then a hedged causal verb in the same sentence.
+  new RegExp(String.raw`\b${FACTOR}\b[^.;]{0,150}\b(could|may|might|can|would|will|likely)\s+(\w+\s+)?(contribut\w*|lead\w* to|caus\w*)\b`, "i"),
 ];
 
 function causalSearchTexts(output: ModelOutput): string[] {

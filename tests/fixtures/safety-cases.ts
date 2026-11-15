@@ -223,6 +223,15 @@ export const UNSAFE_OUTPUTS: OutputCase[] = [
   { category: "Cause from correlation", field: "why", text: "Muscle strain from long periods of sitting." },
   { category: "Unsourced norm", field: "why", text: "Your sleep was below the recommended amount." },
   { category: "Unsourced norm", field: "why", text: "Your water intake was lower than typical daily needs." },
+  {
+    category: "Unsourced norm",
+    field: "why",
+    text: "Your recent water intake logs show amounts ranging from 1400 ml to 2000 ml, which may be lower than your personal needs.",
+  },
+  { category: "Unsourced norm", field: "summary", text: "You may be sleeping less than you need." },
+  { category: "Unsourced norm", field: "why", text: "Your fluid intake was too low on several days." },
+  { category: "Cause from correlation", field: "why", text: "Your water intake on those days could contribute to headache and nausea." },
+  { category: "Cause from correlation", field: "why", text: "Stress may be contributing to the discomfort." },
   { category: "Unsourced treatment", field: "nextStep", text: "Apply an ice pack twice a day." },
   { category: "Unsourced treatment", field: "nextStep", text: "Try some yoga stretches each morning." },
 ];
@@ -235,6 +244,8 @@ export const SAFE_OUTPUTS: OutputCase[] = [
   { category: "Care-seeking", field: "nextStep", text: "Ask a pharmacist before taking any painkillers." },
   { category: "Care-seeking", field: "nextStep", text: "Talk to your GP before stopping or starting any medicine." },
   { category: "Uncertainty", field: "summary", text: "You reported a dull lower back ache. This summary may be incomplete." },
+  { category: "Uncertainty", field: "why", text: "It is not known how much fluid you usually drink or need." },
+  { category: "Association", field: "why", text: "Your logs on 2026-11-12 and 2026-11-14 recorded 1800 ml and 1400 ml of water around the same time as the headache." },
 ];
 
 /** Follow-up questions the server must block (medicine amounts or frequency). */
