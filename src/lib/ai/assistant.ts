@@ -3,7 +3,8 @@
 import type { ChatResponse, HealthLog, Profile } from "@/lib/validations";
 
 import { selectReferences, type CuratedReference } from "../health/references.ts";
-import { extractTerms, selectRecentMeasurementLogs, selectRelevantLogs } from "../health/retrieve-history.ts";
+import { recordedFactsFor } from "../health/analytics.ts";
+import { extractTerms, rankRelevantLogs, selectRecentMeasurementLogs } from "../health/retrieve-history.ts";
 import { PROMPT_ASSISTANT_NOTE, PROMPT_NEXT_STEP, type SafetyEvaluation } from "../health/safety-rules.ts";
 import { parseModelOutput, toContractAssessment } from "./output.ts";
 import { SYSTEM_PROMPT, buildRepairInstruction, buildUserContent } from "./prompts.ts";
@@ -57,11 +58,16 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
   }
 
   const queryText = [input.message, ...priorUserTexts].join("\n");
-  const relevantLogs = selectRelevantLogs(input.candidateLogs, queryText);
+  const now = input.now ?? Date.now();
+  const ranked = rankRelevantLogs(input.candidateLogs, queryText, { now });
+  const relevantLogs = ranked.map((entry) => entry.log);
+  const matchedTerms = new Map(ranked.map((entry) => [entry.log.id, entry.matchedTerms]));
+  // Code calculates the figures; the model may only restate and explain them.
+  const recordedPatterns = recordedFactsFor(input.candidateLogs, queryText, 30, now);
   const recentMeasurementLogs = selectRecentMeasurementLogs(
     input.candidateLogs,
     new Set(relevantLogs.map((log) => log.id)),
-    input.now,
+    now,
   );
   const references = selectReferences(extractTerms(queryText), deps.references);
   const mustAssess = priorUserTexts.length >= MAX_FOLLOW_UP_ROUNDS;
@@ -74,6 +80,7 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
     profile: input.profile,
     relevantLogs,
     recentMeasurementLogs,
+    recordedPatterns,
     references,
     mustAssess,
     isRepair: false,
@@ -102,7 +109,10 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
   const { output } = parsed;
   const assessment =
     output.status === "assessment" && output.assessment
-      ? toContractAssessment(output.assessment, relevantLogs, references, recentMeasurementLogs, queryText)
+      ? toContractAssessment(output.assessment, relevantLogs, references, recentMeasurementLogs, queryText, {
+          matchedTerms,
+          recordedFacts: recordedPatterns,
+        })
       : null;
   // Prompt level (NHS "urgent GP / 111" item): the model still answers, but the
   // fixed advice is added by the server so it never depends on the model.

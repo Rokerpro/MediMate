@@ -1,4 +1,7 @@
 import {
+  analyticsQuerySchema,
+  analyticsResponseSchema,
+  type AnalyticsResponse,
   apiErrorResponseSchema,
   assessmentHistoryQuerySchema,
   assessmentHistoryResponseSchema,
@@ -270,6 +273,12 @@ export async function listHealthLogs(limit?: number): Promise<HealthLogListRespo
 
 export async function getHealthLogs(limit?: number): Promise<HealthLogListResponse> {
   return listHealthLogs(limit);
+}
+
+/** GET /api/insights/analytics?days=7|14|30 — deterministic figures from the user's logs (contract §3e). */
+export async function getHealthAnalytics(days: 7 | 14 | 30 = 30): Promise<AnalyticsResponse> {
+  const query = analyticsQuerySchema.parse({ days });
+  return requestJson(`/api/insights/analytics?days=${query.days}`, { method: "GET" }, analyticsResponseSchema, 200);
 }
 
 /** Completed assistant conversations, newest first (contract §3c). Read-only. */

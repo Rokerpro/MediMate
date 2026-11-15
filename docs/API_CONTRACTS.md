@@ -313,6 +313,70 @@ Signed-in only. No request body (send `{}`). Generated on demand from the user's
 
 UI: the "This week's summary" card on `/dashboard` (`src/components/weekly-summary.tsx`).
 
+## 3e. Grounded history and deterministic analytics (added 2026-11-15)
+
+### New fields on every assessment (chat and weekly summary)
+
+Schemas: `assessmentSchema`, `consideredRecordSchema` in `src/lib/validations/assistant.ts`. Older stored assessments parse with these fields as empty lists.
+
+```json
+"assessment": {
+  "summary": "…model interpretation, server-checked…",
+  "possibleExplanations": [
+    { "title": "…", "whyItMayBeRelevant": "…interpretation…",
+      "supportingHistory": [{ "logId": "uuid", "date": "2026-11-13", "observation": "symptoms: \"Mild lower back discomfort\"; pain level 3/10", "matchedTerms": ["back"] }],
+      "unknowns": ["…"] }
+  ],
+  "recordedFacts": [
+    "Logs mentioning \"back\": 6 logs on 6 days in the last 30 days, between 2026-11-02 and 2026-11-13 (3 separate stretches of days; the longest was 2 days in a row).",
+    "Recorded pain on those logs: 2–4/10, average 2.8/10 (6 logs with a pain level)."
+  ],
+  "historyConsidered": [
+    { "logId": "uuid", "date": "2026-11-13", "observation": "…", "matchedTerms": ["back"], "reason": "symptom_match", "cited": true },
+    { "logId": "uuid", "date": "2026-11-12", "observation": "sleep 6h; sleep quality 2/5", "matchedTerms": [], "reason": "recent_measurement", "cited": false }
+  ],
+  "nextSteps": ["…"], "sources": [], "disclaimer": "…"
+}
+```
+
+- **Recorded facts vs interpretation.** `recordedFacts` and every `observation` are written by the server from the user's logs, so they are recorded facts. `summary`, `title` and `whyItMayBeRelevant` are the model's interpretation (server-checked). The UI must show them in separate, labelled sections, for example "From your records" and "MediMate's interpretation".
+- **Which records were used.** `historyConsidered` lists every record given to the model, newest first (max 20). `reason` is `symptom_match` (it shares `matchedTerms` with the concern) or `recent_measurement` (sleep/fluid/activity/mood from the last 7 days). `cited: true` means a possible explanation used it.
+- **How records are chosen** (`rankRelevantLogs`):
+  - one point per shared term, plus one if it is in the recorded pain location;
+  - recency and recorded pain only break ties;
+  - unrelated logs are dropped;
+  - duplicates (same day, same symptom text) keep the highest-pain entry;
+  - top 5 from the last 30 days.
+
+### `GET /api/insights/analytics?days=30`
+
+Signed-in only. `days` is 7, 14 or 30 (default 30); anything else gives 400. Deterministic: no AI call and no rate limit. Schema: `src/lib/validations/analytics.ts` (`analyticsResponseSchema`). Client: `getHealthAnalytics(days)`.
+
+```json
+{
+  "windowDays": 30, "windowStart": "2026-10-17", "windowEnd": "2026-11-15",
+  "logCount": 14, "symptomLogCount": 6,
+  "symptoms": [{
+    "topic": "back", "logCount": 6, "dayCount": 6,
+    "severity": { "recordedCount": 6, "average": 2.8, "lowest": 2, "highest": 4 },
+    "severityChange": { "earlierAverage": 2.5, "laterAverage": 3, "direction": "about_the_same" },
+    "recurrence": { "episodes": 3, "longestEpisodeDays": 2, "firstDate": "2026-11-02", "lastDate": "2026-11-13" },
+    "evidenceLogIds": ["uuid"]
+  }],
+  "daily": [{ "date": "2026-11-13", "painLevel": 3, "sleepHours": 7.5, "sleepQuality": 4, "waterMl": 1500, "activityMinutes": 15, "logIds": ["uuid"] }],
+  "associations": [{ "topic": "back", "measure": "sleepHours", "daysWithTopic": 6, "averageWithTopic": 7.1, "daysWithout": 8, "averageWithout": 6.9, "evidenceLogIds": ["uuid"] }],
+  "note": "Calculated from your own logs. Figures show what was recorded together, not causes, and are not a diagnosis."
+}
+```
+
+- `symptoms`: at most 8 topics, most frequent first. A topic is a keyword from the user's own symptom text or pain location, with generic words ("pain", "discomfort") removed; "headache" counts as "head". "No symptom reported" logs are not counted.
+- `severity`: recorded pain (0–10) on that topic's logs; values are null when none were recorded.
+- `severityChange`: compares the first half of the window with the second half. It needs at least 2 recorded pain levels in each half, otherwise `not_enough_data`. A change of at least 1 point is `higher` or `lower`; anything smaller is `about_the_same`.
+- `recurrence.episodes`: runs of consecutive days with the topic logged.
+- `daily`: one entry per day, oldest first. Each value is null when nothing was recorded; values are never filled in. `painLevel` and `sleepHours` are the day's highest, `waterMl` and `activityMinutes` are day totals, and `sleepQuality` is the day's average.
+- `associations`: for the top 3 topics, the average sleep hours, sleep quality, activity or water on days with the topic vs other days. A measure appears only when each side has at least 2 days. **Show these as "recorded together", never as a cause or effect**, and always show `note`.
+- Errors: 400 (`days`), 401, 500.
+
 ## 4. Status and error behavior
 
 - `400`: malformed or invalid request.
