@@ -141,6 +141,7 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 
 - On a retryable assistant error, keeps the submitted text in the message field and shows the server error message with a Retry action.
 - Retrying resends the same message without appending another user transcript entry; the field clears only after a successful response.
+- A `prompt` safety level on a follow-up or assessment shows the server message above the reply in an amber `role="status"` notice titled “Contact a GP or NHS 111 today.” Urgent responses retain their separate prominent red alert.
 
 ### Responsive assistant popup and voice input
 
