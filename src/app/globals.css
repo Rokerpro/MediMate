@@ -54,6 +54,7 @@ html {
 :root[data-theme="dark"] [class~="bg-[#fbfaf5]"],
 :root[data-theme="dark"] [class~="bg-[#fbfaf6]"],
 :root[data-theme="dark"] [class~="bg-[#fffdf8]"],
+:root[data-theme="dark"] [class~="bg-[#fffdf8]/70"],
 :root[data-theme="dark"] [class~="bg-[#faf8f2]"],
 :root[data-theme="dark"] [class~="bg-[#faf8f2]/70"],
 :root[data-theme="dark"] [class~="bg-[#fbfaf5]/95"],
@@ -87,6 +88,9 @@ html {
 :root[data-theme="dark"] [class~="hover:bg-slate-50"]:hover,
 :root[data-theme="dark"] [class~="hover:bg-[#dfe5d6]"]:hover,
 :root[data-theme="dark"] [class~="hover:bg-[#eef0e5]"]:hover,
+:root[data-theme="dark"] [class~="hover:bg-[#eeece1]"]:hover,
+:root[data-theme="dark"] [class~="hover:bg-[#f3f4ec]"]:hover,
+:root[data-theme="dark"] [class~="hover:bg-[#f2f2f2]"]:hover,
 :root[data-theme="dark"] [class~="hover:bg-[#eff1e9]"]:hover,
 :root[data-theme="dark"] [class~="hover:bg-[#f5f3e9]"]:hover {
   background-color: var(--theme-surface-alt) !important;
@@ -118,6 +122,29 @@ html {
 :root[data-theme="dark"] [class~="border-slate-600"],
 :root[data-theme="dark"] [class~="border-slate-700"] {
   border-color: var(--theme-border) !important;
+}
+
+:root[data-theme="dark"] [class~="hover:bg-[#f5ddd2]"]:hover {
+  background-color: #3a2420 !important;
+}
+
+/* Light call-to-action chip on the dark dashboard card. */
+.dashboard-cta {
+  background-color: #f2eee2;
+  color: #284537;
+}
+
+.group:hover .dashboard-cta {
+  background-color: #ffffff;
+}
+
+:root[data-theme="dark"] .dashboard-cta {
+  background-color: #d9c99f;
+  color: #16301f;
+}
+
+:root[data-theme="dark"] .group:hover .dashboard-cta {
+  background-color: #e8dcb8;
 }
 
 :root[data-theme="dark"] [class~="bg-[#d2a06c]"] {

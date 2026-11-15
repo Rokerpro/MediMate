@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingSkeleton } from "@/components/loading-skeleton";
+import { PageHeader } from "@/components/page-header";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createReminder,
@@ -289,21 +291,21 @@ export function Reminders({
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
-      <div>
-        <p className="text-sm font-medium text-blue-700">In-app reminders</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Reminders</h1>
-        <p className="mt-2 max-w-2xl text-slate-600">
-          Reminders you set yourself. MediMate does not suggest or check medication timing or doses. Ask your pharmacist or prescriber about how to take a medicine.
-        </p>
-        <p className="mt-2 text-sm text-slate-500">
-          Medication reminders can use notifications or your sign-in email; other reminders remain in-app only.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="In-app reminders"
+        title="Reminders"
+        description={
+          <>
+            <p>Reminders you set yourself. MediMate does not suggest or check medication timing or doses. Ask your pharmacist or prescriber about how to take a medicine.</p>
+            <p className="mt-2 text-sm text-[#6b776f]">Medication reminders can use notifications or your sign-in email; other reminders remain in-app only.</p>
+          </>
+        }
+      />
 
       <ReminderNotifications />
       <ReminderDoses targetDoseId={targetDoseId} confirmFailed={confirmFailed} />
 
-      <section aria-labelledby="reminder-form-heading" className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+      <section aria-labelledby="reminder-form-heading" className="rounded-2xl border border-[#dfe3d6] bg-[#fffdf8] p-5 shadow-sm sm:p-8">
         <h2 id="reminder-form-heading" className="text-xl font-semibold">
           {editingId ? "Edit reminder" : "Create a reminder"}
         </h2>
@@ -311,54 +313,54 @@ export function Reminders({
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="space-y-1 text-sm font-medium">
               Title
-              <input value={form.title} onChange={(event) => updateField("title", event.target.value)} aria-invalid={Boolean(fieldErrors.title)} className="w-full rounded-md border border-slate-300 px-3 py-2 font-normal focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200" maxLength={120} required />
+              <input value={form.title} onChange={(event) => updateField("title", event.target.value)} aria-invalid={Boolean(fieldErrors.title)} className="w-full rounded-full border border-[#cbd6c5] px-3 py-2 font-normal focus:border-[#254a38] focus:outline-none focus:ring-2 focus:ring-[#d8e1cf]" maxLength={120} required />
               {fieldErrors.title && <span className="block text-xs font-normal text-red-700">{fieldErrors.title}</span>}
             </label>
             <label className="space-y-1 text-sm font-medium">
               Remind at
-              <input type="datetime-local" value={form.remindAt} onChange={(event) => updateField("remindAt", event.target.value)} aria-invalid={Boolean(fieldErrors.remindAt)} className="w-full rounded-md border border-slate-300 px-3 py-2 font-normal focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200" required />
+              <input type="datetime-local" value={form.remindAt} onChange={(event) => updateField("remindAt", event.target.value)} aria-invalid={Boolean(fieldErrors.remindAt)} className="w-full rounded-full border border-[#cbd6c5] px-3 py-2 font-normal focus:border-[#254a38] focus:outline-none focus:ring-2 focus:ring-[#d8e1cf]" required />
               {fieldErrors.remindAt && <span className="block text-xs font-normal text-red-700">{fieldErrors.remindAt}</span>}
             </label>
             <label className="space-y-1 text-sm font-medium">
               Category
-              <select value={form.category} onChange={(event) => updateField("category", event.target.value as ReminderCategory)} className="w-full rounded-md border border-slate-300 px-3 py-2 font-normal focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200">
+              <select value={form.category} onChange={(event) => updateField("category", event.target.value as ReminderCategory)} className="w-full rounded-full border border-[#cbd6c5] px-3 py-2 font-normal focus:border-[#254a38] focus:outline-none focus:ring-2 focus:ring-[#d8e1cf]">
                 {REMINDER_CATEGORIES.map((category) => <option key={category} value={category}>{categoryLabels[category]}</option>)}
               </select>
               {form.category === "medication" && (
-                <span className="block text-xs font-normal text-slate-600">
+                <span className="block text-xs font-normal text-[#5b6b61]">
                   You&apos;ll be notified until you confirm you took it.
                 </span>
               )}
             </label>
             <label className="space-y-1 text-sm font-medium">
               Repeat
-              <select value={form.repeat} onChange={(event) => updateField("repeat", event.target.value as ReminderRepeat)} className="w-full rounded-md border border-slate-300 px-3 py-2 font-normal focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200">
+              <select value={form.repeat} onChange={(event) => updateField("repeat", event.target.value as ReminderRepeat)} className="w-full rounded-full border border-[#cbd6c5] px-3 py-2 font-normal focus:border-[#254a38] focus:outline-none focus:ring-2 focus:ring-[#d8e1cf]">
                 {REMINDER_REPEATS.map((repeat) => <option key={repeat} value={repeat}>{repeatLabels[repeat]}</option>)}
               </select>
             </label>
           </div>
           <label className="block space-y-1 text-sm font-medium">
-            Notes <span className="font-normal text-slate-500">(optional)</span>
-            <textarea value={form.notes} onChange={(event) => updateField("notes", event.target.value)} aria-invalid={Boolean(fieldErrors.notes)} className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 font-normal focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200" maxLength={500} />
+            Notes <span className="font-normal text-[#6b776f]">(optional)</span>
+            <textarea value={form.notes} onChange={(event) => updateField("notes", event.target.value)} aria-invalid={Boolean(fieldErrors.notes)} className="min-h-24 w-full rounded-full border border-[#cbd6c5] px-3 py-2 font-normal focus:border-[#254a38] focus:outline-none focus:ring-2 focus:ring-[#d8e1cf]" maxLength={500} />
             {fieldErrors.notes && <span className="block text-xs font-normal text-red-700">{fieldErrors.notes}</span>}
           </label>
           <div className="flex flex-wrap gap-3">
-            <button type="submit" disabled={saving} className="rounded-md bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">
+            <button type="submit" disabled={saving} className="rounded-full bg-[#254a38] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1c3a2c] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">
               {editingId ? "Save changes" : "Review reminder"}
             </button>
-            {editingId && <button type="button" onClick={cancelEdit} className="rounded-md border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">Cancel</button>}
+            {editingId && <button type="button" onClick={cancelEdit} className="rounded-full border border-[#cbd6c5] px-4 py-2.5 text-sm font-semibold text-[#24352d] hover:bg-[#f3f4ec] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">Cancel</button>}
           </div>
         </form>
 
         {pendingCreate && (
-          <div className="mt-5 space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-4" role="dialog" aria-labelledby="confirm-reminder-heading">
-            <h3 id="confirm-reminder-heading" className="font-semibold text-blue-950">Confirm this reminder</h3>
-            <p className="text-sm text-blue-950">
+          <div className="mt-5 space-y-3 rounded-lg border border-[#cbd6c5] bg-[#eef0e5] p-4" role="dialog" aria-labelledby="confirm-reminder-heading">
+            <h3 id="confirm-reminder-heading" className="font-semibold text-[#24352d]">Confirm this reminder</h3>
+            <p className="text-sm text-[#24352d]">
               “{pendingCreate.title}” on {displayDate(toOffsetIso(pendingCreate.remindAt))}. You are choosing this wording and timing yourself.
             </p>
             <div className="flex flex-wrap gap-3">
-              <button type="button" onClick={() => void saveReminder()} disabled={saving} className="rounded-md bg-blue-800 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-900 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">Confirm and save</button>
-              <button type="button" onClick={() => setPendingCreate(null)} disabled={saving} className="rounded-md border border-blue-300 px-3 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">Change</button>
+              <button type="button" onClick={() => void saveReminder()} disabled={saving} className="rounded-full bg-[#1c3a2c] px-3 py-2 text-sm font-semibold text-white hover:bg-[#16301f] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">Confirm and save</button>
+              <button type="button" onClick={() => setPendingCreate(null)} disabled={saving} className="rounded-full border border-[#cbd6c5] px-3 py-2 text-sm font-semibold text-[#254a38] hover:bg-[#eef0e5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">Change</button>
             </div>
           </div>
         )}
@@ -368,43 +370,43 @@ export function Reminders({
 
       <section aria-labelledby="reminders-list-heading" className="space-y-4">
         <h2 id="reminders-list-heading" className="text-xl font-semibold">Your reminders</h2>
-        {loadState === "loading" && <p role="status">Loading reminders…</p>}
+        {loadState === "loading" && <LoadingSkeleton label="Loading reminders…" rows={2} />}
         {loadState === "error" && (
           <div role="alert" className="space-y-3 rounded-lg border border-red-200 bg-red-50 p-4 text-red-900">
             <p>{loadError || "We could not load your reminders. Please try again."}</p>
-            <button type="button" onClick={() => void load()} className="rounded-md bg-red-800 px-3 py-2 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600">Retry</button>
+            <button type="button" onClick={() => void load()} className="rounded-full bg-red-800 px-3 py-2 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600">Retry</button>
           </div>
         )}
-        {loadState === "ready" && sortedReminders.length === 0 && <p className="rounded-lg border border-dashed border-slate-300 bg-white p-5 text-slate-600">No reminders yet</p>}
+        {loadState === "ready" && sortedReminders.length === 0 && <p className="rounded-2xl border border-dashed border-[#cbd6c5] bg-[#fffdf8]/70 p-5 text-[#5b6b61]">No reminders yet</p>}
         {loadState === "ready" && sortedReminders.length > 0 && (
           <ul className="space-y-3">
             {sortedReminders.map((reminder) => (
-              <li key={reminder.id} className={`rounded-xl border bg-white p-5 shadow-sm ${reminder.active ? "border-slate-200" : "border-slate-300 opacity-80"}`}>
+              <li key={reminder.id} className={`rounded-2xl border bg-[#fffdf8] p-5 shadow-sm ${reminder.active ? "border-[#dfe3d6]" : "border-[#cbd6c5] opacity-80"}`}>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="break-words text-lg font-semibold">{reminder.title}</h3>
-                      <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">{categoryLabels[reminder.category]}</span>
-                      {!reminder.active && <span className="rounded-full bg-slate-200 px-2 py-1 text-xs text-slate-700">Paused</span>}
+                      <span className="rounded-full bg-[#eeece1] px-2 py-1 text-xs text-[#40564a]">{categoryLabels[reminder.category]}</span>
+                      {!reminder.active && <span className="rounded-full bg-[#e4e1d2] px-2 py-1 text-xs text-[#40564a]">Paused</span>}
                     </div>
-                    <p className="mt-2 text-sm text-slate-700">
+                    <p className="mt-2 text-sm text-[#40564a]">
                       {reminder.active && reminder.nextDueAt && currentTime !== null && new Date(reminder.nextDueAt).getTime() < currentTime ? "Overdue · " : ""}
                       {reminder.active ? `Due ${displayDate(reminder.nextDueAt)}` : "Paused"}
                       {reminder.repeat !== "none" && ` · ${repeatLabels[reminder.repeat]}`}
                     </p>
-                    {reminder.notes && <p className="mt-2 whitespace-pre-wrap break-words text-sm text-slate-600">{reminder.notes}</p>}
+                    {reminder.notes && <p className="mt-2 whitespace-pre-wrap break-words text-sm text-[#5b6b61]">{reminder.notes}</p>}
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
-                    <button type="button" onClick={() => void toggleActive(reminder)} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">{reminder.active ? "Pause" : "Resume"}</button>
-                    <button type="button" onClick={() => startEdit(reminder)} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">Edit</button>
-                    <button type="button" onClick={() => setPendingDelete(reminder.id)} className="rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-800 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600">Delete</button>
+                    <button type="button" onClick={() => void toggleActive(reminder)} className="rounded-full border border-[#cbd6c5] px-3 py-2 text-sm font-semibold hover:bg-[#f3f4ec] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">{reminder.active ? "Pause" : "Resume"}</button>
+                    <button type="button" onClick={() => startEdit(reminder)} className="rounded-full border border-[#cbd6c5] px-3 py-2 text-sm font-semibold hover:bg-[#f3f4ec] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">Edit</button>
+                    <button type="button" onClick={() => setPendingDelete(reminder.id)} className="rounded-full border border-red-300 px-3 py-2 text-sm font-semibold text-red-800 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600">Delete</button>
                   </div>
                 </div>
                 {pendingDelete === reminder.id && (
                   <div className="mt-4 flex flex-wrap items-center gap-3 rounded-md border border-red-200 bg-red-50 p-3" role="alert">
                     <span className="text-sm text-red-900">Delete this reminder?</span>
-                    <button type="button" onClick={() => void removeReminder()} className="rounded-md bg-red-800 px-3 py-2 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600">Delete</button>
-                    <button type="button" onClick={() => setPendingDelete(null)} className="rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600">Cancel</button>
+                    <button type="button" onClick={() => void removeReminder()} className="rounded-full bg-red-800 px-3 py-2 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600">Delete</button>
+                    <button type="button" onClick={() => setPendingDelete(null)} className="rounded-full border border-red-300 px-3 py-2 text-sm font-semibold text-red-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600">Cancel</button>
                   </div>
                 )}
               </li>

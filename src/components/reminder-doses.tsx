@@ -100,7 +100,7 @@ export function ReminderDoses({
     <section aria-labelledby="recent-doses-heading" className="space-y-4">
       <div>
         <h2 id="recent-doses-heading" className="text-xl font-semibold">Recent medicine doses</h2>
-        <p className="mt-1 text-sm text-slate-600">Recent doses from your medication reminders.</p>
+        <p className="mt-1 text-sm text-[#5b6b61]">Recent doses from your medication reminders.</p>
       </div>
 
       {confirmFailed && (
@@ -116,19 +116,19 @@ export function ReminderDoses({
           <button
             type="button"
             onClick={() => void load(true)}
-            className="rounded-md bg-red-800 px-3 py-2 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+            className="rounded-full bg-red-800 px-3 py-2 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
           >
             Retry
           </button>
         </div>
       )}
       {loadState === "ready" && targetDoseId && !targetDose && (
-        <p role="status" className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
+        <p role="status" className="rounded-lg border border-[#dfe3d6] bg-white p-4 text-sm text-[#40564a]">
           This reminder has expired or was not found.
         </p>
       )}
       {loadState === "ready" && doses.length === 0 && !targetDoseId && (
-        <p className="rounded-lg border border-dashed border-slate-300 bg-white p-5 text-slate-600">
+        <p className="rounded-2xl border border-dashed border-[#cbd6c5] bg-[#fffdf8]/70 p-5 text-[#5b6b61]">
           No medicine doses in the last 24 hours.
         </p>
       )}
@@ -140,13 +140,13 @@ export function ReminderDoses({
               ? "bg-green-50 text-green-800"
               : dose.status === "missed"
                 ? "bg-amber-50 text-amber-900"
-                : "bg-blue-50 text-blue-900";
+                : "bg-[#eef0e5] text-[#254a38]";
             return (
               <li
                 key={dose.id}
                 id={`dose-${dose.id}`}
                 tabIndex={highlighted ? -1 : undefined}
-                className={`rounded-xl border bg-white p-5 shadow-sm ${highlighted ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200"}`}
+                className={`rounded-2xl border bg-[#fffdf8] p-5 shadow-sm ${highlighted ? "border-[#bd7e3e] ring-2 ring-[#ead9be]" : "border-[#dfe3d6]"}`}
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
@@ -156,8 +156,8 @@ export function ReminderDoses({
                         {statusLabel(dose.status)}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm text-slate-700">Due {displayDate(dose.dueAt)}</p>
-                    <p className="mt-1 text-sm text-slate-600">Reminder {dose.notificationsSent} of 3</p>
+                    <p className="mt-2 text-sm text-[#40564a]">Due {displayDate(dose.dueAt)}</p>
+                    <p className="mt-1 text-sm text-[#5b6b61]">Reminder {dose.notificationsSent} of 3</p>
                     {dose.status === "missed" && dose.canConfirm && (
                       <p className="mt-2 text-sm text-amber-900">
                         Missed. You can still confirm until {displayDate(dose.confirmBy)}.
@@ -169,7 +169,7 @@ export function ReminderDoses({
                       type="button"
                       onClick={() => void confirmDose(dose)}
                       disabled={confirmingId === dose.id}
-                      className={`w-full shrink-0 rounded-md px-4 py-2.5 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 sm:w-auto ${highlighted ? "bg-blue-800 hover:bg-blue-900 sm:px-6 sm:py-3 sm:text-base" : "bg-blue-700 hover:bg-blue-800"}`}
+                      className={`w-full shrink-0 rounded-full px-4 py-2.5 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 sm:w-auto ${highlighted ? "bg-[#1c3a2c] hover:bg-[#16301f] sm:px-6 sm:py-3 sm:text-base" : "bg-[#254a38] hover:bg-[#1c3a2c]"}`}
                     >
                       {confirmingId === dose.id ? "Confirming…" : "I took it"}
                     </button>

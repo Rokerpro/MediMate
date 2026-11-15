@@ -10,7 +10,7 @@ const HEIGHT = 200;
 const MARGIN = { top: 12, right: 12, bottom: 28, left: 34 };
 const PLOT_W = WIDTH - MARGIN.left - MARGIN.right;
 const PLOT_H = HEIGHT - MARGIN.top - MARGIN.bottom;
-const LINE_COLOR = "#1d4ed8"; // blue-700, the app's primary colour
+const LINE_COLOR = "#3d6149"; // MediMate green
 
 function shortDate(date: string): string {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
@@ -49,21 +49,21 @@ export function TrendChart({ title, unitLabel, points, value, yMax, yTicks, form
     : `${title}: no measurements recorded in this period.`;
 
   return (
-    <figure className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm print:break-inside-avoid print:shadow-none">
+    <figure className="rounded-xl border border-[#dfe3d6] bg-white p-4 shadow-sm print:break-inside-avoid print:shadow-none">
       <figcaption className="flex items-baseline justify-between gap-2">
-        <span className="font-semibold text-slate-900">{title}</span>
-        <span className="text-xs text-slate-500">{unitLabel}</span>
+        <span className="font-semibold text-[#24352d]">{title}</span>
+        <span className="text-xs text-[#6b776f]">{unitLabel}</span>
       </figcaption>
       {recorded.length === 0 ? (
-        <p className="mt-3 rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-600">
+        <p className="mt-3 rounded-lg border border-dashed border-[#cbd6c5] p-6 text-center text-sm text-[#5b6b61]">
           No measurements recorded in the last {points.length} days.
         </p>
       ) : (
         <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={summary} className="mt-2 h-auto w-full">
           {yTicks.map((tick) => (
             <g key={tick}>
-              <line x1={MARGIN.left} x2={WIDTH - MARGIN.right} y1={y(tick)} y2={y(tick)} stroke="#e2e8f0" strokeWidth={1} />
-              <text x={MARGIN.left - 6} y={y(tick)} textAnchor="end" dominantBaseline="middle" fontSize={11} fill="#64748b">
+              <line x1={MARGIN.left} x2={WIDTH - MARGIN.right} y1={y(tick)} y2={y(tick)} stroke="#e2e5da" strokeWidth={1} />
+              <text x={MARGIN.left - 6} y={y(tick)} textAnchor="end" dominantBaseline="middle" fontSize={11} fill="#6b776f">
                 {tick}
               </text>
             </g>
@@ -75,7 +75,7 @@ export function TrendChart({ title, unitLabel, points, value, yMax, yTicks, form
               y={HEIGHT - 8}
               textAnchor={index === 0 ? "start" : index === points.length - 1 ? "end" : "middle"}
               fontSize={11}
-              fill="#64748b"
+              fill="#6b776f"
             >
               {shortDate(points[index]!.date)}
             </text>
@@ -125,7 +125,7 @@ export function HealthTrends({ logs, now }: { logs: readonly HealthLog[]; now?: 
           format={(v) => `${v} h`}
         />
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-[#6b776f]">
         User-reported measurements from the last {TREND_DAYS} days, not diagnostic indicators. Gaps are days with nothing recorded.
       </p>
     </div>

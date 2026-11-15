@@ -87,7 +87,7 @@ export function AccountDeletion() {
               aria-describedby="delete-account-warning"
               autoComplete="off"
               disabled={deleting}
-              className="mt-1 w-full max-w-sm rounded-lg border border-red-300 bg-white px-3 py-2 text-slate-950 outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+              className="mt-1 w-full max-w-sm rounded-lg border border-red-300 bg-white px-3 py-2 text-[#24352d] outline-none focus-visible:ring-2 focus-visible:ring-red-600"
             />
           </div>
 
@@ -110,7 +110,7 @@ export function AccountDeletion() {
               type="button"
               onClick={cancelConfirmation}
               disabled={deleting}
-              className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full border border-[#cbd6c5] bg-white px-4 py-2 text-sm font-semibold text-[#24352d] hover:bg-[#f3f4ec] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c98b48] disabled:cursor-not-allowed disabled:opacity-60"
             >
               Cancel
             </button>

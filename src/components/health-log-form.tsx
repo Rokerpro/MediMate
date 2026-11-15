@@ -109,7 +109,7 @@ export function HealthLogForm({ onCreated }: { onCreated: (log: HealthLog) => vo
         <Field id="activityMinutes" label="Activity (minutes)" type="number" min="0" value={values.activityMinutes} error={fieldErrors.activityMinutes} onChange={(value) => updateField("activityMinutes", value)} />
       </div>
       <Field id="notes" label="Notes (optional)" value={values.notes} error={fieldErrors.notes} multiline onChange={(value) => updateField("notes", value)} />
-      <button type="submit" disabled={saving} className="rounded-md bg-blue-700 px-4 py-2.5 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-600">
+      <button type="submit" disabled={saving} className="rounded-full bg-[#254a38] px-4 py-2.5 font-semibold text-white hover:bg-[#1c3a2c] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-[#c98b48]">
         {saving ? "Saving…" : "Save daily log"}
       </button>
     </form>
@@ -139,12 +139,12 @@ function Field({
   required?: boolean;
   onChange: (value: string) => void;
 }) {
-  const className = `mt-1 w-full rounded-md border bg-white px-3 py-2 text-slate-950 shadow-sm outline-none focus:ring-2 ${
-    error ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-blue-600"
+  const className = `mt-1 w-full rounded-xl border bg-white px-3.5 py-2.5 text-[#24352d] shadow-sm outline-none transition focus:ring-2 ${
+    error ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-[#cbd6c5] focus:border-[#789078] focus:ring-[#d8e1cf]"
   }`;
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-800">{label}</label>
+      <label htmlFor={id} className="block text-sm font-medium text-[#24352d]">{label}</label>
       {multiline ? (
         <textarea id={id} rows={4} value={value} required={required} onChange={(event) => onChange(event.target.value)} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} className={className} />
       ) : (
