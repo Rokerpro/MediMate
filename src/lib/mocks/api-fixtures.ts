@@ -17,6 +17,7 @@ export const mockProfileResponse: ProfileResponse = {
     displayName: "Alex Demo",
     age: 24,
     gender: null,
+    location: null,
     heightCm: 175,
     weightKg: 70,
     conditions: [],

@@ -103,6 +103,7 @@ export function HealthSummary() {
           <Item label="Name" value={profile.displayName} />
           <Item label="Age" value={profile.age !== null ? String(profile.age) : "Not recorded"} />
           <Item label="Gender" value={profile.gender ?? "Not recorded"} />
+          <Item label="Location" value={profile.location ?? "Not recorded"} />
           <Item label="Height" value={profile.heightCm !== null ? `${profile.heightCm} cm` : "Not recorded"} />
           <Item label="Weight" value={profile.weightKg !== null ? `${profile.weightKg} kg` : "Not recorded"} />
         </dl>

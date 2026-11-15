@@ -104,6 +104,7 @@ export const PROTECTED_PREFIXES = [
   "/reminders",
   "/summary",
   "/prescriptions",
+  "/welcome",
 ] as const;
 
 export function isProtectedPath(pathname: string): boolean {

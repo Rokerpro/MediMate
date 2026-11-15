@@ -46,6 +46,7 @@ Returns the signed-in user's profile. `age` is `null` for a new account until th
     "displayName": "Alex",
     "age": 24,
     "gender": null,
+    "location": null,
     "heightCm": 175,
     "weightKg": 70,
     "conditions": [],
@@ -58,7 +59,9 @@ Returns the signed-in user's profile. `age` is `null` for a new account until th
 
 ### `PATCH /api/profile`
 
-Accepts only editable profile fields. Return `{ "profile": { ... } }` using the same shape. Validate numeric ranges and string lengths. Gender is optional and must not be used to make unsupported inferences.
+Accepts only editable profile fields. Return `{ "profile": { ... } }` using the same shape. Validate numeric ranges and string lengths. Gender is optional and must not be used to make unsupported inferences. `location` (added 2026-11-15, migration `0004`) is optional free text (town or country, max 100 characters; blank is stored as `null`). It is shown on the profile and summary only and is never sent to the AI.
+
+**Onboarding:** while `displayName` is still `"New user"` or `age` is `null`, the app shell sends the user to `/welcome` (`src/components/onboarding-gate.tsx`). That page asks for full name and age (required) plus location and the other optional fields, then continues to the page they were heading to.
 
 ## 2. Health logs
 

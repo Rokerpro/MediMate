@@ -6,6 +6,7 @@ import {
   type Profile,
 } from "@/lib/validations";
 import { getProfile, updateProfile } from "@/lib/api-client";
+import { NEW_USER_NAME } from "@/lib/profile-onboarding";
 
 type FieldErrors = Record<string, string>;
 type ProfileDraft = Omit<Profile, "age"> & { age: number | null };
@@ -27,7 +28,19 @@ function parseList(value: string) {
     .filter(Boolean);
 }
 
-export function ProfileForm() {
+/** Shows the placeholder name as an empty field so the user types their own. */
+function toDraft(profile: Profile, onboarding: boolean): ProfileDraft {
+  return onboarding && profile.displayName === NEW_USER_NAME ? { ...profile, displayName: "" } : profile;
+}
+
+export function ProfileForm({
+  onboarding = false,
+  onSaved,
+}: {
+  /** First-run mode: name and age required, placeholder name cleared, "Continue" button. */
+  onboarding?: boolean;
+  onSaved?: () => void;
+} = {}) {
   const [profile, setProfile] = useState<ProfileDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,7 +53,7 @@ export function ProfileForm() {
     setLoading(true);
     setLoadError(null);
     try {
-      setProfile((await getProfile()).profile);
+      setProfile(toDraft((await getProfile()).profile, onboarding));
     } catch {
       setLoadError("We could not load the profile. Please try again.");
     } finally {
@@ -52,7 +65,7 @@ export function ProfileForm() {
     let active = true;
     getProfile()
       .then((response) => {
-        if (active) setProfile(response.profile);
+        if (active) setProfile(toDraft(response.profile, onboarding));
       })
       .catch(() => {
         if (active) setLoadError("We could not load the profile. Please try again.");
@@ -63,7 +76,7 @@ export function ProfileForm() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [onboarding]);
 
   function updateField<K extends keyof ProfileDraft>(field: K, value: ProfileDraft[K]) {
     setProfile((current) => (current ? { ...current, [field]: value } : current));
@@ -86,12 +99,17 @@ export function ProfileForm() {
       setFieldErrors(getFieldErrors(parsed.error));
       return;
     }
+    if (onboarding && (parsed.data.displayName?.trim() === NEW_USER_NAME || parsed.data.age == null)) {
+      setFieldErrors({ displayName: "Please enter your name.", age: "Please enter your age." });
+      return;
+    }
 
     setSaving(true);
     try {
       const response = await updateProfile(parsed.data);
       setProfile(response.profile);
       setSuccessMessage("Profile saved.");
+      onSaved?.();
     } catch {
       setSaveError("We could not save your profile. Please try again.");
     } finally {
@@ -133,7 +151,7 @@ export function ProfileForm() {
       <div className="grid gap-5 md:grid-cols-2">
         <TextField
           id="displayName"
-          label="Display name"
+          label={onboarding ? "Full name" : "Display name"}
           value={profile.displayName}
           error={fieldErrors.displayName}
           onChange={(value) => updateField("displayName", value)}
@@ -152,6 +170,13 @@ export function ProfileForm() {
           error={fieldErrors.gender}
           options={["Male", "Female", "Other"]}
           onChange={(value) => updateField("gender", value || null)}
+        />
+        <TextField
+          id="location"
+          label="Location (town or country, optional)"
+          value={profile.location ?? ""}
+          error={fieldErrors.location}
+          onChange={(value) => updateField("location", value || null)}
         />
         <NumberField
           id="heightCm"
@@ -201,7 +226,7 @@ export function ProfileForm() {
         disabled={saving}
         className="rounded-md bg-blue-700 px-4 py-2.5 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-600"
       >
-        {saving ? "Saving…" : "Save profile"}
+        {saving ? "Saving…" : onboarding ? "Continue to MediMate" : "Save profile"}
       </button>
     </form>
   );

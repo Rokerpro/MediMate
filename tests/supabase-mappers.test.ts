@@ -16,6 +16,7 @@ const profileRow = {
   display_name: "Alex Demo",
   age: 24,
   gender: null,
+  location: null,
   height_cm: 175,
   weight_kg: "70.0",
   conditions: [],
