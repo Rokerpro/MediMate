@@ -19,6 +19,10 @@ Live demo: https://medi-mate-mauve.vercel.app
 - **Uses your history:** the assessment shows which dated log entries it used, keeps them separate from medical-reference information, and says plainly when no related history was found.
 - **Weekly AI summary:** on demand from the dashboard, a summary of the last 7 days of logs with patterns written as associations (never causes), using the same safety checks and output validation as the chat.
 - **Voice input:** dictate a message with the browser's built-in speech recognition (Chrome, Edge and Safari; not Firefox or Brave). In Chrome the audio is processed by Google's speech service.
+- **Medicine reminders that notify you:** for a medication reminder, MediMate sends a phone/desktop notification (or an email when notifications are off) at the time you set, then again every 5 minutes up to 3 times until you tap "I took it". After that the dose is marked missed and can still be confirmed for an hour. It only repeats your own reminder text and never advises on medicines or doses.
+- **Installable app:** MediMate is a PWA; on Android it offers to install itself to the home screen, and it has an offline page.
+- **Insights:** symptom frequency, recorded pain over time and measures recorded on the same days, calculated from your logs (no AI), for 7, 14 or 30 days.
+- **Light and dark theme** across the site.
 - **Reminders, summary and prescription explainer:** user-written in-app reminders, a printable summary for a clinician, and plain-language meanings of common prescription abbreviations (no dose advice).
 - **Safety first:** warning signs from NHS emergency lists are checked by fixed rules *before* the AI is called. If one matches, the user gets urgent care guidance and the AI is not used. Signs the NHS lists under "ask for an urgent GP appointment or call 111" add that advice to the reply, which the AI cannot override.
 
@@ -74,7 +78,7 @@ Before a demo, run `supabase/reset-demo.sql` to restore the synthetic data (logs
 ```bash
 npm run lint
 npm run typecheck
-npm test           # 305 tests: safety rules, retrieval, prompts, output checks, auth, weekly summary
+npm test           # 317 tests: safety rules, retrieval, prompts, output checks, auth, weekly summary
 npm run scorecard  # offline safety scorecard: 266/266 fixed warning-sign, false-alarm and unsafe-output checks
 npm run eval       # evaluation suite: emergency recall, false positives, schema validity, evidence accuracy,
                    # unsupported claims, data isolation (add -- --live 1 for a small real-model sample)

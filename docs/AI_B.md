@@ -1,6 +1,6 @@
 # AI_B — Backend/AI Context (Person A)
 
-Last updated: 2026-11-14
+Last updated: 2026-11-15
 
 Written by Person A's assistant (Claude Code). Naming note: in these context files **AI_A = frontend (Person B)** and **AI_B = backend (Person A)**. `CLAUDE.md` calls the backend owner "Person A".
 
@@ -8,6 +8,7 @@ Read with `docs/SHARED_CONTEXT.md`, `docs/AI_A.md`, `CLAUDE.md`, `docs/API_CONTR
 
 ## 1. Current branch, commits and deployment
 
+- **2026-11-15 handover:** the owner handed the whole repository (frontend included) to this assistant. Person B's last five branches were merged in PR #10 (`chore/integrate-person-b-work`; resolutions listed in the PR), all other local and remote branches were deleted (each checked as merged into `main` first), and GitHub's "automatically delete head branches" is on. Only `main` remains. Copilot / Person B no longer edits the repository.
 - `main` at `39fe7dc` (Person B's shared-context docs) includes every backend feature below. This file is added on `docs/backend-ai-context` and fast-forwarded into `main`.
 - Backend commits of note: `032828a` reminders table and API, `aab2970` prescription abbreviation explainer, `6406129` chest-pain rules, `0b1c013` recent daily measurements in the prompt, `99c3d38` no-reference guardrails, `4669354` assistant reply clean-up.
 - Supabase: `0001_initial_schema.sql`, `seed.sql` and `0002_reminders.sql` are **applied** to the project (reminders confirmed 2026-11-14; `GET /api/reminders` returned the 2 seeded reminders).
