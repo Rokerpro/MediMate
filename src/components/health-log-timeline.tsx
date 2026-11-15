@@ -89,7 +89,7 @@ export function HealthLogTimeline({ newLog }: { newLog: HealthLog | null }) {
   const summaryLink = (
     <Link
       href="/summary"
-      className="inline-flex items-center gap-2 text-sm font-semibold text-[#3d6149] underline decoration-[#aab49b] underline-offset-4 hover:text-[#284537] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949]"
+      className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-[#3d6149] underline decoration-[#aab49b] underline-offset-4 hover:text-[#284537] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949]"
     >
       View health summary <span aria-hidden="true">→</span>
     </Link>

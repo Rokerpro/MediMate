@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { AssistantChat } from "@/components/assistant-chat";
+
+export const metadata: Metadata = { title: "Assistant · MediMate" };
 
 export default function AssistantPage() {
   return (

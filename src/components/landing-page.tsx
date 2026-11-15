@@ -50,8 +50,8 @@ const features: { title: string; text: string; wide?: boolean; preview?: ReactNo
     text: "Trends over 7, 14 or 30 days. Associations to talk about, never causes.",
   },
   {
-    title: "Reminders",
-    text: "Write your own medicine reminders. MediMate repeats your wording and never advises on doses.",
+    title: "Medicines & reminders",
+    text: "Look up what a medicine is generally for, in plain English, and set your own reminders. Never doses or advice on taking it.",
   },
   {
     title: "Doctor summary",
@@ -156,10 +156,10 @@ export function LandingPage() {
             <span className="display-font text-2xl font-semibold tracking-[-0.04em]">MediMate</span>
           </Link>
           <div className="hidden items-center gap-8 text-sm text-[#52655a] md:flex">
-            <a href="#how" className="transition-colors hover:text-[#254a38]">How it works</a>
-            <a href="#features" className="transition-colors hover:text-[#254a38]">Features</a>
-            <a href="#safety" className="transition-colors hover:text-[#254a38]">Safety</a>
-            <a href="#questions" className="transition-colors hover:text-[#254a38]">Questions</a>
+            <a href="#how" className="inline-flex min-h-10 items-center transition-colors hover:text-[#254a38]">How it works</a>
+            <a href="#features" className="inline-flex min-h-10 items-center transition-colors hover:text-[#254a38]">Features</a>
+            <a href="#safety" className="inline-flex min-h-10 items-center transition-colors hover:text-[#254a38]">Safety</a>
+            <a href="#questions" className="inline-flex min-h-10 items-center transition-colors hover:text-[#254a38]">Questions</a>
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
@@ -327,7 +327,7 @@ export function LandingPage() {
             </div>
             <p>Synthetic demo data only. Educational information, not medical advice.</p>
             <WorkspaceLink
-              className="font-semibold text-[#527158] hover:text-[#254a38]"
+              className="inline-flex min-h-10 items-center font-semibold text-[#527158] hover:text-[#254a38]"
               signedOutLabel="Sign in"
               signedInLabel="Open your dashboard"
               icon={<span aria-hidden="true"> →</span>}

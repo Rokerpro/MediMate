@@ -243,12 +243,12 @@ export function HealthSummary() {
               <table className="w-full min-w-[40rem] table-fixed border-collapse text-left text-sm print:min-w-0 print:text-[9px]">
                 <thead>
                   <tr className="border-b border-[#cbd6c5] text-[#40564a]">
-                    <th scope="col" className="py-2 pr-3 font-semibold">Date</th>
-                    <th scope="col" className="py-2 pr-3 font-semibold">Symptoms</th>
-                    <th scope="col" className="py-2 pr-3 font-semibold">Pain</th>
-                    <th scope="col" className="py-2 pr-3 font-semibold">Sleep</th>
-                    <th scope="col" className="py-2 pr-3 font-semibold">Water</th>
-                    <th scope="col" className="py-2 pr-3 font-semibold">Activity</th>
+                    <th scope="col" className="w-[13%] py-2 pr-3 font-semibold">Date</th>
+                    <th scope="col" className="w-[27%] py-2 pr-3 font-semibold">Symptoms</th>
+                    <th scope="col" className="w-[8%] py-2 pr-3 font-semibold">Pain</th>
+                    <th scope="col" className="w-[16%] py-2 pr-3 font-semibold">Sleep</th>
+                    <th scope="col" className="w-[12%] py-2 pr-3 font-semibold">Water</th>
+                    <th scope="col" className="w-[12%] py-2 pr-3 font-semibold">Activity</th>
                     <th scope="col" className="py-2 font-semibold">Mood</th>
                   </tr>
                 </thead>

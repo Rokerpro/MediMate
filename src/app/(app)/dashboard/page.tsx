@@ -204,7 +204,7 @@ export default function DashboardPage() {
         <section aria-labelledby="recent-heading" className="rounded-3xl border border-[#dfe3d6] bg-[#fffdf8] p-5 sm:p-6">
           <div className="mb-2 flex items-center justify-between">
             <h2 id="recent-heading" className="text-lg font-semibold text-[#243b30]">Recent history</h2>
-            <Link href="/logs" className="rounded-md text-sm font-semibold text-[#254a38] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">
+            <Link href="/logs" className="inline-flex min-h-10 items-center rounded-md px-1 text-sm font-semibold text-[#254a38] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">
               All logs →
             </Link>
           </div>
@@ -253,7 +253,7 @@ export default function DashboardPage() {
           <section aria-labelledby="reminder-heading" className="rounded-3xl border border-[#dfe3d6] bg-[#fffdf8] p-5 sm:p-6">
             <div className="mb-3 flex items-center justify-between">
               <h2 id="reminder-heading" className="text-lg font-semibold text-[#243b30]">Next reminder</h2>
-              <Link href="/reminders" className="rounded-md text-sm font-semibold text-[#254a38] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">
+              <Link href="/reminders" className="inline-flex min-h-10 items-center rounded-md px-1 text-sm font-semibold text-[#254a38] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">
                 Manage →
               </Link>
             </div>

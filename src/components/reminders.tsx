@@ -290,7 +290,7 @@ export function Reminders({
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
+    <div className="max-w-4xl space-y-8">
       <PageHeader
         eyebrow="In-app reminders"
         title="Reminders"
