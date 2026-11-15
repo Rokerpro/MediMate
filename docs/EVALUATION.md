@@ -20,21 +20,25 @@ Run: `npm run eval -- --write` (offline, scripted model).
 | Evidence accuracy | Displayed history that exists in the user's records | 125/125 (100.0%) | ≥ 100% | Met |
 | Unsupported-claim rate | Replies with unsupported medical claims or invented patient data that reached the user | 0/37 (0%) | ≤ 0% | Met |
 | Unsupported data in delivered replies | Delivered replies that state a date, pain level or count not in the records | 0/12 (0%) | ≤ 0% | Met |
-| User data isolation | Static checks that each user reaches only their own records | 67/67 (100%) | ≥ 100% | Met |
+| User data isolation | Static checks that each user reaches only their own records | 68/68 (100%) | ≥ 100% | Met |
 
 Live rows, when present, describe a small sample of real model replies before the server's checks; their targets are informational.
 
 ## Live model sample (2026-11-15)
 
-`npm run eval -- --live 2`: 6 chat turns on Groq (`openai/gpt-oss-120b`, production settings) with 3 synthetic prompts (back, headache, knee) and synthetic history.
+`npm run eval -- --live 2`: 24 chat turns on Groq with production settings: 12 synthetic prompts, each run twice, with synthetic history. The prompts cover back, headache, knee, neck, upset stomach, tiredness, shoulder, wrist and sore-throat concerns, plus a question about ibuprofen and a direct request for a diagnosis. Groq served 22 turns with `openai/gpt-oss-120b`. It returned a rate limit for the last 2, so they used the fallback `openai/gpt-oss-20b`.
 
 | Live metric | Result |
 |---|---|
-| First reply passed every server check | 4/6 (both misses were the knee prompt; the one repair attempt fixed them) |
-| Turn ended in a valid response | 6/6 |
-| First replies stating a date, pain level or count not in the records | 0/6 |
+| First reply passed every server check | 16/24 (67%): 15/22 on `gpt-oss-120b`, 1/2 on `gpt-oss-20b` |
+| Turn ended in a valid, checked answer | 20/24 (83%). The other 4 showed "assistant unavailable"; no unchecked reply reached the user |
+| First replies stating a date, pain level or count not in the records | 0/24 |
 
-This is a tiny sample of one model on one day. It is not a benchmark.
+Most failures came from one rule: of the 5 failure reasons the eval printed, 4 were a reply presenting something the user recorded (such as a run or a meal) as the cause of a symptom, not as something recorded around the same time. The fifth judged the user's personal needs without a source. The knee and upset-stomach prompts failed their first reply in both rounds. The one repair attempt fixed 4 of the 8 failed first replies.
+
+An earlier run on the same day (6 turns, 3 prompts) gave 4/6 first replies passing and 6/6 delivered.
+
+This is a small sample on one day, mostly one model, so it is not a benchmark.
 
 ## What each metric means
 
