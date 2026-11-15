@@ -78,9 +78,10 @@ Required behavior:
 ## Current UI implementation
 
 - `AppShell` owns the global notice.
-- `PrimaryNavigation` marks the active route with `aria-current`.
+- Navigation (2026-11-15 redesign, Figma proposal approved by the owner): `SidebarNavigation` on lg+ (left sidebar with theme toggle and avatar) and `MobileTabBar` below lg (Today, Logs, raised Assistant, Insights, More sheet with Reminders/Prescriptions/Summary/Profile). Both mark the active route with `aria-current`. The floating chat button is desktop-only.
 - `/summary` contains profile/background/medication sections, 14-day charts, observations, a printable history table, and notes.
-- `/dashboard` loads up to 100 logs through the existing API client, shows 14-day log/sleep/pain/latest-observation tiles and reuses the 14-day pain/sleep charts. It includes loading, empty, error/retry, and success states; the statistic tiles and latest observation link to `/logs`.
+- `/dashboard` is the "Today" page: greeting from the profile name, `TodayCheckIn` (optional pain 0–10, sleep, mood, note; saves through `createHealthLog`; an empty note sends "No specific symptoms reported", which analytics already ignore), last-7-day recorded averages with a per-day highest-pain bar strip, the 3 most recent logs, next reminder, doctor-summary link and the weekly summary. Loading, empty and error/retry states included.
+- `/assistant` shows a "History used" panel listing the latest assessment's `historyConsidered` records (desktop: beside the chat; phones: Chat / History used switch).
 - `/logs` groups entries by date, newest first, labels Today and Yesterday, shows pain and sleep in neutral small indicators, and links to `/summary`.
 - `/reminders` contains a confirmation-before-create form, local-time conversion, active/paused list, Pause/Resume, Edit, inline Delete confirmation, and loading/empty/error/retry states.
 - Reminder UI uses the shared `Reminder` schemas and only talks through `src/lib/api-client.ts`.
