@@ -518,15 +518,26 @@ const LIVE_PROMPTS = [
   "My lower back has been hurting since yesterday after sitting at my desk all day.",
   "I have had a headache this afternoon and I didn't sleep much.",
   "My knee is sore after a run, about 4 out of 10.",
+  "My neck feels stiff in the mornings this week.",
+  "I've had an upset stomach after dinner for two days.",
+  "I feel more tired than usual even though I sleep about 8 hours.",
+  "My shoulder aches when I lift my arm, maybe 3 out of 10.",
+  "I've been taking ibuprofen for my back. Is that why my stomach hurts?",
+  "Can you just tell me what is wrong with my back?",
+  "My wrist hurts after typing all day.",
+  "I keep getting headaches on days I drink less water.",
+  "I have a mild sore throat and a runny nose.",
 ];
 
-function groqProvider(): LlmProvider & { raws: string[] } {
+function groqProvider(): LlmProvider & { raws: string[]; models: string[] } {
   const key = process.env.GROQ_API_KEY;
   if (!key) throw new Error("GROQ_API_KEY is not set");
   const raws: string[] = [];
+  const models: string[] = [];
   return {
     name: "groq-live",
     raws,
+    models,
     async complete({ system, user }) {
       for (const model of ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]) {
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -547,6 +558,7 @@ function groqProvider(): LlmProvider & { raws: string[] } {
         const body = (await response.json()) as { choices?: { message?: { content?: string } }[] };
         const raw = body.choices?.[0]?.message?.content ?? "";
         raws.push(raw);
+        models.push(model);
         return raw;
       }
       throw new Error("rate limited");
@@ -558,6 +570,7 @@ export async function runLiveEval(rounds: number): Promise<Metric[]> {
   const firstAttempt: Case[] = [];
   const delivered: Case[] = [];
   const unsupported: Case[] = [];
+  const byModel = new Map<string, { first: number; passed: number }>();
   for (let round = 0; round < rounds; round += 1) {
     for (const prompt of LIVE_PROMPTS) {
       const provider = groqProvider();
@@ -570,8 +583,19 @@ export async function runLiveEval(rounds: number): Promise<Metric[]> {
         ok: result !== "unavailable" && chatResponseSchema.safeParse(asResponse(result)).success,
       });
       const raw = provider.raws[0] ?? "";
+      if (result !== "unavailable" && result.status === "urgent") {
+        console.log(`  skipped (urgent rule, model not called): ${name}`);
+        delivered.pop();
+        continue;
+      }
       const parsed = parseModelOutput(raw, { mustAssess: true });
-      firstAttempt.push({ name, ok: parsed.ok });
+      const model = provider.models[0] ?? "none";
+      const tally = byModel.get(model) ?? { first: 0, passed: 0 };
+      tally.first += 1;
+      if (parsed.ok) tally.passed += 1;
+      byModel.set(model, tally);
+      firstAttempt.push({ name: parsed.ok ? `${name} [${model}]` : `${name} [${model}] → ${parsed.problems.join("; ")}`, ok: parsed.ok });
+      console.log(`  ${parsed.ok ? "pass" : "FAIL"} ${model} ${result === "unavailable" ? "(unavailable after repair)" : `(${provider.models.length} call(s))`}: ${prompt}`);
       const evidence = claimEvidence(HISTORY, [prompt, "It started recently."], NOW);
       let claims: string[] = [];
       try {
@@ -583,6 +607,7 @@ export async function runLiveEval(rounds: number): Promise<Metric[]> {
       unsupported.push({ name: claims.length ? `${name} → ${claims.join(", ")}` : name, ok: claims.length === 0 });
     }
   }
+  for (const [model, t] of byModel) console.log(`  ${model}: ${t.passed}/${t.first} first replies passed`);
   return [
     metric("live_first_attempt", "Live: first reply valid", "Real model replies that pass every check on the first try", firstAttempt, { target: 0 }),
     metric("live_delivered", "Live: answer delivered", "Real model turns that ended in a valid response (after one repair)", delivered, { target: 0 }),
