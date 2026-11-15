@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandMark } from "@/components/brand-mark";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -170,10 +171,9 @@ export function RoutePreloader() {
       }`}
     >
       <div className="flex flex-col items-center px-6 text-center">
-        <div className="relative mb-8 flex h-20 w-20 items-center justify-center">
-          <span className="absolute inset-0 animate-spin rounded-full border-2 border-[#dfe3d6] border-t-[#bd7e3e] motion-reduce:animate-none" />
-          <span className="h-10 w-10 rounded-full bg-[#254a38] shadow-[0_8px_24px_rgba(37,74,56,0.2)]" />
-          <span className="absolute h-2.5 w-2.5 translate-x-5 -translate-y-5 rounded-full bg-[#bd7e3e]" />
+        <div className="relative mb-8 flex h-20 w-20 items-center justify-center text-[#254a38]">
+          <span className="absolute inset-1 animate-ping rounded-full bg-[#d2a06c]/15 motion-reduce:animate-none" />
+          <BrandMark className="relative h-20 w-20" />
         </div>
         <p className="display-font text-5xl font-semibold tracking-[-0.06em] text-[#254a38] sm:text-6xl">
           MediMate
