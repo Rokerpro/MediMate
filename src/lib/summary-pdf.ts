@@ -27,8 +27,7 @@ export async function downloadSummaryPdf(root: HTMLElement, fileName: string): P
     const canvas = await html2canvas(block, {
       scale: 2,
       backgroundColor: "#ffffff",
-      // Draw in the light theme at a desktop width, whatever the viewer uses.
-      windowWidth: 1100,
+      // Always draw in the light theme, whatever the viewer uses.
       ignoreElements: (element) => element.hasAttribute("data-pdf-exclude"),
       onclone: (clonedDocument) => {
         clonedDocument.documentElement.setAttribute("data-theme", "light");
@@ -47,7 +46,7 @@ export async function downloadSummaryPdf(root: HTMLElement, fileName: string): P
     }
 
     if (y + blockHeight <= bottom) {
-      pdf.addImage(canvas, "PNG", margin, y, contentWidth, blockHeight);
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.85), "JPEG", margin, y, contentWidth, blockHeight);
       y += blockHeight + gap;
       continue;
     }
@@ -61,7 +60,7 @@ export async function downloadSummaryPdf(root: HTMLElement, fileName: string): P
       slice.width = canvas.width;
       slice.height = slicePx;
       slice.getContext("2d")?.drawImage(canvas, 0, sourceY, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
-      pdf.addImage(slice, "PNG", margin, y, contentWidth, slicePx * mmPerPx);
+      pdf.addImage(slice.toDataURL("image/jpeg", 0.85), "JPEG", margin, y, contentWidth, slicePx * mmPerPx);
       sourceY += slicePx;
       y += slicePx * mmPerPx + gap;
       if (sourceY < canvas.height) {
