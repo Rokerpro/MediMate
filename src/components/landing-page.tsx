@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AccountMenu } from "@/components/account-menu";
 import { ScrollAwareHeader } from "@/components/scroll-aware-header";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const features = [
   {
@@ -67,7 +68,10 @@ export function LandingPage() {
             <a href="#how" className="transition-colors hover:text-[#254a38]">How it works</a>
             <a href="#questions" className="transition-colors hover:text-[#254a38]">Questions</a>
           </div>
-          <AccountMenu variant="landing" />
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <AccountMenu variant="landing" />
+          </div>
         </nav>
       </ScrollAwareHeader>
 

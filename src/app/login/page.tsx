@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { ContinueWithGoogle } from "@/components/continue-with-google";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { safeNextPath } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Sign in · MediMate" };
@@ -43,13 +44,16 @@ function LoginShell({
       <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-32 h-[min(76vw,34rem)] w-[min(76vw,34rem)] rounded-full bg-[#dbe2ce]/70 blur-2xl" />
       <div aria-hidden="true" className="pointer-events-none absolute -bottom-40 -left-36 h-[min(72vw,30rem)] w-[min(72vw,30rem)] rounded-full bg-[#ead9be]/55 blur-2xl" />
       <div className="relative w-full max-w-md">
-        <Link
-          href="/"
-          className="display-font mb-7 inline-flex items-center rounded-md text-2xl font-semibold tracking-[-0.04em] text-[#254a38] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]"
-        >
-          <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#bd7e3e]" />
-          MediMate
-        </Link>
+        <div className="mb-7 flex items-center justify-between gap-4">
+          <Link
+            href="/"
+            className="display-font inline-flex items-center rounded-md text-2xl font-semibold tracking-[-0.04em] text-[#254a38] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]"
+          >
+            <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#bd7e3e]" />
+            MediMate
+          </Link>
+          <ThemeToggle />
+        </div>
 
         <section
           aria-labelledby="login-heading"
