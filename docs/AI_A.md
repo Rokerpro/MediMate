@@ -4,7 +4,7 @@ Last updated: 2026-11-15
 
 ## Role and current state
 
-This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, prescription explainer UI, assistant popup, and their frontend data-access methods are integrated. The current working branch is `feat/account-ui`, based on `main` at `3fe7a1e`; it carries the prompt-level notice and adds inline chat sign-in and account-deletion UI.
+This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, prescription explainer UI, assistant popup, and their frontend data-access methods are integrated. `main` at `8eaa26a` includes the prompt-level notice, inline chat sign-in, account deletion, and the nullable Google avatar field in `/api/auth/me`. The current branch, `feat/landing-profile-menu`, adds the signed-in avatar and sign-out menu to the public landing page.
 
 PR #2 (`feat/health-insights-journey`) was merged into `main`. Do not assume that a feature is deployed just because it is merged; verify the deployed app separately.
 
@@ -119,6 +119,7 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 - On assistant-chat 401, the shared page/popup UI preserves the typed message and shows an inline "Sign in to chat with MediMate" card with a URL-encoded `/auth/login?next=<current path>` link instead of generic retry UI.
 - `/profile` has a danger zone with an in-page confirmation; the user must type `DELETE`, receives focus in the confirmation input, and sees pending/error/retry states. The existing `deleteAccount()` API client owns the success redirect.
 - `/?accountDeleted=1` shows a dismissible confirmation notice. It reads the query after client mount so the notice is not held inside a hidden streamed Suspense boundary.
+- The landing navigation uses `AccountMenu`'s `landing` variant: signed-out visitors see a Sign in link; signed-in users see their Google avatar, initials if the photo is unavailable, and a popover with their name and the existing sign-out action. The app-header account menu remains unchanged.
 - A real deletion has not been tested; the owner must apply `supabase/migrations/0005_delete_account.sql` before the endpoint can succeed.
 
 ### Prescription explainer UI

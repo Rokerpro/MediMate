@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AccountMenu } from "@/components/account-menu";
 
 const features = [
   {
@@ -62,9 +63,7 @@ export function LandingPage() {
           <a href="#how" className="transition-colors hover:text-[#254a38]">How it works</a>
           <a href="#questions" className="transition-colors hover:text-[#254a38]">Questions</a>
         </div>
-        <Link href="/login" className="landing-pill landing-pill-dark">
-          Sign in <ArrowUpRight />
-        </Link>
+        <AccountMenu variant="landing" />
       </nav>
 
       <section className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 pb-20 pt-10 sm:px-8 sm:pb-28 lg:grid-cols-[1.05fr_.95fr] lg:px-12 lg:pt-20">
