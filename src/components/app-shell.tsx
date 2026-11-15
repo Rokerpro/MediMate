@@ -29,9 +29,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-[#dfe3d6] bg-[#fffdf8] px-4 py-6 lg:flex print:hidden">
           <Logo className="mb-8 px-2" />
           <SidebarNavigation />
-          <div className="mt-auto space-y-4 border-t border-[#dfe3d6] px-2 pt-4">
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-[#dfe3d6] px-2 pt-4">
+            <div className="min-w-0 flex-1">
+              <AccountMenu showName />
+            </div>
             <ThemeToggle />
-            <AccountMenu showName />
           </div>
         </aside>
 
