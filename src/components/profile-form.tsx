@@ -21,6 +21,18 @@ function getFieldErrors(error: { issues: Array<{ path: PropertyKey[]; message: s
   }, {});
 }
 
+type ListField = "conditions" | "allergies" | "medications";
+type ListText = Record<ListField, string>;
+
+/** The raw text typed in each comma-separated field, so commas and spaces are kept while typing. */
+function listTextOf(profile: Pick<Profile, ListField>): ListText {
+  return {
+    conditions: profile.conditions.join(", "),
+    allergies: profile.allergies.join(", "),
+    medications: profile.medications.join(", "),
+  };
+}
+
 function parseList(value: string) {
   return value
     .split(",")
@@ -48,12 +60,23 @@ export function ProfileForm({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [listText, setListText] = useState<ListText>({ conditions: "", allergies: "", medications: "" });
+
+  function showProfile(loaded: Profile) {
+    setProfile(toDraft(loaded, onboarding));
+    setListText(listTextOf(loaded));
+  }
+
+  function updateList(field: ListField, text: string) {
+    setListText((current) => ({ ...current, [field]: text }));
+    updateField(field, parseList(text));
+  }
 
   async function loadProfile() {
     setLoading(true);
     setLoadError(null);
     try {
-      setProfile(toDraft((await getProfile()).profile, onboarding));
+      showProfile((await getProfile()).profile);
     } catch {
       setLoadError("We could not load the profile. Please try again.");
     } finally {
@@ -65,7 +88,9 @@ export function ProfileForm({
     let active = true;
     getProfile()
       .then((response) => {
-        if (active) setProfile(toDraft(response.profile, onboarding));
+        if (!active) return;
+        setProfile(toDraft(response.profile, onboarding));
+        setListText(listTextOf(response.profile));
       })
       .catch(() => {
         if (active) setLoadError("We could not load the profile. Please try again.");
@@ -107,7 +132,7 @@ export function ProfileForm({
     setSaving(true);
     try {
       const response = await updateProfile(parsed.data);
-      setProfile(response.profile);
+      showProfile(response.profile);
       setSuccessMessage("Profile saved.");
       onSaved?.();
     } catch {
@@ -196,23 +221,23 @@ export function ProfileForm({
       <TextField
         id="conditions"
         label="Conditions (comma-separated)"
-        value={profile.conditions.join(", ")}
+        value={listText.conditions}
         error={fieldErrors.conditions}
-        onChange={(value) => updateField("conditions", parseList(value))}
+        onChange={(value) => updateList("conditions", value)}
       />
       <TextField
         id="allergies"
         label="Allergies (comma-separated)"
-        value={profile.allergies.join(", ")}
+        value={listText.allergies}
         error={fieldErrors.allergies}
-        onChange={(value) => updateField("allergies", parseList(value))}
+        onChange={(value) => updateList("allergies", value)}
       />
       <TextField
         id="medications"
         label="Medications (comma-separated)"
-        value={profile.medications.join(", ")}
+        value={listText.medications}
         error={fieldErrors.medications}
-        onChange={(value) => updateField("medications", parseList(value))}
+        onChange={(value) => updateList("medications", value)}
       />
       <TextAreaField
         id="medicalHistory"
