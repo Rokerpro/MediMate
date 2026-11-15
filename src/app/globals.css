@@ -55,6 +55,7 @@ html {
 :root[data-theme="dark"] [class~="bg-[#fbfaf6]"],
 :root[data-theme="dark"] [class~="bg-[#fffdf8]"],
 :root[data-theme="dark"] [class~="bg-[#fffdf8]/70"],
+:root[data-theme="dark"] [class~="bg-[#fffdf8]/95"],
 :root[data-theme="dark"] [class~="bg-[#faf8f2]"],
 :root[data-theme="dark"] [class~="bg-[#faf8f2]/70"],
 :root[data-theme="dark"] [class~="bg-[#fbfaf5]/95"],

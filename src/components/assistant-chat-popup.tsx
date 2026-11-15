@@ -131,7 +131,7 @@ export function AssistantChatPopup() {
         aria-expanded={isOpen}
         aria-controls="assistant-chat-popup"
         onClick={() => setIsOpen((open) => !open)}
-        className="fixed bottom-5 right-5 z-[70] inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#254a38] text-white shadow-xl shadow-[#254a38]/25 transition duration-200 hover:-translate-y-0.5 hover:bg-[#1c3a2c] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#c98b48]/60 motion-reduce:transition-none print:hidden"
+        className="fixed bottom-5 right-5 z-[70] hidden h-14 w-14 lg:inline-flex items-center justify-center rounded-full bg-[#254a38] text-white shadow-xl shadow-[#254a38]/25 transition duration-200 hover:-translate-y-0.5 hover:bg-[#1c3a2c] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#c98b48]/60 motion-reduce:transition-none print:hidden"
       >
         {isOpen ? (
           <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none">
