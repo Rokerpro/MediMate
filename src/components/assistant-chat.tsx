@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { ChatResponse } from "@/lib/validations";
+import { SaveToLog } from "@/components/save-to-log";
 import {
   useAssistantExperience,
   type AssistantChatMessage,
@@ -437,10 +438,11 @@ export function AssistantChat({
                 Share one concern at a time. MediMate may ask follow-up questions and use relevant synthetic health history.
               </p>
             </div>
-          ) : messages.map((message) => (
+          ) : messages.map((message, index) => (
             <MessageBubble
               key={message.id}
               message={message}
+              priorUserTexts={messages.slice(0, index).filter((m) => m.role === "user").map((m) => m.content)}
               dark={dark}
               onFeedback={experience.setFeedback}
               onCopy={async (content) => {
@@ -562,11 +564,14 @@ export function AssistantChat({
 
 function MessageBubble({
   message,
+  priorUserTexts,
   dark,
   onFeedback,
   onCopy,
 }: {
   message: AssistantChatMessage;
+  /** The user's own messages before this reply (used only to prefill "Save to my log"). */
+  priorUserTexts: readonly string[];
   dark: boolean;
   onFeedback: (messageId: string, feedback: "helpful" | "not-helpful") => void;
   onCopy: (content: string) => void;
@@ -630,6 +635,11 @@ function MessageBubble({
       {!isUser && message.response && (
         <div className="mt-3 w-full max-w-3xl">
           <AssistantResult response={message.response} dark={dark} />
+        </div>
+      )}
+      {!isUser && message.response?.status === "assessment" && priorUserTexts.length > 0 && (
+        <div className="mt-3 w-full max-w-3xl">
+          <SaveToLog userTexts={priorUserTexts} dark={dark} />
         </div>
       )}
     </article>
