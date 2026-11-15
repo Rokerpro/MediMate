@@ -72,7 +72,7 @@ export default function DashboardPage() {
   const [logsState, setLogsState] = useState<LogsState>({ status: "loading" });
   const [name, setName] = useState<string | null>(null);
   const [nextReminder, setNextReminder] = useState<NextReminder | "loading">("loading");
-  const [now] = useState(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
 
   const reloadLogs = useCallback(async () => {
     setLogsState(await fetchLogs());
@@ -80,6 +80,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let active = true;
+    queueMicrotask(() => {
+      if (active) setNow(new Date());
+    });
     fetchLogs().then((result) => {
       if (active) setLogsState(result);
     });
@@ -121,11 +124,9 @@ export default function DashboardPage() {
   const bars = logsState.status === "ready" ? dailyPain(weekLogs, logsState.loadedAt) : [];
   const recent = logsState.status === "ready" ? logsState.logs.slice(0, 3) : [];
 
-  const dateLabel = new Intl.DateTimeFormat("en", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(now);
+  const dateLabel = now
+    ? new Intl.DateTimeFormat("en", { weekday: "long", day: "numeric", month: "long" }).format(now)
+    : "Today";
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -133,7 +134,7 @@ export default function DashboardPage() {
         <div>
           <p className="landing-kicker">{dateLabel}</p>
           <h1 className="display-font mt-2 text-4xl font-semibold leading-[1.05] tracking-[-0.045em] text-[#254a38] sm:text-5xl">
-            {greeting(now.getHours())}{name ? `, ${name}` : ""}
+            {now ? greeting(now.getHours()) : "Welcome back"}{name ? `, ${name}` : ""}
           </h1>
         </div>
         <Link

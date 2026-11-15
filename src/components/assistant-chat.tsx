@@ -256,7 +256,7 @@ export function AssistantChat({
     );
   }
 
-  return (
+  const chat = (
     <div className={`relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border shadow-xl ${
       dark ? "border-[#35443a] bg-[#17241d] text-[#f5f2e8]" : "border-[#dfe3d6] bg-[#fffdf8] text-[#24352d]"
     } ${popup ? "h-full" : "min-h-[70vh]"}`}>
@@ -596,6 +596,83 @@ export function AssistantChat({
           </div>
         </form>
       </section>
+    </div>
+  );
+
+  if (popup) return chat;
+  return <AssistantPageLayout messages={messages}>{chat}</AssistantPageLayout>;
+}
+
+function AssistantPageLayout({
+  messages,
+  children,
+}: {
+  messages: readonly AssistantChatMessage[];
+  children: ReactNode;
+}) {
+  const [mobileView, setMobileView] = useState<"chat" | "history">("chat");
+  const latestAssessment =
+    [...messages].reverse().find((message) => message.response?.assessment)?.response?.assessment ?? null;
+  const records = latestAssessment?.historyConsidered ?? [];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div role="tablist" aria-label="Assistant view" className="flex rounded-full bg-[#eeece1] p-1 lg:hidden">
+        {(["chat", "history"] as const).map((view) => (
+          <button
+            key={view}
+            type="button"
+            role="tab"
+            aria-selected={mobileView === view}
+            onClick={() => setMobileView(view)}
+            className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] ${
+              mobileView === view ? "bg-[#254a38] text-[#fbfaf5]" : "text-[#40564a]"
+            }`}
+          >
+            {view === "chat" ? "Chat" : `History used · ${records.length}`}
+          </button>
+        ))}
+      </div>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className={`min-w-0 flex-col ${mobileView === "chat" ? "flex" : "hidden lg:flex"}`}>{children}</div>
+        <aside
+          aria-labelledby="history-used-heading"
+          className={`h-fit flex-col gap-3 rounded-3xl border border-[#dfe3d6] bg-[#fffdf8] p-5 lg:sticky lg:top-6 ${
+            mobileView === "history" ? "flex" : "hidden lg:flex"
+          }`}
+        >
+          <p className="landing-kicker">History used</p>
+          <h2 id="history-used-heading" className="text-lg font-semibold text-[#243b30]">
+            {records.length > 0
+              ? `${records.length} ${records.length === 1 ? "record" : "records"} informed the latest answer`
+              : "No records used yet"}
+          </h2>
+          {records.length === 0 ? (
+            <p className="text-sm leading-6 text-[#5b6b61]">
+              When MediMate gives an educational assessment, the dated logs it retrieved for your concern appear here.
+              If none are relevant, it says so instead of guessing.
+            </p>
+          ) : (
+            <ol className="space-y-2.5">
+              {records.map((record) => (
+                <li key={record.logId} className="rounded-2xl border border-[#dfe3d6] bg-[#f7f5ed] px-4 py-3">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#8a6a47]">
+                    Log · <time dateTime={record.date}>{record.date}</time>
+                    {record.cited ? " · cited" : ""}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-[#24352d]">{record.observation}</p>
+                  {record.reason === "recent_measurement" && (
+                    <p className="mt-1 text-xs text-[#6b776f]">Recent measurement</p>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+          <p className="rounded-2xl border border-[#e6cfa9] bg-[#f5ead9] px-4 py-3 text-xs leading-5 text-[#654a2e]">
+            Records are your own user-reported logs. Links between them and your concern are possible associations, not causes.
+          </p>
+        </aside>
+      </div>
     </div>
   );
 }
