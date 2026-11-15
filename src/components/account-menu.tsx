@@ -167,7 +167,7 @@ export function AccountMenu({ variant = "app", showName = false }: AccountMenuPr
         </span>
         <span className="min-w-0 text-xs leading-5 text-[#5b6b61]">
           <span className="block truncate font-semibold text-[#24352d]">{user.displayName}</span>
-          <span className="block">Synthetic demo profile</span>
+          <span className="block truncate">Demo profile</span>
         </span>
       </Link>
     );
