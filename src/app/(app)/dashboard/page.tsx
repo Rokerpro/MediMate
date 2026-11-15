@@ -2,18 +2,21 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { HealthTrends } from "@/components/health-trends";
+import { LoadingSkeleton } from "@/components/loading-skeleton";
+import { TodayCheckIn } from "@/components/today-check-in";
 import { WeeklySummary } from "@/components/weekly-summary";
-import { ApiClientError, getHealthLogs } from "@/lib/api-client";
+import { ApiClientError, getHealthLogs, getProfile, listReminders } from "@/lib/api-client";
 import type { HealthLog } from "@/lib/validations";
-import { TREND_DAYS, logsInWindow, summaryFigures } from "@/lib/health/trends";
+import { logsInWindow, summaryFigures } from "@/lib/health/trends";
 
-type InsightsState =
+type LogsState =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "ready"; logs: HealthLog[]; loadedAt: number };
 
-async function fetchInsights(): Promise<InsightsState> {
+type NextReminder = { title: string; dueAt: string; category: string } | null;
+
+async function fetchLogs(): Promise<LogsState> {
   try {
     const response = await getHealthLogs(100);
     return { status: "ready", logs: response.logs, loadedAt: Date.now() };
@@ -22,288 +25,270 @@ async function fetchInsights(): Promise<InsightsState> {
       status: "error",
       message: error instanceof ApiClientError
         ? error.message
-        : "We could not load your health insights. Please try again.",
+        : "We could not load your recent logs. Please try again.",
     };
   }
 }
 
-function formatDate(date: string): string {
+function formatShortDate(value: string): string {
+  return new Intl.DateTimeFormat("en", { day: "numeric", month: "short", timeZone: "UTC" })
+    .format(new Date(`${value.slice(0, 10)}T00:00:00Z`))
+    .toUpperCase();
+}
+
+function formatDue(value: string): string {
   return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeZone: "UTC",
-  }).format(new Date(`${date.slice(0, 10)}T00:00:00Z`));
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function greeting(hour: number): string {
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function formatSleep(minutes: number | null): string {
+  if (minutes === null) return "—";
+  const hours = Math.floor(minutes / 60);
+  const rest = Math.round(minutes % 60);
+  return rest ? `${hours}h ${rest}m` : `${hours}h`;
+}
+
+/** Pain per day for the last 7 days (null when nothing was recorded that day). */
+function dailyPain(logs: readonly HealthLog[], now: number): { date: string; pain: number | null }[] {
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(now - (6 - index) * 86_400_000).toISOString().slice(0, 10);
+    const levels = logs
+      .filter((log) => log.loggedAt.slice(0, 10) === date && log.painLevel !== null)
+      .map((log) => log.painLevel as number);
+    return { date, pain: levels.length ? Math.max(...levels) : null };
+  });
 }
 
 export default function DashboardPage() {
-  const [insights, setInsights] = useState<InsightsState>({ status: "loading" });
+  const [logsState, setLogsState] = useState<LogsState>({ status: "loading" });
+  const [name, setName] = useState<string | null>(null);
+  const [nextReminder, setNextReminder] = useState<NextReminder | "loading">("loading");
+  const [now] = useState(() => new Date());
 
-  const loadInsights = useCallback(async () => {
-    setInsights({ status: "loading" });
-    setInsights(await fetchInsights());
+  const reloadLogs = useCallback(async () => {
+    setLogsState(await fetchLogs());
   }, []);
 
   useEffect(() => {
     let active = true;
-    fetchInsights().then((result) => {
-      if (active) setInsights(result);
+    fetchLogs().then((result) => {
+      if (active) setLogsState(result);
     });
+    getProfile()
+      .then(({ profile }) => {
+        if (active) setName(profile.displayName.split(" ")[0] ?? null);
+      })
+      .catch(() => undefined);
+    listReminders(false)
+      .then(({ reminders }) => {
+        if (!active) return;
+        const upcoming = reminders.find((reminder) => reminder.nextDueAt);
+        setNextReminder(
+          upcoming?.nextDueAt
+            ? { title: upcoming.title, dueAt: upcoming.nextDueAt, category: upcoming.category }
+            : null,
+        );
+      })
+      .catch(() => {
+        if (active) setNextReminder(null);
+      });
     return () => {
       active = false;
     };
   }, []);
 
-  const windowLogs = insights.status === "ready"
-    ? logsInWindow(insights.logs, TREND_DAYS, insights.loadedAt)
+  const weekLogs = logsState.status === "ready"
+    ? logsInWindow(logsState.logs, 7, logsState.loadedAt)
     : [];
-  const figures = insights.status === "ready" ? summaryFigures(windowLogs) : null;
-  const latestObservation = windowLogs[0] ?? null;
+  const figures = summaryFigures(weekLogs);
+  const pains = weekLogs.map((log) => log.painLevel).filter((value): value is number => value !== null);
+  const averagePain = pains.length
+    ? Math.round((pains.reduce((sum, value) => sum + value, 0) / pains.length) * 10) / 10
+    : null;
+  const sleeps = weekLogs
+    .map((log) => log.sleepDurationMinutes)
+    .filter((value): value is number => value !== null);
+  const averageSleep = sleeps.length ? sleeps.reduce((sum, value) => sum + value, 0) / sleeps.length : null;
+  const bars = logsState.status === "ready" ? dailyPain(weekLogs, logsState.loadedAt) : [];
+  const recent = logsState.status === "ready" ? logsState.logs.slice(0, 3) : [];
+
+  const dateLabel = new Intl.DateTimeFormat("en", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(now);
 
   return (
-    <div className="space-y-10 pb-8 sm:space-y-14">
-      <section className="grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-end">
-        <div className="max-w-3xl">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#89754d]">
-            MediMate / Demo workspace
-          </p>
-          <h1 className="display-font mt-4 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-[-0.045em] text-[#243b30] sm:text-5xl lg:text-6xl">
-            A clearer view of your health story.
+    <div className="space-y-6 lg:space-y-8">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="landing-kicker">{dateLabel}</p>
+          <h1 className="display-font mt-2 text-4xl font-semibold leading-[1.05] tracking-[-0.045em] text-[#254a38] sm:text-5xl">
+            {greeting(now.getHours())}{name ? `, ${name}` : ""}
           </h1>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href="/logs"
-              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#254a38] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1c3a2c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2"
-            >
-              Log today&apos;s observation
-              <span aria-hidden="true">→</span>
-            </Link>
-            <Link
-              href="/assistant"
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[#cbd6c5] bg-[#fffdf8] px-5 py-2.5 text-sm font-semibold text-[#254a38] transition-colors hover:bg-[#eef0e5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2"
-            >
-              Ask the assistant
-            </Link>
-          </div>
         </div>
-        <aside className="rounded-2xl border border-[#d8d6c9] bg-[#eeece1] p-5 sm:p-6">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#dce2d2] text-[#365642]">
-              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-                <path d="M5 18.5V6.8c0-.7.6-1.3 1.3-1.3h11.4c.7 0 1.3.6 1.3 1.3v10.4c0 .7-.6 1.3-1.3 1.3H5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                <path d="M8 9h8M8 12.5h8M8 16h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            </span>
-            <h2 className="text-sm font-semibold tracking-wide text-[#304739]">Quick actions</h2>
-          </div>
-                    <nav aria-label="Quick actions" className="mt-5 grid grid-cols-2 gap-2">
-            {[
-              { href: "/insights", label: "View insights" },
-              { href: "/summary", label: "Summary" },
-              { href: "/reminders", label: "Reminders" },
-              { href: "/profile", label: "Edit profile" },
-            ].map((action) => (
-              <Link
-                key={action.href}
-                href={action.href}
-                className="inline-flex min-h-11 items-center justify-between gap-2 rounded-xl border border-[#d8d6c9] bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-[#304739] transition-colors hover:bg-[#f3f4ec] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]"
-              >
-                {action.label}
-                <span aria-hidden="true">→</span>
-              </Link>
-            ))}
-          </nav>
-        </aside>
-      </section>
-
-      <section aria-labelledby="workspace-tools-heading">
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#89754d]">Your workspace</p>
-            <h2 id="workspace-tools-heading" className="display-font mt-2 text-2xl font-semibold tracking-[-0.03em] text-[#243b30]">
-              Choose a starting point
-            </h2>
-          </div>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-12">
-        <Link
-          href="/profile"
-          className="group rounded-2xl border border-[#deded4] bg-[#fbfaf6] p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none hover:border-[#aab49b] hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949] sm:p-6 lg:col-span-5 lg:col-start-8 lg:row-start-1"
-        >
-          <div className="flex items-start justify-between gap-4">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e8eadf] text-[#536647]">
-              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-                <circle cx="12" cy="8" r="3.25" stroke="currentColor" strokeWidth="1.6" />
-                <path d="M5.5 19c.6-3 2.8-4.5 6.5-4.5s5.9 1.5 6.5 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            </span>
-            <span className="text-xs font-semibold tracking-[0.14em] text-[#9a8054]">02 / PROFILE</span>
-          </div>
-          <h3 className="mt-8 text-xl font-semibold tracking-[-0.025em] text-[#304739]">Personal profile</h3>
-          <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#3d6149]">
-            Review profile
-            <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
-          </span>
-        </Link>
-
-        <Link
-          href="/logs"
-          className="group rounded-2xl border border-[#deded4] bg-[#f0eee3] p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none hover:border-[#b8ac8c] hover:bg-[#f5f3e9] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949] sm:p-6 lg:col-span-5 lg:col-start-8 lg:row-start-2"
-        >
-          <div className="flex items-start justify-between gap-4">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e4e1d2] text-[#756344]">
-              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-                <path d="M6.5 4.5h11A1.5 1.5 0 0 1 19 6v14H5V6a1.5 1.5 0 0 1 1.5-1.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                <path d="M8.5 9h7M8.5 12.5h7M8.5 16h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            </span>
-            <span className="text-xs font-semibold tracking-[0.14em] text-[#9a8054]">03 / DAILY LOGS</span>
-          </div>
-          <h3 className="mt-8 text-xl font-semibold tracking-[-0.025em] text-[#304739]">Daily observations</h3>
-          <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#3d6149]">
-            Open daily logs
-            <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
-          </span>
-        </Link>
-
         <Link
           href="/assistant"
-          className="group order-first relative overflow-hidden rounded-2xl border border-[#284537] bg-[#284537] p-6 text-[#f7f5ed] transition duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none hover:bg-[#315440] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949] sm:p-8 lg:order-none lg:col-span-7 lg:row-span-2"
+          className="inline-flex min-h-11 items-center gap-2 self-start rounded-full bg-[#254a38] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#1c3a2c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2 sm:self-auto"
         >
-          <div aria-hidden="true" className="absolute -right-20 -top-20 h-64 w-64 rounded-full border border-white/10" />
-          <div aria-hidden="true" className="absolute -right-8 -top-8 h-40 w-40 rounded-full border border-white/10" />
-          <div className="relative flex h-full flex-col">
-            <div className="flex items-start justify-between gap-4">
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-[#e2d3ac]">
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-                  <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4.7A2.5 2.5 0 0 1 5 13.5v-7Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                  <path d="M8.5 8.5h7M8.5 11.5h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                </svg>
-              </span>
-              <span className="text-xs font-semibold tracking-[0.14em] text-[#d9c99f]">01 / ASSISTANT</span>
-            </div>
-            <div className="mt-auto max-w-lg pt-14">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#d9c99f]">History-aware conversation</p>
-              <h3 className="mt-3 text-3xl font-semibold leading-tight tracking-[-0.035em] sm:text-4xl">
-                Discuss a concern with context.
-              </h3>
-              <span className="mt-7 dashboard-cta inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition-colors duration-200">
-                Open assistant
-                <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
-              </span>
-            </div>
-          </div>
+          Ask the assistant <span aria-hidden="true">→</span>
         </Link>
-        </div>
-      </section>
+      </header>
 
-      <section aria-labelledby="insights-heading" className="space-y-5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#89754d]">
-              Last {TREND_DAYS} days
-            </p>
-            <h2 id="insights-heading" className="display-font mt-2 text-2xl font-semibold tracking-[-0.03em] text-[#243b30]">
-              Personal health insights
-            </h2>
+      <div className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
+        <TodayCheckIn onSaved={() => void reloadLogs()} />
+
+        <section
+          aria-labelledby="week-heading"
+          className="flex flex-col gap-4 rounded-3xl bg-[#254a38] p-5 text-[#f2eee2] sm:p-6"
+        >
+          <h2 id="week-heading" className="text-xs font-semibold uppercase tracking-[0.16em] text-[#d9c99f]">
+            Last 7 days · recorded
+          </h2>
+          {logsState.status === "loading" ? (
+            <p role="status" className="text-sm text-[#cfe0d2]">Loading…</p>
+          ) : logsState.status === "error" ? (
+            <p role="alert" className="text-sm text-[#f2eee2]">{logsState.message}</p>
+          ) : (
+            <>
+              <dl className="grid grid-cols-3 gap-2">
+                {[
+                  { label: "Avg pain", value: averagePain === null ? "—" : `${averagePain}` },
+                  { label: "Avg sleep", value: formatSleep(averageSleep) },
+                  { label: "Logs", value: `${figures.logCount}` },
+                ].map((stat) => (
+                  <div key={stat.label} className="rounded-2xl bg-white/10 p-3 sm:p-4">
+                    <dt className="text-xs text-[#d9c99f]">{stat.label}</dt>
+                    <dd className="display-font mt-1 text-2xl font-semibold text-white">{stat.value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <div>
+                <div aria-hidden="true" className="flex h-20 items-end gap-1.5">
+                  {bars.map((bar, index) => (
+                    <span
+                      key={bar.date}
+                      className={`flex-1 rounded-t-md ${
+                        bar.pain === null ? "bg-white/10" : index === bars.length - 1 ? "bg-[#d9c99f]" : "bg-[#c8d4bf]"
+                      }`}
+                      style={{ height: bar.pain === null ? "6%" : `${Math.max(10, bar.pain * 10)}%` }}
+                    />
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-[#cfe0d2]">
+                  Highest pain recorded each day. User-reported values, not diagnostic indicators.
+                </p>
+              </div>
+            </>
+          )}
+          <Link
+            href="/insights"
+            className="dashboard-cta mt-auto inline-flex min-h-11 items-center gap-2 self-start rounded-full px-5 text-sm font-semibold transition-colors"
+          >
+            Open insights <span aria-hidden="true">→</span>
+          </Link>
+        </section>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
+        <section aria-labelledby="recent-heading" className="rounded-3xl border border-[#dfe3d6] bg-[#fffdf8] p-5 sm:p-6">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 id="recent-heading" className="text-lg font-semibold text-[#243b30]">Recent history</h2>
+            <Link href="/logs" className="rounded-md text-sm font-semibold text-[#254a38] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">
+              All logs →
+            </Link>
           </div>
-        </div>
-
-        {insights.status === "loading" ? (
-          <p role="status" className="rounded-2xl border border-[#deded4] bg-[#fbfaf6] p-5 text-sm text-[#5e6b61]">
-            Loading your recent health insights…
-          </p>
-        ) : null}
-
-        {insights.status === "error" ? (
-          <div role="alert" className="rounded-2xl border border-[#d8c6b1] bg-[#f3ede3] p-5 text-[#594a39]">
-            <p>{insights.message}</p>
-            <button
-              type="button"
-              onClick={() => void loadInsights()}
-              className="mt-4 rounded-lg border border-[#aa916c] px-4 py-2 text-sm font-semibold text-[#4c5c48] transition-colors hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949]"
-            >
-              Retry
-            </button>
-          </div>
-        ) : null}
-
-        {insights.status === "ready" && figures ? (
-          <div className="space-y-5">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <InsightTile
-                label="Logs recorded"
-                value={`${figures.logCount}`}
-                detail={`in the last ${TREND_DAYS} days`}
-              />
-              <InsightTile
-                label="Average recorded sleep"
-                value={figures.averageSleepHours === null ? "—" : `${figures.averageSleepHours} h`}
-                detail="based on recorded sleep entries"
-              />
-              <InsightTile
-                label="Highest pain recorded"
-                value={figures.highestPain ? `${figures.highestPain.level}/10` : "—"}
-                detail={figures.highestPain ? formatDate(figures.highestPain.date) : "No pain level recorded"}
-              />
-              <Link
-                href="/logs"
-                aria-label={latestObservation
-                  ? `Open daily logs. Latest observation: ${latestObservation.symptoms}, ${formatDate(latestObservation.loggedAt)}`
-                  : "Open daily logs. No recent observation recorded."}
-                className="group min-w-0 rounded-2xl border border-[#d8d6c9] bg-[#eeece1] p-5 transition-colors hover:border-[#b8ac8c] hover:bg-[#f5f3e9] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949]"
+          {logsState.status === "loading" ? (
+            <LoadingSkeleton label="Loading recent logs…" rows={2} />
+          ) : logsState.status === "error" ? (
+            <div role="alert" className="space-y-3 rounded-2xl bg-[#f3ede3] p-4 text-sm text-[#594a39]">
+              <p>{logsState.message}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setLogsState({ status: "loading" });
+                  void reloadLogs();
+                }}
+                className="rounded-full border border-[#aa916c] px-4 py-2 font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]"
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7b704f]">
-                  Latest observation
-                </p>
-                <p className="mt-3 line-clamp-2 min-h-12 text-base font-semibold leading-6 text-[#304739]">
-                  {latestObservation?.symptoms ?? "No recent observation"}
-                </p>
-                <p className="mt-2 text-xs text-[#6d7568]">
-                  {latestObservation ? formatDate(latestObservation.loggedAt) : "No logs in this period"}
-                </p>
-                <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#3d6149]">
-                  View daily logs
-                  <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
-                </span>
+                Retry
+              </button>
+            </div>
+          ) : recent.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-[#cbd6c5] p-4 text-sm text-[#5b6b61]">
+              No logs yet. Use today&apos;s check-in to add your first one.
+            </p>
+          ) : (
+            <ol>
+              {recent.map((log) => (
+                <li key={log.id} className="flex gap-4 border-t border-[#eeece1] py-3.5 first:border-t-0">
+                  <time dateTime={log.loggedAt} className="w-14 shrink-0 pt-0.5 text-xs font-bold text-[#8a6a47]">
+                    {formatShortDate(log.loggedAt)}
+                  </time>
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 text-sm font-semibold text-[#24352d]">{log.symptoms}</p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs text-[#40564a]">
+                      {log.painLevel !== null && <span className="rounded-full bg-[#eeece1] px-2.5 py-1">Pain {log.painLevel}/10</span>}
+                      {log.sleepDurationMinutes !== null && <span className="rounded-full bg-[#eeece1] px-2.5 py-1">Sleep {formatSleep(log.sleepDurationMinutes)}</span>}
+                      {log.mood && <span className="rounded-full bg-[#eeece1] px-2.5 py-1">Mood {log.mood}</span>}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+
+        <div className="flex flex-col gap-5">
+          <section aria-labelledby="reminder-heading" className="rounded-3xl border border-[#dfe3d6] bg-[#fffdf8] p-5 sm:p-6">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 id="reminder-heading" className="text-lg font-semibold text-[#243b30]">Next reminder</h2>
+              <Link href="/reminders" className="rounded-md text-sm font-semibold text-[#254a38] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">
+                Manage →
               </Link>
             </div>
+            {nextReminder === "loading" ? (
+              <p role="status" className="text-sm text-[#5b6b61]">Loading…</p>
+            ) : nextReminder ? (
+              <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#f3f4ec] px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-[#24352d]">{nextReminder.title}</p>
+                  <p className="text-xs text-[#5b6b61]">{formatDue(nextReminder.dueAt)}</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-[#eeece1] px-2.5 py-1 text-xs font-semibold capitalize text-[#40564a]">
+                  {nextReminder.category.replace("_", " ")}
+                </span>
+              </div>
+            ) : (
+              <p className="text-sm text-[#5b6b61]">No upcoming reminders.</p>
+            )}
+          </section>
 
-            {windowLogs.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-[#d8d6c9] p-4 text-sm text-[#657168]">
-                No daily logs were recorded in the last {TREND_DAYS} days.
-              </p>
-            ) : null}
-
-            <HealthTrends logs={windowLogs} now={insights.loadedAt} />
-          </div>
-        ) : null}
-      </section>
+          <Link
+            href="/summary"
+            className="group flex items-center justify-between gap-4 rounded-3xl border border-[#dfe3d6] bg-[#fffdf8] p-5 transition-colors hover:bg-[#f3f4ec] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] sm:p-6"
+          >
+            <div>
+              <p className="text-lg font-semibold text-[#243b30]">Doctor summary</p>
+              <p className="mt-1 text-sm text-[#5b6b61]">Printable, clinician-readable</p>
+            </div>
+            <span className="rounded-full border border-[#cbd6c5] px-4 py-2 text-sm font-semibold text-[#254a38]">
+              Open <span aria-hidden="true">→</span>
+            </span>
+          </Link>
+        </div>
+      </div>
 
       <WeeklySummary />
     </div>
-  );
-}
-
-function InsightTile({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <Link
-      href="/logs"
-      className="group min-w-0 rounded-2xl border border-[#deded4] bg-[#fbfaf6] p-5 transition-colors hover:border-[#aab49b] hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949]"
-    >
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7b704f]">{label}</p>
-      <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[#304739]">{value}</p>
-      <p className="mt-2 text-xs leading-5 text-[#6d7568]">{detail}</p>
-      <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#3d6149]">
-        View daily logs
-        <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
-      </span>
-    </Link>
   );
 }
