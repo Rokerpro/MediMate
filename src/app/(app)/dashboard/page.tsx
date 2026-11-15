@@ -65,7 +65,7 @@ export default function DashboardPage() {
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#89754d]">
             MediMate / Demo workspace
           </p>
-          <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-[-0.045em] text-[#243b30] sm:text-5xl lg:text-6xl">
+          <h1 className="display-font mt-4 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-[-0.045em] text-[#243b30] sm:text-5xl lg:text-6xl">
             A clearer view of your health story.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-[#5e6b61] sm:text-lg">
@@ -96,7 +96,7 @@ export default function DashboardPage() {
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#89754d]">Your workspace</p>
-            <h2 id="workspace-tools-heading" className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[#243b30]">
+            <h2 id="workspace-tools-heading" className="display-font mt-2 text-2xl font-semibold tracking-[-0.03em] text-[#243b30]">
               Choose a starting point
             </h2>
           </div>
@@ -116,7 +116,7 @@ export default function DashboardPage() {
                 <path d="M5.5 19c.6-3 2.8-4.5 6.5-4.5s5.9 1.5 6.5 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
             </span>
-            <span className="text-xs font-semibold tracking-[0.14em] text-[#9a8054]">01 / PROFILE</span>
+            <span className="text-xs font-semibold tracking-[0.14em] text-[#9a8054]">02 / PROFILE</span>
           </div>
           <h3 className="mt-8 text-xl font-semibold tracking-[-0.025em] text-[#304739]">Personal profile</h3>
           <p className="mt-2 max-w-sm text-sm leading-6 text-[#657168]">
@@ -139,7 +139,7 @@ export default function DashboardPage() {
                 <path d="M8.5 9h7M8.5 12.5h7M8.5 16h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
             </span>
-            <span className="text-xs font-semibold tracking-[0.14em] text-[#9a8054]">02 / DAILY LOGS</span>
+            <span className="text-xs font-semibold tracking-[0.14em] text-[#9a8054]">03 / DAILY LOGS</span>
           </div>
           <h3 className="mt-8 text-xl font-semibold tracking-[-0.025em] text-[#304739]">Daily observations</h3>
           <p className="mt-2 max-w-sm text-sm leading-6 text-[#657168]">
@@ -165,7 +165,7 @@ export default function DashboardPage() {
                   <path d="M8.5 8.5h7M8.5 11.5h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                 </svg>
               </span>
-              <span className="text-xs font-semibold tracking-[0.14em] text-[#d9c99f]">03 / ASSISTANT</span>
+              <span className="text-xs font-semibold tracking-[0.14em] text-[#d9c99f]">01 / ASSISTANT</span>
             </div>
             <div className="mt-auto max-w-lg pt-14">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#d9c99f]">History-aware conversation</p>
@@ -175,7 +175,7 @@ export default function DashboardPage() {
               <p className="mt-4 max-w-md text-sm leading-6 text-[#e1e7df] sm:text-base">
                 Explore educational information with relevant synthetic history shown alongside the conversation.
               </p>
-              <span className="mt-7 inline-flex items-center gap-2 rounded-lg bg-[#f2eee2] px-4 py-3 text-sm font-semibold text-[#284537] transition-colors duration-200 group-hover:bg-white">
+              <span className="mt-7 dashboard-cta inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition-colors duration-200">
                 Open assistant
                 <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
               </span>
@@ -191,7 +191,7 @@ export default function DashboardPage() {
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#89754d]">
               Last {TREND_DAYS} days
             </p>
-            <h2 id="insights-heading" className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[#243b30]">
+            <h2 id="insights-heading" className="display-font mt-2 text-2xl font-semibold tracking-[-0.03em] text-[#243b30]">
               Personal health insights
             </h2>
           </div>

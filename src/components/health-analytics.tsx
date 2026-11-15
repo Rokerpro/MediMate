@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingSkeleton } from "@/components/loading-skeleton";
+import { PageHeader } from "@/components/page-header";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -189,7 +191,43 @@ function TrendCharts({ data }: { data: AnalyticsResponse }) {
   );
 }
 
+const INITIAL_TOPICS = 3;
+const INITIAL_ASSOCIATIONS = 3;
+
+function ShowMoreButton({
+  expanded,
+  hiddenCount,
+  noun,
+  controls,
+  onToggle,
+}: {
+  expanded: boolean;
+  hiddenCount: number;
+  noun: string;
+  controls: string;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-expanded={expanded}
+      aria-controls={controls}
+      onClick={onToggle}
+      className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[#cbd6c5] px-5 py-2 text-sm font-semibold text-[#254a38] transition-colors hover:bg-[#eef0e5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]"
+    >
+      {expanded ? `Show fewer ${noun}` : `Show ${hiddenCount} more ${noun}`}
+      <span aria-hidden="true" className={`transition-transform ${expanded ? "rotate-180" : ""}`}>⌄</span>
+    </button>
+  );
+}
+
 function AnalyticsResults({ data }: { data: AnalyticsResponse }) {
+  const [showAllTopics, setShowAllTopics] = useState(false);
+  const [showAllAssociations, setShowAllAssociations] = useState(false);
+  const visibleSymptoms = showAllTopics ? data.symptoms : data.symptoms.slice(0, INITIAL_TOPICS);
+  const visibleAssociations = showAllAssociations
+    ? data.associations
+    : data.associations.slice(0, INITIAL_ASSOCIATIONS);
   const datesByLogId = new Map<string, string>();
   const maxSymptomLogCount = Math.max(0, ...data.symptoms.map((symptom) => symptom.logCount));
   for (const day of data.daily) {
@@ -225,14 +263,25 @@ function AnalyticsResults({ data }: { data: AnalyticsResponse }) {
           </p>
         ) : (
           <div className="space-y-4">
-            {data.symptoms.map((symptom) => (
-              <SymptomCard
-                key={symptom.topic}
-                symptom={symptom}
-                maxLogCount={maxSymptomLogCount}
-                datesByLogId={datesByLogId}
+            <div id="symptom-topic-list" className="space-y-4">
+              {visibleSymptoms.map((symptom) => (
+                <SymptomCard
+                  key={symptom.topic}
+                  symptom={symptom}
+                  maxLogCount={maxSymptomLogCount}
+                  datesByLogId={datesByLogId}
+                />
+              ))}
+            </div>
+            {data.symptoms.length > INITIAL_TOPICS && (
+              <ShowMoreButton
+                expanded={showAllTopics}
+                hiddenCount={data.symptoms.length - INITIAL_TOPICS}
+                noun={data.symptoms.length - INITIAL_TOPICS === 1 && !showAllTopics ? "topic" : "topics"}
+                controls="symptom-topic-list"
+                onToggle={() => setShowAllTopics((value) => !value)}
               />
-            ))}
+            )}
           </div>
         )}
       </section>
@@ -248,8 +297,9 @@ function AnalyticsResults({ data }: { data: AnalyticsResponse }) {
             There are not enough recorded days to compare patterns yet.
           </p>
         ) : (
-          <ul className="space-y-3">
-            {data.associations.map((association, index) => (
+          <div className="space-y-4">
+          <ul id="recorded-together-list" className="space-y-3">
+            {visibleAssociations.map((association, index) => (
               <li key={`${association.topic}-${association.measure}-${index}`} className="rounded-2xl border border-[#deded4] bg-[#fbfaf6] p-5">
                 <p className="text-sm leading-6 text-[#40564a]">
                   On days with <span className="font-semibold">{association.topic}</span> logged:{" "}
@@ -271,6 +321,16 @@ function AnalyticsResults({ data }: { data: AnalyticsResponse }) {
               </li>
             ))}
           </ul>
+            {data.associations.length > INITIAL_ASSOCIATIONS && (
+              <ShowMoreButton
+                expanded={showAllAssociations}
+                hiddenCount={data.associations.length - INITIAL_ASSOCIATIONS}
+                noun={data.associations.length - INITIAL_ASSOCIATIONS === 1 && !showAllAssociations ? "comparison" : "comparisons"}
+                controls="recorded-together-list"
+                onToggle={() => setShowAllAssociations((value) => !value)}
+              />
+            )}
+          </div>
         )}
       </section>
 
@@ -312,40 +372,42 @@ export function HealthAnalytics() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 pb-8">
-      <header className="space-y-3">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#89754d]">Your workspace / Insights</p>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-[-0.04em] text-[#243b30] sm:text-4xl">Health insights</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#657168]">
-              A descriptive view of patterns in your own logs, based only on what was recorded.
-            </p>
-          </div>
-          <div className="shrink-0">
-            <label htmlFor="analytics-window" className="mb-1 block text-sm font-medium text-[#40564a]">
-              Time period
-            </label>
-            <select
-              id="analytics-window"
-              value={days}
-              onChange={(event) => {
-                setState({ status: "loading" });
-                setDays(Number(event.target.value) as WindowDays);
-              }}
-              className="min-h-11 w-full rounded-lg border border-[#c8cec0] bg-white px-3 text-sm text-[#24352d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9a7949] sm:w-auto"
-            >
-              <option value={7}>Last 7 days</option>
-              <option value={14}>Last 14 days</option>
-              <option value={30}>Last 30 days</option>
-            </select>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Your workspace / Insights"
+        title="Health insights"
+        description="A descriptive view of patterns in your own logs, based only on what was recorded."
+        actions={
+          <fieldset>
+            <legend className="mb-1.5 text-sm font-medium text-[#40564a]">Time period</legend>
+            <div className="inline-flex rounded-full border border-[#cbd6c5] bg-[#fffdf8] p-1">
+              {([7, 14, 30] as const).map((option) => (
+                <label
+                  key={option}
+                  className={`cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[#c98b48] ${
+                    days === option ? "bg-[#254a38] text-[#fbfaf5]" : "text-[#40564a] hover:bg-[#eef0e5]"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="analytics-window"
+                    value={option}
+                    checked={days === option}
+                    onChange={() => {
+                      setState({ status: "loading" });
+                      setDays(option);
+                    }}
+                    className="sr-only"
+                  />
+                  {option} days
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        }
+      />
 
       {state.status === "loading" && (
-        <p role="status" className="rounded-2xl border border-[#deded4] bg-[#fbfaf6] p-5 text-sm text-[#5e6b61]">
-          Loading your health insights…
-        </p>
+        <LoadingSkeleton label="Loading your health insights…" rows={3} />
       )}
 
       {state.status === "error" && (

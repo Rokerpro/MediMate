@@ -120,13 +120,13 @@ export function ReminderNotifications() {
   return (
     <section
       aria-labelledby="medicine-notifications-heading"
-      className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+      className="space-y-4 rounded-2xl border border-[#dfe3d6] bg-[#fffdf8] p-5 shadow-sm sm:p-6"
     >
       <div>
         <h2 id="medicine-notifications-heading" className="text-xl font-semibold">
           Medicine notifications
         </h2>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-[#5b6b61]">
           Medication reminders notify you at the due time, then 5 and 10 minutes later, until you confirm. Without notifications on, they&apos;re sent to your sign-in email.
         </p>
       </div>
@@ -138,7 +138,7 @@ export function ReminderNotifications() {
           <button
             type="button"
             onClick={() => void loadConfig(true)}
-            className="rounded-md bg-red-800 px-3 py-2 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+            className="rounded-full bg-red-800 px-3 py-2 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
           >
             Retry
           </button>
@@ -153,16 +153,16 @@ export function ReminderNotifications() {
               : "Off"}
           </p>
           {!config.pushAvailable && !config.emailAvailable && (
-            <p className="text-sm text-slate-600">Notifications aren&apos;t set up yet.</p>
+            <p className="text-sm text-[#5b6b61]">Notifications aren&apos;t set up yet.</p>
           )}
           {unsupported && (
-            <p className="text-sm text-slate-600">Notifications aren&apos;t supported in this browser.</p>
+            <p className="text-sm text-[#5b6b61]">Notifications aren&apos;t supported in this browser.</p>
           )}
           <button
             type="button"
             onClick={() => void (deviceSubscribed ? turnOff() : turnOn())}
             disabled={busy !== null || unsupported}
-            className="w-full rounded-md bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 sm:w-auto"
+            className="w-full rounded-full bg-[#254a38] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1c3a2c] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] sm:w-auto"
           >
             {busy
               ? busy === "enable" ? "Turning on…" : "Turning off…"
@@ -179,7 +179,7 @@ export function ReminderNotifications() {
               type="button"
               onClick={() => void (feedback.retry === "enable" ? turnOn() : turnOff())}
               disabled={busy !== null}
-              className="rounded-md border border-slate-300 px-3 py-2 font-semibold hover:bg-slate-50 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+              className="rounded-full border border-[#cbd6c5] px-3 py-2 font-semibold hover:bg-[#f3f4ec] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]"
             >
               Retry
             </button>

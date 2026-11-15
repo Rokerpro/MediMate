@@ -25,7 +25,7 @@ export default function RemindersPage({
   searchParams,
 }: PageProps<"/reminders">) {
   return (
-    <Suspense fallback={<p role="status" className="text-sm text-slate-600">Loading reminders…</p>}>
+    <Suspense fallback={<p role="status" className="text-sm text-[#5b6b61]">Loading reminders…</p>}>
       <RemindersContent searchParams={searchParams} />
     </Suspense>
   );

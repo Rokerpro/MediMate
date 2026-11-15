@@ -20,11 +20,11 @@ export function SaveToLog({ userTexts, dark = false }: { userTexts: readonly str
   const [painLevel, setPainLevel] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const muted = dark ? "text-slate-300" : "text-slate-600";
+  const muted = dark ? "text-slate-300" : "text-[#5b6b61]";
   const field = `mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-[#bd7e3e] ${
-    dark ? "border-[#49574d] bg-[#16211b] text-slate-100" : "border-slate-300 bg-white text-slate-950"
+    dark ? "border-[#49574d] bg-[#16211b] text-slate-100" : "border-[#cbd6c5] bg-white text-[#24352d]"
   }`;
-  const panel = `rounded-xl border p-4 sm:p-5 ${dark ? "border-[#35443a] bg-[#1f2c24] text-slate-100" : "border-slate-200 bg-white text-slate-950"}`;
+  const panel = `rounded-xl border p-4 sm:p-5 ${dark ? "border-[#35443a] bg-[#1f2c24] text-slate-100" : "border-[#dfe3d6] bg-white text-[#24352d]"}`;
 
   function open() {
     const draft = draftLogFromUserMessages(userTexts);
@@ -75,7 +75,7 @@ export function SaveToLog({ userTexts, dark = false }: { userTexts: readonly str
         type="button"
         onClick={open}
         className={`rounded-md border px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#bd7e3e] ${
-          dark ? "border-[#49574d] text-slate-100 hover:bg-white/5" : "border-slate-300 text-[#24352d] hover:bg-slate-50"
+          dark ? "border-[#49574d] text-slate-100 hover:bg-white/5" : "border-[#cbd6c5] text-[#24352d] hover:bg-[#f3f4ec]"
         }`}
       >
         Save to my log
@@ -145,7 +145,7 @@ export function SaveToLog({ userTexts, dark = false }: { userTexts: readonly str
         <button
           type="submit"
           disabled={!canSave || phase === "saving"}
-          className="rounded-md bg-[#254a38] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d3b2d] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-[#bd7e3e]"
+          className="rounded-full bg-[#254a38] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d3b2d] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-[#bd7e3e]"
         >
           {phase === "saving" ? "Saving…" : error ? "Try again" : "Confirm and save"}
         </button>
@@ -154,7 +154,7 @@ export function SaveToLog({ userTexts, dark = false }: { userTexts: readonly str
           onClick={() => setPhase("closed")}
           disabled={phase === "saving"}
           className={`rounded-md border px-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#bd7e3e] ${
-            dark ? "border-[#49574d] hover:bg-white/5" : "border-slate-300 hover:bg-slate-50"
+            dark ? "border-[#49574d] hover:bg-white/5" : "border-[#cbd6c5] hover:bg-[#f3f4ec]"
           }`}
         >
           Cancel

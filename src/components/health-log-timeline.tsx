@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingSkeleton } from "@/components/loading-skeleton";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { HealthLog } from "@/lib/validations";
@@ -97,7 +98,7 @@ export function HealthLogTimeline({ newLog }: { newLog: HealthLog | null }) {
   if (loading) {
     return (
       <div className="space-y-4">
-        <p role="status" className="text-sm text-[#5e6b61]">Loading your daily logs…</p>
+        <LoadingSkeleton label="Loading your daily logs…" rows={3} />
         {summaryLink}
       </div>
     );
@@ -145,6 +146,11 @@ export function HealthLogTimeline({ newLog }: { newLog: HealthLog | null }) {
             className="text-sm font-semibold uppercase tracking-[0.12em] text-[#756b50]"
           >
             {formatDateHeading(group.date, today)}
+            {formatDateHeading(group.date, today) !== formatDate(group.date) && (
+              <span className="ml-2 font-medium normal-case tracking-normal text-[#8a8571]">
+                <time dateTime={group.date}>{formatDate(group.date)}</time>
+              </span>
+            )}
           </h3>
           <ol className="relative space-y-4 border-l border-[#d6d8cc] pl-5 sm:pl-6">
             {group.logs.map((log) => (
@@ -154,10 +160,7 @@ export function HealthLogTimeline({ newLog }: { newLog: HealthLog | null }) {
                   aria-hidden="true"
                 />
                 <article className="rounded-2xl border border-[#deded4] bg-[#fbfaf6] p-4 sm:p-5">
-                  <time dateTime={log.loggedAt} className="text-xs font-medium text-[#746b52]">
-                    {formatDate(log.loggedAt)}
-                  </time>
-                  <h4 className="mt-2 font-semibold text-[#304739]">{log.symptoms}</h4>
+                  <h4 className="font-semibold text-[#304739]">{log.symptoms}</h4>
                   <ul aria-label="Recorded measurements" className="mt-3 flex flex-wrap gap-2 text-xs text-[#526258]">
                     {log.painLevel !== null ? (
                       <li className="rounded-full border border-[#d9d8ca] bg-[#f0eee3] px-3 py-1.5">

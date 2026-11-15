@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingSkeleton } from "@/components/loading-skeleton";
 import { useEffect, useState } from "react";
 import {
   profileUpdateSchema,
@@ -144,7 +145,7 @@ export function ProfileForm({
   }
 
   if (loading) {
-    return <p role="status">Loading your profile…</p>;
+    return <LoadingSkeleton label="Loading your profile…" rows={2} />;
   }
 
   if (loadError || !profile) {
@@ -260,9 +261,7 @@ export function ProfileForm({
       <button
         type="submit"
         disabled={saving}
-        className={onboarding
-          ? "min-h-11 rounded-full bg-[#254a38] px-6 py-2.5 font-semibold text-white transition-colors hover:bg-[#1c3a2c] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2"
-          : "rounded-md bg-blue-700 px-4 py-2.5 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-600"}
+        className="min-h-11 rounded-full bg-[#254a38] px-6 py-2.5 font-semibold text-white transition-colors hover:bg-[#1c3a2c] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2"
       >
         {saving ? "Saving…" : onboarding ? "Continue to MediMate" : "Save profile"}
       </button>
@@ -270,18 +269,11 @@ export function ProfileForm({
   );
 }
 
-function fieldClass(error?: string, onboarding = false) {
-  const base = onboarding
-    ? "mt-1 w-full rounded-xl border bg-white px-3.5 py-3 text-[#24352d] shadow-sm outline-none transition focus:ring-2"
-    : "mt-1 w-full rounded-md border bg-white px-3 py-2 text-slate-950 shadow-sm outline-none focus:ring-2";
-  const color = error
-    ? onboarding
-      ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-      : "border-red-500 focus:ring-red-500"
-    : onboarding
-      ? "border-[#cbd6c5] focus:border-[#789078] focus:ring-[#d8e1cf]"
-      : "border-slate-300 focus:ring-blue-600";
-  return `${base} ${color}`;
+function fieldClass(error?: string, _onboarding = false) {
+  void _onboarding;
+  return `mt-1 w-full rounded-xl border bg-white px-3.5 py-3 text-[#24352d] shadow-sm outline-none transition focus:ring-2 ${
+    error ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-[#cbd6c5] focus:border-[#789078] focus:ring-[#d8e1cf]"
+  }`;
 }
 
 function TextField({
@@ -301,7 +293,7 @@ function TextField({
 }) {
   return (
     <div>
-      <label htmlFor={id} className={`block text-sm font-medium ${onboarding ? "text-[#40564a]" : "text-slate-800"}`}>
+      <label htmlFor={id} className={`block text-sm font-medium ${onboarding ? "text-[#40564a]" : "text-[#24352d]"}`}>
         {label}
       </label>
       <input
@@ -336,7 +328,7 @@ function SelectField({
 }) {
   return (
     <div>
-      <label htmlFor={id} className={`block text-sm font-medium ${onboarding ? "text-[#40564a]" : "text-slate-800"}`}>
+      <label htmlFor={id} className={`block text-sm font-medium ${onboarding ? "text-[#40564a]" : "text-[#24352d]"}`}>
         {label}
       </label>
       <select
@@ -376,7 +368,7 @@ function NumberField({
 }) {
   return (
     <div>
-      <label htmlFor={id} className={`block text-sm font-medium ${onboarding ? "text-[#40564a]" : "text-slate-800"}`}>{label}</label>
+      <label htmlFor={id} className={`block text-sm font-medium ${onboarding ? "text-[#40564a]" : "text-[#24352d]"}`}>{label}</label>
       <input
         id={id}
         type="number"
@@ -408,7 +400,7 @@ function TextAreaField({
 }) {
   return (
     <div>
-      <label htmlFor={id} className={`block text-sm font-medium ${onboarding ? "text-[#40564a]" : "text-slate-800"}`}>{label}</label>
+      <label htmlFor={id} className={`block text-sm font-medium ${onboarding ? "text-[#40564a]" : "text-[#24352d]"}`}>{label}</label>
       <textarea
         id={id}
         rows={4}

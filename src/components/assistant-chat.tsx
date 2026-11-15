@@ -841,7 +841,7 @@ function AssistantResult({ response, dark = false }: { response: ChatResponse | 
 
   if (response.status === "follow_up") {
     return (
-      <aside className={`h-fit rounded-xl border p-6 ${dark ? "border-blue-900 bg-blue-950 text-blue-50" : "border-blue-200 bg-blue-50 text-blue-950"}`}>
+      <aside className={`h-fit rounded-xl border p-6 ${dark ? "border-[#35443a] bg-[#1f2c24] text-[#eef0e5]" : "border-[#dfe3d6] bg-[#f3f4ec] text-[#24352d]"}`}>
         <h2 className="text-xl font-semibold">More information needed</h2>
         <p className="mt-2 text-sm">
           The assistant is asking focused questions before offering an educational summary.
@@ -858,7 +858,7 @@ function AssistantResult({ response, dark = false }: { response: ChatResponse | 
       dark ? "border-[#35443a] bg-[#1f2c24] text-slate-100" : "border-slate-200 bg-white text-slate-950"
     }`}>
       <div>
-        <p className={`text-sm font-medium ${dark ? "text-blue-300" : "text-blue-700"}`}>Educational assessment</p>
+        <p className={`text-sm font-medium ${dark ? "text-[#d9c99f]" : "text-[#254a38]"}`}>Educational assessment</p>
         <h2 className="mt-1 text-xl font-semibold">Assessment</h2>
       </div>
 

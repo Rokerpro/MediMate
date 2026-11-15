@@ -111,7 +111,7 @@ export function AssistantChatPopup() {
         aria-hidden={!isOpen}
         inert={!isOpen}
         onKeyDown={handlePanelKeyDown}
-        className={`fixed inset-0 z-[80] flex flex-col overflow-hidden bg-white shadow-2xl transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none md:inset-auto md:bottom-24 md:left-auto md:right-5 md:h-[min(42rem,calc(100vh-7rem))] md:w-[26rem] md:origin-bottom-right md:rounded-2xl md:border md:border-slate-200 print:hidden ${
+        className={`fixed inset-0 z-[80] flex flex-col overflow-hidden bg-white shadow-2xl transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none md:inset-auto md:bottom-24 md:left-auto md:right-5 md:h-[min(42rem,calc(100vh-7rem))] md:w-[26rem] md:origin-bottom-right md:rounded-2xl md:border md:border-[#dfe3d6] print:hidden ${
           isOpen
             ? "translate-y-0 opacity-100"
             : "pointer-events-none translate-y-full opacity-0 md:translate-y-4 md:scale-95"
@@ -131,7 +131,7 @@ export function AssistantChatPopup() {
         aria-expanded={isOpen}
         aria-controls="assistant-chat-popup"
         onClick={() => setIsOpen((open) => !open)}
-        className="fixed bottom-5 right-5 z-[70] inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-700 text-white shadow-xl transition duration-200 hover:-translate-y-0.5 hover:bg-blue-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-300 motion-reduce:transition-none print:hidden"
+        className="fixed bottom-5 right-5 z-[70] inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#254a38] text-white shadow-xl shadow-[#254a38]/25 transition duration-200 hover:-translate-y-0.5 hover:bg-[#1c3a2c] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#c98b48]/60 motion-reduce:transition-none print:hidden"
       >
         {isOpen ? (
           <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none">
