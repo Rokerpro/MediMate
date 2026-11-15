@@ -1,7 +1,7 @@
 // MediMate service worker: medicine-reminder notifications + installable app (PWA).
 // Privacy: only the offline page is cached. Pages and API responses (which hold
 // health data) are never stored by this worker.
-const CACHE = "medimate-shell-v1";
+const CACHE = "medimate-shell-v2";
 const OFFLINE_URL = "/offline.html";
 const ICON = "/icons/icon-192.png";
 const BADGE = "/icons/badge-96.png";
