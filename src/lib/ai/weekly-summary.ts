@@ -10,7 +10,7 @@ import { extractTerms, selectRecentMeasurementLogs } from "../health/retrieve-hi
 import { PROMPT_ASSISTANT_NOTE, PROMPT_NEXT_STEP, type SafetyEvaluation } from "../health/safety-rules.ts";
 import { isSymptomEntry } from "../health/trends.ts";
 import { recordedFactsFor } from "../health/analytics.ts";
-import { parseModelOutput, toContractAssessment } from "./output.ts";
+import { claimEvidence, parseModelOutput, toContractAssessment } from "./output.ts";
 import { SYSTEM_PROMPT, WEEKLY_REQUEST, buildRepairInstruction, buildUserContent } from "./prompts.ts";
 import { AiUnavailableError, type LlmProvider, type ModelContext } from "./types.ts";
 import type { WeeklySummaryResponse } from "@/lib/validations";
@@ -109,10 +109,12 @@ export async function runWeeklySummary(
     mode: "weekly",
   };
   const user = buildUserContent(context);
+  // The weekly window is part of the request, so "7 days" is a supported figure.
+  const evidence = claimEvidence(weekLogs, [...recordedPatterns, `${WEEKLY_DAYS} days`], now);
 
   let parsed = parseModelOutput(
     await deps.provider.complete({ system: SYSTEM_PROMPT, user, context }),
-    { mustAssess: true, hasReferences },
+    { mustAssess: true, hasReferences, evidence },
   );
   if (!parsed.ok) {
     parsed = parseModelOutput(
@@ -121,7 +123,7 @@ export async function runWeeklySummary(
         user: user + buildRepairInstruction(parsed.problems, parsed.quotes),
         context: { ...context, isRepair: true },
       }),
-      { mustAssess: true, hasReferences },
+      { mustAssess: true, hasReferences, evidence },
     );
     if (!parsed.ok) throw new AiUnavailableError(`invalid weekly output after repair (${parsed.problems.join("; ")})`);
   }

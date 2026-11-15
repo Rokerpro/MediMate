@@ -25,13 +25,14 @@ Live demo: https://medi-mate-mauve.vercel.app
 ## How an answer is produced
 
 1. **Safety rules** (`src/lib/health/safety-rules.ts`) check the conversation against the NHS "Call 999" lists for back pain, headaches and chest pain. A match returns urgent guidance immediately. A match on the NHS "urgent GP / 111" lists lets the AI answer but always adds that advice.
-2. **History retrieval** (`src/lib/health/retrieve-history.ts`) selects up to 5 past logs with related symptoms from the last 30 days, plus the last 7 days of sleep, water, activity and mood.
-3. **References** (`src/lib/health/references.ts`) add short verbatim excerpts from checked NHS pages when the topic matches.
-4. **The AI model** gets these as separate, labelled sections and must reply with structured JSON.
-5. **Output checks** (`src/lib/ai/output.ts`) validate the reply and reject diagnosis-style wording, percentages, medication or dose advice, invented links and self-care that is not in the references. The model gets one retry; otherwise the user sees a clear "assistant unavailable" message.
-6. The server attaches the dated history, the sources (only from the checked set) and a fixed disclaimer.
+2. **History retrieval** (`src/lib/health/retrieve-history.ts`) ranks past logs from the last 30 days by shared symptom and body-area terms (a match in the recorded pain location counts double). Recency and recorded pain only break ties. Unrelated logs are dropped, and duplicates are shown once. The top 5 go to the model with the last 7 days of sleep, water, activity and mood. Every answer lists the records it was given and why each was picked.
+3. **Deterministic analytics** (`src/lib/health/analytics.ts`) calculate symptom frequency, recorded pain averages and change over time, recurrence and measures recorded on the same days. The model receives these figures in a separate section and may only restate them, and the user sees them as "recorded facts", separate from the model's interpretation. The same figures power `GET /api/insights/analytics`.
+4. **References** (`src/lib/health/references.ts`) add short verbatim excerpts from checked NHS pages when the topic matches.
+5. **The AI model** gets these as separate, labelled sections and must reply with structured JSON.
+6. **Output checks** (`src/lib/ai/output.ts`) validate the reply and reject diagnosis-style wording, percentages, medication or dose advice, invented links, self-care that is not in the references, and any date, pain score or count that is not in the user's records. The model gets one retry; otherwise the user sees a clear "assistant unavailable" message.
+7. The server attaches the dated history, the sources (only from the checked set) and a fixed disclaimer.
 
-The full rules and their sources are in [`docs/AI_SAFETY_SPEC.md`](docs/AI_SAFETY_SPEC.md).
+The full rules and their sources are in [`docs/AI_SAFETY_SPEC.md`](docs/AI_SAFETY_SPEC.md). Evaluation results and what they do and do not show are in [`docs/EVALUATION.md`](docs/EVALUATION.md).
 
 ## Tech stack
 
@@ -73,8 +74,10 @@ Before a demo, run `supabase/reset-demo.sql` to restore the synthetic data (logs
 ```bash
 npm run lint
 npm run typecheck
-npm test           # 288 tests: safety rules, retrieval, prompts, output checks, auth, weekly summary
-npm run scorecard  # offline safety scorecard: 256/256 fixed warning-sign, false-alarm and unsafe-output checks
+npm test           # 305 tests: safety rules, retrieval, prompts, output checks, auth, weekly summary
+npm run scorecard  # offline safety scorecard: 266/266 fixed warning-sign, false-alarm and unsafe-output checks
+npm run eval       # evaluation suite: emergency recall, false positives, schema validity, evidence accuracy,
+                   # unsupported claims, data isolation (add -- --live 1 for a small real-model sample)
 npm run build
 ```
 

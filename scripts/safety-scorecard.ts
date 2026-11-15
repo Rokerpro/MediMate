@@ -75,6 +75,23 @@ function modelReply({ field, text }: OutputCase): string {
 }
 
 /** Runs one final-round turn (the model must assess) and reports whether the reply reached the user. */
+/** Fixed clock and synthetic logs for scripted replies, so dated wording can be checked against real records. */
+const REPLY_NOW = Date.parse("2026-11-15T12:00:00Z");
+const replyLog = (day: string, waterMl: number, activityMinutes: number): HealthLog => ({
+  id: `00000000-0000-4000-8000-0000000011${day}`,
+  loggedAt: `2026-11-${day}T09:00:00+00:00`,
+  symptoms: "No specific symptom reported",
+  painLevel: null,
+  painLocation: null,
+  sleepDurationMinutes: 420,
+  sleepQuality: 3,
+  waterMl,
+  activityMinutes,
+  mood: "okay",
+  notes: null,
+});
+const REPLY_LOGS: HealthLog[] = [replyLog("12", 1800, 15), replyLog("13", 1500, 15), replyLog("14", 1400, 30)];
+
 async function deliverModelReply(reply: string): Promise<boolean> {
   try {
     const turn = await runAssistantTurn(
@@ -85,7 +102,8 @@ async function deliverModelReply(reply: string): Promise<boolean> {
           { role: "assistant", content: "How strong is it?" },
         ],
         profile: PROFILE,
-        candidateLogs: [],
+        candidateLogs: REPLY_LOGS,
+        now: REPLY_NOW,
       },
       { provider: scriptedProvider(reply), evaluateSafety },
     );

@@ -6,7 +6,7 @@ import { selectReferences, type CuratedReference } from "../health/references.ts
 import { recordedFactsFor } from "../health/analytics.ts";
 import { extractTerms, rankRelevantLogs, selectRecentMeasurementLogs } from "../health/retrieve-history.ts";
 import { PROMPT_ASSISTANT_NOTE, PROMPT_NEXT_STEP, type SafetyEvaluation } from "../health/safety-rules.ts";
-import { parseModelOutput, toContractAssessment } from "./output.ts";
+import { claimEvidence, parseModelOutput, toContractAssessment } from "./output.ts";
 import { SYSTEM_PROMPT, buildRepairInstruction, buildUserContent } from "./prompts.ts";
 import { AiUnavailableError, type ChatMessage, type LlmProvider, type ModelContext } from "./types.ts";
 
@@ -87,10 +87,15 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
     promptSign: safety.result.level === "prompt" ? (safety.sign ?? "an NHS urgent-GP / 111 warning sign") : null,
   };
   const user = buildUserContent(context);
+  const evidence = claimEvidence(
+    [...relevantLogs, ...recentMeasurementLogs],
+    [input.message, ...input.priorMessages.map((m) => m.content), ...recordedPatterns],
+    now,
+  );
 
   let parsed = parseModelOutput(
     await deps.provider.complete({ system: SYSTEM_PROMPT, user, context }),
-    { mustAssess, hasReferences },
+    { mustAssess, hasReferences, evidence },
   );
   if (!parsed.ok) {
     // One constrained repair attempt; malformed output is never shown.
@@ -100,7 +105,7 @@ export async function runAssistantTurn(input: ChatTurnInput, deps: ChatTurnDeps)
         user: user + buildRepairInstruction(parsed.problems, parsed.quotes),
         context: { ...context, isRepair: true },
       }),
-      { mustAssess, hasReferences },
+      { mustAssess, hasReferences, evidence },
     );
     // Problems are schema paths and rule labels only — no health content.
     if (!parsed.ok) throw new AiUnavailableError(`invalid model output after repair (${parsed.problems.join("; ")})`);
