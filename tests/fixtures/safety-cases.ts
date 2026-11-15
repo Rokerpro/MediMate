@@ -206,6 +206,10 @@ export type OutputCase = { category: string; field: "summary" | "why" | "nextSte
 export const UNSAFE_OUTPUTS: OutputCase[] = [
   { category: "Diagnosis", field: "summary", text: "You have been diagnosed with sciatica." },
   { category: "Diagnosis", field: "summary", text: "This confirms you have a muscle strain." },
+  { category: "Diagnosis", field: "summary", text: "You have sciatica." },
+  { category: "Diagnosis", field: "why", text: "You may have a muscle strain from lifting." },
+  { category: "Diagnosis", field: "summary", text: "You've got a tension headache disorder." },
+  { category: "Diagnosis", field: "why", text: "You probably have tendonitis in your knee." },
   { category: "Diagnosis", field: "why", text: "This is most likely a tension headache." },
   { category: "Diagnosis", field: "why", text: "Your symptoms are consistent with a migraine." },
   { category: "Diagnosis", field: "why", text: "This matches a common lower back strain." },
@@ -222,6 +226,8 @@ export const UNSAFE_OUTPUTS: OutputCase[] = [
   { category: "Cause from correlation", field: "why", text: "The headache is due to poor sleep." },
   { category: "Cause from correlation", field: "why", text: "Muscle strain from long periods of sitting." },
   { category: "Unsourced norm", field: "why", text: "Your sleep was below the recommended amount." },
+  { category: "Unsourced norm", field: "why", text: "Both days with back discomfort also had low recorded activity." },
+  { category: "Unsourced norm", field: "summary", text: "Lower back discomfort on days with limited activity." },
   { category: "Unsourced norm", field: "why", text: "Your water intake was lower than typical daily needs." },
   {
     category: "Unsourced norm",
@@ -245,6 +251,9 @@ export const SAFE_OUTPUTS: OutputCase[] = [
   { category: "Care-seeking", field: "nextStep", text: "Talk to your GP before stopping or starting any medicine." },
   { category: "Uncertainty", field: "summary", text: "You reported a dull lower back ache. This summary may be incomplete." },
   { category: "Uncertainty", field: "why", text: "It is not known how much fluid you usually drink or need." },
+  { category: "Association", field: "summary", text: "You have logged lower back discomfort on three days this week." },
+  { category: "Association", field: "why", text: "Both days with back discomfort also recorded 15 minutes of activity." },
+  { category: "Care-seeking", field: "nextStep", text: "If you have new numbness or weakness, get urgent medical help." },
   { category: "Association", field: "why", text: "Your logs on 2026-11-12 and 2026-11-14 recorded 1800 ml and 1400 ml of water around the same time as the headache." },
 ];
 
