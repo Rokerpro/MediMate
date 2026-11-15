@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AccountMenu } from "@/components/account-menu";
+import { BrandMark } from "@/components/brand-mark";
 import { WorkspaceLink } from "@/components/workspace-link";
 import { ScrollAwareHeader } from "@/components/scroll-aware-header";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -81,15 +82,6 @@ const faqs = [
   ["Can I use real health information?", "No. This public prototype is for synthetic demo data only. Please use made-up details."],
 ];
 
-function LeafMark({ className = "" }: { className?: string }) {
-  return (
-    <svg aria-hidden="true" className={className} viewBox="0 0 42 42" fill="none">
-      <path d="M37.5 4.5C21.2 5.3 8.9 11.8 7.2 24.7c-.8 6.1 3.9 10.1 8.5 9.5C29.1 32.7 36.2 20.8 37.5 4.5Z" fill="currentColor" />
-      <path d="M7.5 37.5C13.4 25.9 21.3 18.7 31.7 12.6" stroke="white" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function ArrowUpRight() {
   return (
     <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 16 16" fill="none">
@@ -160,7 +152,7 @@ export function LandingPage() {
       >
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8 lg:px-12">
           <Link href="/" className="group flex items-center gap-2 rounded-md text-[#254a38] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]">
-            <LeafMark className="h-8 w-8 transition-transform duration-500 group-hover:-rotate-12" />
+            <BrandMark className="h-8 w-8 transition-transform duration-500 group-hover:scale-110" />
             <span className="display-font text-2xl font-semibold tracking-[-0.04em]">MediMate</span>
           </Link>
           <div className="hidden items-center gap-8 text-sm text-[#52655a] md:flex">
@@ -312,7 +304,7 @@ export function LandingPage() {
         <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-24 lg:px-12">
           <div className="relative overflow-hidden rounded-[2rem] bg-[#dbe2ce] px-6 py-14 text-center sm:px-12">
             <div className="relative">
-              <LeafMark className="mx-auto h-10 w-10 text-[#527158]" />
+              <BrandMark className="mx-auto h-10 w-10 text-[#527158]" />
               <h2 className="display-font mx-auto mt-5 max-w-2xl text-4xl leading-[1] tracking-[-.05em] text-[#254a38] sm:text-6xl">
                 Your health story deserves room to breathe.
               </h2>
@@ -330,7 +322,7 @@ export function LandingPage() {
         <footer className="border-t border-[#dfe3d6]">
           <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 text-sm text-[#66766b] sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
             <div className="flex items-center gap-2 text-[#254a38]">
-              <LeafMark className="h-6 w-6" />
+              <BrandMark className="h-6 w-6" />
               <span className="display-font text-lg font-semibold">MediMate</span>
             </div>
             <p>Synthetic demo data only. Educational information, not medical advice.</p>

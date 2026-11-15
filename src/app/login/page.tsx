@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { BrandMark } from "@/components/brand-mark";
 import { ContinueWithGoogle } from "@/components/continue-with-google";
 import { SignedInRedirect } from "@/components/signed-in-redirect";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -56,7 +57,7 @@ function LoginShell({
             href="/"
             className="display-font inline-flex items-center rounded-md text-2xl font-semibold tracking-[-0.04em] text-[#254a38] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]"
           >
-            <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#bd7e3e]" />
+            <BrandMark className="mr-2 h-7 w-7" />
             MediMate
           </Link>
           <ThemeToggle />
