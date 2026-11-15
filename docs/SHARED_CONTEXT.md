@@ -1,13 +1,13 @@
 # MediMate — Shared AI Context
 
-Last updated: 2026-11-14
+Last updated: 2026-11-15
 
 This is the combined source of truth for both coding AIs. Naming: `docs/AI_A.md` = frontend AI (Person B), `docs/AI_B.md` = backend/AI assistant (Person A, called "Person A" in `CLAUDE.md`). It supplements, but does not replace, `CLAUDE.md`, `docs/ARCHITECTURE.md`, `docs/API_CONTRACTS.md`, and `docs/AI_SAFETY_SPEC.md`. When these documents conflict, the executable schemas and safety specification take precedence; resolve conflicts explicitly rather than guessing.
 
 ## Current repository state
 
-- `main` at `feb2db0` contains the merged health summary, trends, navigation polish, reminders UI and API, reminder migration, prescription explainer, landing page, assistant popup, mobile navigation, and route preloader.
-- The current follow-up branch is `feat/assistant-experience`, based on `fix/assistant-popup-controls` at `9ac7866`; it rebuilds popup and full-page chat around persistent browser-local conversation state while preserving the existing synchronous API and safety rendering.
+- `main` at `3fe7a1e` includes Google sign-in, onboarding, weekly summary, account-menu/profile refresh, and the backend support for account deletion, alongside the health summary, reminders, assistant, and navigation work.
+- The current branch is `feat/account-ui`, based on `3fe7a1e`; it carries the prompt-level notice and adds inline chat sign-in and account-deletion UI without changing API or backend files.
 - PR #2 (`feat/health-insights-journey`: PR #1 review fixes `ad87a1f`, Personal Health Insights `09ebb8b`, Interactive Health Journey `bbfdd5e`) was reviewed and merged by Person A on 2026-11-14, together with the backend past-conversations endpoint (`cd73b88`), safety scorecard (`77e37a9`), security headers (`3962e9d`) and the dose-question fix (`1312d70`). Checks on the merged tree: lint, typecheck, build, 202 tests, scorecard 134/134.
 - The app is a Next.js 16.4.6 App Router application using React 19.3, TypeScript, Tailwind 4.3, Zod 4.6, Supabase PostgreSQL, and a server-side Groq-compatible AI provider.
 - Node.js `>=22.18` is required.
@@ -99,6 +99,9 @@ Required behavior:
 - The reminders page was tested at 375px with no horizontal overflow and through create → confirm → pause → resume → edit → delete. The temporary test reminder was deleted.
 - The prescription explainer page was tested at 375px with no horizontal overflow. It always shows the API guidance and source after a successful response, including when no terms are recognized.
 - Assistant `RATE_LIMITED` (429) is retryable; the chat retains the failed text, shows the server message, and retries without duplicating its transcript entry.
+- A `prompt` safety level on assistant follow-up or assessment responses appears above the reply in an amber `role="status"` notice titled “Contact a GP or NHS 111 today”; urgent responses retain their distinct red alert.
+- On assistant-chat 401, the page and popup preserve the typed message and show a contextual sign-in card with `/auth/login?next=<encoded current path>` instead of generic retry UI.
+- `/profile` provides inline account-deletion confirmation gated by typing `DELETE`, with focus, pending, and retryable error states. The landing page displays a dismissible notice for `/?accountDeleted=1`.
 - `AssistantChat` supports page and popup presentation variants without duplicating chat state/API logic. Browser speech recognition is optional, announces unsupported/permission failures, and never auto-sends recognized text.
 - The expanded assistant UI supports local create/search/switch/rename/remove, theme selection, copy, local response feedback, and safe basic Markdown. Removing a local conversation does not delete a server record. The current API is synchronous and does not provide streaming/cancellation, transcript retrieval, attachment upload, true edit/regenerate, server-side feedback, or syntax highlighting; the UI does not claim these features.
 - Prescription example wording and the landing-page curated-source label were updated per PR #1 review; Send is disabled when it would duplicate text awaiting assistant Retry.
@@ -124,6 +127,8 @@ For mobile navigation and the route preloader, lint, typecheck, all 204 tests, a
 
 For `feat/assistant-experience`, lint, typecheck, all 204 tests, and production build pass. Browser checks verified mocked follow-up rendering, local persistence across reloads, rename, popup/page continuity, desktop popup alignment, responsive mobile sizing, and mocked microphone permission/recognition behavior. The API limitations listed above remain intentional.
 
+For `feat/account-ui`, lint, typecheck, all 285 tests, and production build pass. Mocked browser checks verified the prompt notice at desktop and 375px, inline 401 sign-in cards with preserved messages, deletion confirmation/error/retry behavior, and the dismissible landing notice with no horizontal overflow. No successful account deletion or live Google sign-in was attempted; migration `0005_delete_account.sql` remains an owner prerequisite.
+
 Use short-lived feature branches, focused Conventional Commits, explicit `git add` paths, and no force-pushes. Merge only after the other AI reviews changed files and the checks pass.
 
 ## Pending shared work
@@ -133,9 +138,9 @@ Done 2026-11-14: `0002_reminders.sql` applied in Supabase; the live Vercel site 
 1. Owner: run `supabase/reset-demo.sql` in the Supabase SQL editor just before the demo (restores Alex Demo, 14 logs dated up to today, 2 reminders; deletes all chat sessions). Then rehearse and record the backup video.
 2. Done 2026-11-15 by Person A at the owner's request: "Recent assistant conversations" on `/summary` (`src/components/recent-assistant-conversations.tsx`, `listAssistantSessions` in `src/lib/api-client.ts`, rendered from `src/app/(app)/summary/page.tsx`, below Person B's `HealthSummary`). Shows the last 5 completed conversations with urgent / GP-111 badges, summary, possibilities, next steps, sources and disclaimer; loading, error/retry and empty states; prints. Person B may restyle it or move it above "Notes for the appointment". Assistant conversations are not written to the profile (they are user-reported, not recorded facts); "Save to my log" is done too (2026-11-15, Person A at the owner's request): `src/components/save-to-log.tsx`, shown under each completed assessment in `assistant-chat.tsx` (not for urgent or follow-up replies). It is prefilled only from the user's own messages (`draftLogFromUserMessages` in `src/lib/health/log-draft.ts`: symptoms text, body area typed, last "N/10" score), the user edits and confirms, then the existing `POST /api/health-logs` saves it with a note "Saved by the user from an assistant conversation (user-reported)".
 3. Person B: confirm the `/summary` print layout in a real browser print preview.
-4. Pitch: `npm run scorecard` prints the offline safety scorecard (180/180 fixed checks as of `fix/personal-needs-wording`; always quote the numbers it prints; see `docs/AI_SAFETY_SPEC.md` §4.1). Quote it with its scope: fixed examples, not comprehensive emergency detection.
+4. Pitch: `npm run scorecard` currently prints 256/256 fixed checks. Its weekly-summary lines are 32/32 for unsafe AI output blocked and 35/35 for warning-sign escalation in logs. Keep the scope note: fixed examples, keyword matching, and not comprehensive emergency detection; output checks use a scripted AI stand-in.
 5. Workflow: Person A builds the system side and hands Person B a UI prompt; neither edits the other's files without coordinating.
-7. Person B: show the new `safety.level: "prompt"` (NHS urgent GP / 111 advice, contract §3 and §3c) as an amber notice with `safety.message` beside the normal reply, and label `urgencyLevel: "prompt"` sessions "Urgent GP / NHS 111 advice was given". Backend merged; the reply text and first next step already carry the advice, so nothing breaks before the UI change.
 6. Keep this file and both AI-specific context files synchronized after meaningful decisions or contract changes.
 
 - 2026-11-15 (A): `DELETE /api/auth/account` + `deleteAccount()` in api-client (needs migration 0005). Deletes the user's profile, logs, chats, reminders and sign-in; the demo profile is only unlinked. `sendAssistantMessage` no longer redirects on 401: it throws `ApiClientError` status 401 so the chat can show an inline sign-in prompt. `PROFILE_SAVED_EVENT` refreshes the header name after a profile save.
+- 2026-11-15 (B): prompt-level notices are shown in the shared assistant page/popup and `urgencyLevel: "prompt"` summaries use the contract label "Urgent GP / NHS 111 advice was given". The account UI uses mocked failures only; do not test successful deletion until the owner applies `supabase/migrations/0005_delete_account.sql`.

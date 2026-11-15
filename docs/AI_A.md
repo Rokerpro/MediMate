@@ -1,10 +1,10 @@
 # AI_A — Current Project Context
 
-Last updated: 2026-11-14
+Last updated: 2026-11-15
 
 ## Role and current state
 
-This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, prescription explainer UI, assistant popup, and their frontend data-access methods are integrated. `main` includes the mobile navigation, route preloader, and assistant popup merged in PR #3. The current working branch is `feat/assistant-experience`, based on `fix/assistant-popup-controls` at `9ac7866`; it rebuilds the popup and dedicated assistant page around shared browser-local conversation state.
+This file records the context for the frontend/product AI (Person B). The reminders UI, printable health summary, prescription explainer UI, assistant popup, and their frontend data-access methods are integrated. The current working branch is `feat/account-ui`, based on `main` at `3fe7a1e`; it carries the prompt-level notice and adds inline chat sign-in and account-deletion UI.
 
 PR #2 (`feat/health-insights-journey`) was merged into `main`. Do not assume that a feature is deployed just because it is merged; verify the deployed app separately.
 
@@ -114,6 +114,13 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 - DELETE handles the contract's `204 No Content` response separately.
 - `explainPrescription` posts example wording to `/api/prescriptions/explain` and parses `PrescriptionExplainResponse` with the shared schema.
 
+### Account sign-in and deletion UI
+
+- On assistant-chat 401, the shared page/popup UI preserves the typed message and shows an inline "Sign in to chat with MediMate" card with a URL-encoded `/auth/login?next=<current path>` link instead of generic retry UI.
+- `/profile` has a danger zone with an in-page confirmation; the user must type `DELETE`, receives focus in the confirmation input, and sees pending/error/retry states. The existing `deleteAccount()` API client owns the success redirect.
+- `/?accountDeleted=1` shows a dismissible confirmation notice. It reads the query after client mount so the notice is not held inside a hidden streamed Suspense boundary.
+- A real deletion has not been tested; the owner must apply `supabase/migrations/0005_delete_account.sql` before the endpoint can succeed.
+
 ### Prescription explainer UI
 
 `src/components/prescription-explainer.tsx` and `/prescriptions`:
@@ -141,6 +148,7 @@ Never edit a protected backend or validation file as a frontend workaround. If t
 
 - On a retryable assistant error, keeps the submitted text in the message field and shows the server error message with a Retry action.
 - Retrying resends the same message without appending another user transcript entry; the field clears only after a successful response.
+- A `prompt` safety level on a follow-up or assessment shows the server message above the reply in an amber `role="status"` notice titled “Contact a GP or NHS 111 today.” Urgent responses retain their separate prominent red alert.
 
 ### Responsive assistant popup and voice input
 
@@ -238,6 +246,8 @@ On `fix/assistant-popup-controls`, browser checks verified that the desktop pane
 For the mobile navigation and route preloader, lint, typecheck, all 204 tests, and the production build passed. Browser checks verified the mobile menu fills a 375×812 viewport, supports Escape and its close button, restores focus and body scrolling, and has no horizontal overflow. Desktop links remain visible while the hamburger is hidden. Internal navigation displayed the preloader for at least one second and waited for the page API requests to settle; the synthetic-data notice remained visible.
 
 For `feat/assistant-experience`, lint, typecheck, all 204 tests, and the production build pass. Browser checks verified mocked follow-up rendering, persistence across reloads, rename, popup/page conversation continuity, desktop launcher alignment, mobile popup sizing, and mocked microphone permission/recognition behavior. Streaming, server-side history management, attachment upload, server feedback, and syntax highlighting are not supported by the current API and are intentionally absent.
+
+For `feat/account-ui`, lint, typecheck, all 285 tests, and the production build pass. Browser checks with mocked API responses verified the prompt notice and normal follow-up at desktop and 375px, inline 401 sign-in cards with preserved composer text on the assistant page and landing popup, and the profile deletion confirmation/error/retry flow without a successful deletion. The landing-page deletion notice appears and dismisses at desktop and 375px. No real account deletion or live Google sign-in was attempted; migration `0005_delete_account.sql` is still an owner prerequisite.
 
 ## Pending work and coordination
 

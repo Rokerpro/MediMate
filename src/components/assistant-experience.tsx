@@ -58,6 +58,7 @@ type AssistantExperienceContextValue = {
   isSending: boolean;
   errorMessage: string | null;
   retryAvailable: boolean;
+  signInRequired: boolean;
   storageMessage: string | null;
   createConversation: () => void;
   selectConversation: (id: string) => void;
@@ -130,6 +131,7 @@ export function AssistantExperienceProvider({ children }: { children: ReactNode 
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryAvailable, setRetryAvailable] = useState(false);
+  const [signInRequired, setSignInRequired] = useState(false);
   const [retryPrompt, setRetryPrompt] = useState<{ conversationId: string; message: string } | null>(null);
   const sendingRef = useRef(false);
 
@@ -159,6 +161,7 @@ export function AssistantExperienceProvider({ children }: { children: ReactNode 
     }));
     setErrorMessage(null);
     setRetryAvailable(false);
+    setSignInRequired(false);
     setRetryPrompt(null);
   }, []);
 
@@ -168,6 +171,7 @@ export function AssistantExperienceProvider({ children }: { children: ReactNode 
       : current);
     setErrorMessage(null);
     setRetryAvailable(false);
+    setSignInRequired(false);
     setRetryPrompt(null);
   }, []);
 
@@ -197,6 +201,7 @@ export function AssistantExperienceProvider({ children }: { children: ReactNode 
     });
     setErrorMessage(null);
     setRetryAvailable(false);
+    setSignInRequired(false);
     setRetryPrompt(null);
   }, []);
 
@@ -270,6 +275,7 @@ export function AssistantExperienceProvider({ children }: { children: ReactNode 
     setIsSending(true);
     setErrorMessage(null);
     setRetryAvailable(false);
+    setSignInRequired(false);
     try {
       const response: ChatResponse = await sendAssistantMessage({
         sessionId: conversation.sessionId,
@@ -298,6 +304,15 @@ export function AssistantExperienceProvider({ children }: { children: ReactNode 
       setRetryPrompt(null);
       return true;
     } catch (error) {
+      if (error instanceof ApiClientError && error.status === 401) {
+        setRetryPrompt(null);
+        setRetryAvailable(false);
+        setErrorMessage(null);
+        setSignInRequired(true);
+        return false;
+      }
+
+      setSignInRequired(false);
       if (error instanceof ApiClientError && error.status === 404) {
         setRetryPrompt(null);
       } else {
@@ -331,6 +346,7 @@ export function AssistantExperienceProvider({ children }: { children: ReactNode 
     isSending,
     errorMessage,
     retryAvailable,
+    signInRequired,
     storageMessage,
     createConversation: createConversationAction,
     selectConversation,
@@ -350,6 +366,7 @@ export function AssistantExperienceProvider({ children }: { children: ReactNode 
     renameConversation,
     retry,
     retryAvailable,
+    signInRequired,
     selectConversation,
     sendMessage,
     setFeedback,

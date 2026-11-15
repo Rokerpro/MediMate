@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import type { ChatResponse } from "@/lib/validations";
 import { SaveToLog } from "@/components/save-to-log";
 import {
@@ -87,6 +88,7 @@ export function AssistantChat({
   onClose?: () => void;
 }) {
   const experience = useAssistantExperience();
+  const pathname = usePathname();
   const messages = experience.activeConversation?.messages ?? [];
   const latestResponse = [...messages].reverse().find((message) => message.response)?.response ?? null;
   const [input, setInput] = useState("");
@@ -108,6 +110,7 @@ export function AssistantChat({
   const errorMessage = experience.errorMessage;
   const retryAvailable = experience.retryAvailable;
   const dark = experience.theme === "dark";
+  const signInHref = `/auth/login?next=${encodeURIComponent(pathname)}`;
   const conversations = experience.conversations
     .filter((conversation) => {
       const query = search.trim().toLocaleLowerCase();
@@ -507,7 +510,25 @@ export function AssistantChat({
           </div>
         )}
 
-        {errorMessage && (
+        {experience.signInRequired && (
+          <div
+            role="status"
+            className={`shrink-0 border-t px-4 py-4 text-sm ${
+              dark ? "border-[#35443a] bg-[#25342b] text-[#f4f1e7]" : "border-[#e7e4da] bg-[#eef0e5] text-[#24352d]"
+            }`}
+          >
+            <h2 className="font-semibold">Sign in to chat with MediMate</h2>
+            <p className="mt-1">Your health history stays private to your account.</p>
+            <a
+              href={signInHref}
+              className="mt-3 inline-flex min-h-10 items-center justify-center rounded-full bg-[#254a38] px-4 py-2 font-semibold text-white hover:bg-[#1d3d2e] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bd7e3e]"
+            >
+              Continue with Google
+            </a>
+          </div>
+        )}
+
+        {errorMessage && !experience.signInRequired && (
           <div role="alert" className="shrink-0 border-t border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
             <p>{errorMessage}</p>
             {retryAvailable && (
@@ -603,8 +624,23 @@ function MessageBubble({
 }) {
   const isUser = message.role === "user";
   const isUrgent = message.response?.status === "urgent";
+  const promptSafetyMessage =
+    message.response?.safety.level === "prompt" ? message.response.safety.message : null;
   return (
     <article className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
+      {!isUser && promptSafetyMessage && (
+        <aside
+          role="status"
+          className={`mb-3 max-w-[92%] rounded-xl border px-4 py-3 text-sm leading-6 sm:max-w-[85%] ${
+            dark
+              ? "border-amber-700 bg-amber-950 text-amber-100"
+              : "border-amber-300 bg-amber-50 text-amber-950"
+          }`}
+        >
+          <h2 className="font-semibold">Contact a GP or NHS 111 today</h2>
+          <p className="mt-1">{promptSafetyMessage}</p>
+        </aside>
+      )}
       {!isUrgent && (
         <div
           className={`max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-6 sm:max-w-[85%] ${
