@@ -73,37 +73,90 @@ export function buildPushPayload(notification: Notification): PushPayload {
   };
 }
 
-/** Plain-text email for when no device is subscribed or every push failed. */
-export function buildEmail(notification: Notification, origin: string): { subject: string; text: string } {
+/** Escapes user text for HTML email bodies. */
+export const escapeHtml = (text: string): string =>
+  text.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
+
+export type ReminderEmail = { subject: string; text: string; html: string };
+
+const SAFETY_LINE =
+  "MediMate only repeats the reminder you wrote. It does not give advice about medicines or doses; ask your pharmacist or doctor if you are unsure.";
+const STOP_LINE = "To stop these emails, pause or delete the reminder in MediMate.";
+
+/**
+ * Email for when no device is subscribed or every push failed: a minimal HTML
+ * version (inline styles, table layout, for email clients) plus plain text.
+ * User text is escaped; the only link is the dose's own confirm page.
+ */
+export function buildEmail(notification: Notification, origin: string): ReminderEmail {
   const link = `${origin}${dosePath(notification.doseId)}`;
+  const title = oneLine(notification.title);
+  const notes = notification.notes ? oneLine(notification.notes) : null;
   // Relative, so it reads right in any time zone (the server does not know the user's).
   const minutesLate = (notification.attempt - 1) * 5;
   const due = minutesLate === 0 ? "due now" : `due ${minutesLate} minutes ago`;
-  return {
-    subject: `Medicine reminder: ${oneLine(notification.title)}`.slice(0, 160),
-    text: [
-      `This is the medicine reminder you set in MediMate: "${oneLine(notification.title)}" (${due}).`,
-      notification.notes ? `Your note: ${oneLine(notification.notes)}` : null,
-      "",
-      `Confirm you have taken it: ${link}`,
-      "",
-      notification.attempt >= MAX_DOSE_NOTIFICATIONS
-        ? "This is the last reminder for this dose. After this it will be marked as missed; you can still confirm it for up to an hour after it was due."
-        : `You will be reminded again in 5 minutes (up to ${MAX_DOSE_NOTIFICATIONS} times) until you confirm.`,
-      "",
-      "MediMate only repeats the reminder you wrote. It does not give advice about medicines or doses; ask your pharmacist or doctor if you are unsure.",
-      "To stop these emails, pause or delete the reminder in MediMate.",
-    ]
-      .filter((line): line is string => line !== null)
-      .join("\n"),
-  };
+  const last = notification.attempt >= MAX_DOSE_NOTIFICATIONS;
+  const counter = `Reminder ${notification.attempt} of ${MAX_DOSE_NOTIFICATIONS}`;
+  const nextLine = last
+    ? "This is the last reminder for this dose. After this it will be marked as missed; you can still confirm it for up to an hour after it was due."
+    : `You will be reminded again in 5 minutes (up to ${MAX_DOSE_NOTIFICATIONS} times) until you confirm.`;
+
+  const text = [
+    `This is the medicine reminder you set in MediMate: "${title}" (${due}).`,
+    notes ? `Your note: ${notes}` : null,
+    "",
+    `Confirm you have taken it: ${link}`,
+    "",
+    nextLine,
+    "",
+    SAFETY_LINE,
+    STOP_LINE,
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
+
+  const font = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;";
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>${escapeHtml(`Medicine reminder: ${title}`)}</title>
+</head>
+<body style="margin:0;padding:0;background:#f7f5ed;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(`${title}: ${due}. Tap to confirm once you have taken it.`)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f5ed;">
+<tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border:1px solid #e2e5da;border-radius:16px;">
+<tr><td style="padding:28px 28px 0;${font}">
+<p style="margin:0;font-size:13px;font-weight:600;letter-spacing:0.04em;color:#254a38;">MediMate</p>
+<p style="margin:20px 0 4px;font-size:13px;color:#6b776f;">${escapeHtml(`Medicine reminder · ${counter} · ${due}`)}</p>
+<h1 style="margin:0;font-size:24px;line-height:1.3;font-weight:600;color:#243b30;">${escapeHtml(title)}</h1>
+${notes ? `<p style="margin:12px 0 0;font-size:15px;line-height:1.5;color:#40564a;">${escapeHtml(notes)}</p>` : ""}
+</td></tr>
+<tr><td style="padding:24px 28px;${font}">
+<a href="${escapeHtml(link)}" style="display:inline-block;padding:12px 24px;border-radius:999px;background:#254a38;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;">I took it</a>
+<p style="margin:16px 0 0;font-size:14px;line-height:1.5;color:#5b6b61;">${escapeHtml(nextLine)}</p>
+</td></tr>
+<tr><td style="padding:16px 28px 24px;border-top:1px solid #eef0e8;${font}">
+<p style="margin:0;font-size:12px;line-height:1.5;color:#6b776f;">${escapeHtml(SAFETY_LINE)}</p>
+<p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:#6b776f;">${escapeHtml(STOP_LINE)}</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+  return { subject: `Medicine reminder: ${title}`.slice(0, 160), text, html };
 }
 
 export type PushTarget = Notification["subscriptions"][number];
 /** Sends one web push. `gone` = the push service says this device no longer exists (404/410). */
 export type PushSender = (target: PushTarget, payload: string) => Promise<{ ok: boolean; gone: boolean }>;
 /** Sends one email; true when the mail server accepted it. */
-export type EmailSender = (to: string, subject: string, text: string) => Promise<boolean>;
+export type EmailSender = (to: string, email: ReminderEmail) => Promise<boolean>;
 
 export type DispatchResult = {
   /** Notifications delivered to at least one device. */
@@ -144,8 +197,7 @@ export async function dispatchNotifications(
         if (delivered) result.pushed += 1;
       }
       if (!delivered && sendEmail && notification.email) {
-        const { subject, text } = buildEmail(notification, origin);
-        delivered = await sendEmail(notification.email, subject, text).catch(() => false);
+        delivered = await sendEmail(notification.email, buildEmail(notification, origin)).catch(() => false);
         if (delivered) result.emailed += 1;
       }
       if (!delivered) result.failed += 1;

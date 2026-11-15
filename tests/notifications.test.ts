@@ -85,6 +85,16 @@ describe("notification wording", () => {
     assert.match(buildEmail(item(), "https://x.example").text, /\(due now\)/);
   });
 
+  it("builds a minimal HTML version with escaped user text and one confirm link", () => {
+    const { html } = buildEmail(item({ title: '<b>Tab</b> "x"', notes: "<script>alert(1)</script>", attempt: 3 }), "https://app.example.com");
+    assert.match(html, /&lt;b&gt;Tab&lt;\/b&gt; &quot;x&quot;/);
+    assert.doesNotMatch(html, /<script|<b>/);
+    assert.equal(html.match(/<a /g)?.length, 1);
+    assert.match(html, /href="https:\/\/app\.example\.com\/reminders\?dose=[^"]+"[^>]*>I took it</);
+    assert.match(html, /Reminder 3 of 3/);
+    assert.match(html, /does not give advice about medicines or doses/);
+  });
+
   it("strips line breaks from titles (no email header injection)", () => {
     assert.equal(oneLine("Tablet\r\nBcc: someone@example.com"), "Tablet Bcc: someone@example.com");
     assert.doesNotMatch(buildEmail(item({ title: "A\r\nB" }), "https://x.example").subject, /[\r\n]/);

@@ -65,9 +65,9 @@ export function createEmailSender(): EmailSender | null {
     connectionTimeout: 8000,
     socketTimeout: 8000,
   });
-  return async (to, subject, text) => {
+  return async (to, { subject, text, html }) => {
     try {
-      await transport.sendMail({ from: `MediMate reminders <${config.user}>`, to, subject, text });
+      await transport.sendMail({ from: `MediMate reminders <${config.user}>`, to, subject, text, html });
       return true;
     } catch (error) {
       const code = error && typeof error === "object" && "code" in error ? String(error.code).slice(0, 32) : "unknown";
