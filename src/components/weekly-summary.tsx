@@ -40,12 +40,12 @@ export function WeeklySummary() {
   return (
     <section
       aria-labelledby="weekly-summary-heading"
-      className="rounded-3xl border border-[#dfe3d6] bg-[#fbfaf5] p-6 sm:p-8"
+      className="rounded-[2rem] border border-[#d8d6c9] bg-[#eeece1] p-5 shadow-[0_20px_55px_-42px_rgba(37,74,56,0.35)] sm:p-8"
     >
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="max-w-xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a6a47]">AI summary</p>
-          <h2 id="weekly-summary-heading" className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[#243b30]">
+        <div className="min-w-0 max-w-xl">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#89754d]">AI summary</p>
+          <h2 id="weekly-summary-heading" className="display-font mt-2 text-3xl font-semibold leading-tight tracking-[-0.04em] text-[#243b30] sm:text-4xl">
             This week&apos;s summary
           </h2>
           <p className="mt-2 text-sm leading-6 text-[#5b6b61]">
@@ -56,7 +56,7 @@ export function WeeklySummary() {
           type="button"
           onClick={() => void generate()}
           disabled={state.status === "loading"}
-          className="rounded-full bg-[#254a38] px-5 py-2.5 text-sm font-semibold text-[#fbfaf5] transition-colors hover:bg-[#1c3a2c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2 disabled:opacity-60"
+          className="min-h-11 rounded-full bg-[#254a38] px-5 py-2.5 text-sm font-semibold text-[#fbfaf5] transition-colors hover:bg-[#1c3a2c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2 focus-visible:ring-offset-[#eeece1] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {state.status === "loading" ? "Summarising…" : result ? "Generate again" : "Generate summary"}
         </button>
@@ -85,7 +85,7 @@ export function WeeklySummary() {
         )}
 
         {result?.status === "no_data" && (
-          <p className="rounded-xl border border-dashed border-[#cfd6c8] px-4 py-5 text-sm text-[#5b6b61]">
+          <p className="rounded-2xl border border-dashed border-[#cfd6c8] bg-[#fbfaf5]/70 px-4 py-5 text-sm leading-6 text-[#5b6b61]">
             {result.assistantMessage}
           </p>
         )}
@@ -99,14 +99,14 @@ export function WeeklySummary() {
         )}
 
         {result?.status === "summary" && result.assessment && (
-          <div className="space-y-5 text-[#24352d]">
+          <div className="space-y-5 rounded-2xl border border-[#dfe3d6] bg-[#fbfaf5] p-4 text-[#24352d] sm:p-6">
             <p className="text-xs text-[#6b776f]">
               {formatDate(result.weekStart)} – {formatDate(result.weekEnd)} · {result.logCount}{" "}
               {result.logCount === 1 ? "log" : "logs"}
             </p>
 
             {result.safety.level === "prompt" && (
-              <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-950">
+              <p role="status" className="rounded-2xl border border-[#d5a856] bg-[#fbf0d7] px-4 py-3 text-sm leading-6 text-[#654a2e]">
                 Contact a GP or NHS 111 today. {result.safety.message}
               </p>
             )}
