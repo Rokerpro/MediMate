@@ -137,3 +137,5 @@ Done 2026-11-14: `0002_reminders.sql` applied in Supabase; the live Vercel site 
 5. Workflow: Person A builds the system side and hands Person B a UI prompt; neither edits the other's files without coordinating.
 7. Person B: show the new `safety.level: "prompt"` (NHS urgent GP / 111 advice, contract §3 and §3c) as an amber notice with `safety.message` beside the normal reply, and label `urgencyLevel: "prompt"` sessions "Urgent GP / NHS 111 advice was given". Backend merged; the reply text and first next step already carry the advice, so nothing breaks before the UI change.
 6. Keep this file and both AI-specific context files synchronized after meaningful decisions or contract changes.
+
+- 2026-11-15 (A): `DELETE /api/auth/account` + `deleteAccount()` in api-client (needs migration 0005). Deletes the user's profile, logs, chats, reminders and sign-in; the demo profile is only unlinked. `sendAssistantMessage` no longer redirects on 401: it throws `ApiClientError` status 401 so the chat can show an inline sign-in prompt. `PROFILE_SAVED_EVENT` refreshes the header name after a profile save.
