@@ -68,9 +68,21 @@ export default function DashboardPage() {
           <h1 className="display-font mt-4 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-[-0.045em] text-[#243b30] sm:text-5xl lg:text-6xl">
             A clearer view of your health story.
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-[#5e6b61] sm:text-lg">
-            Organize your profile and daily observations, then bring that context into a conversation.
-          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/logs"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#254a38] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1c3a2c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2"
+            >
+              Log today&apos;s observation
+              <span aria-hidden="true">→</span>
+            </Link>
+            <Link
+              href="/assistant"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[#cbd6c5] bg-[#fffdf8] px-5 py-2.5 text-sm font-semibold text-[#254a38] transition-colors hover:bg-[#eef0e5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48] focus-visible:ring-offset-2"
+            >
+              Ask the assistant
+            </Link>
+          </div>
         </div>
         <aside className="rounded-2xl border border-[#d8d6c9] bg-[#eeece1] p-5 sm:p-6">
           <div className="flex items-center gap-3">
@@ -86,9 +98,23 @@ export default function DashboardPage() {
             Keep dated observations together and review the relevant synthetic history used in a conversation.
           </p>
           <div className="mt-5 h-px bg-[#d4d3c7]" />
-          <p className="mt-4 text-xs leading-5 text-[#6d7568]">
-            Educational information only. MediMate does not diagnose or replace care from a qualified professional.
-          </p>
+          <nav aria-label="Quick actions" className="mt-4 grid grid-cols-2 gap-2">
+            {[
+              { href: "/insights", label: "View insights" },
+              { href: "/summary", label: "Doctor summary" },
+              { href: "/reminders", label: "Reminders" },
+              { href: "/profile", label: "Edit profile" },
+            ].map((action) => (
+              <Link
+                key={action.href}
+                href={action.href}
+                className="inline-flex min-h-11 items-center justify-between gap-2 rounded-xl border border-[#d8d6c9] bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-[#304739] transition-colors hover:bg-[#f3f4ec] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c98b48]"
+              >
+                {action.label}
+                <span aria-hidden="true">→</span>
+              </Link>
+            ))}
+          </nav>
         </aside>
       </section>
 
