@@ -11,3 +11,4 @@ export * from "./auth";
 export * from "./weekly-summary";
 export * from "./analytics";
 export * from "./notifications";
+export * from "./medicine";

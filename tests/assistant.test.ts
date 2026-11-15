@@ -73,7 +73,7 @@ function fakeProvider(...replies: (string | Error)[]): LlmProvider & { requests:
   return {
     name: "fake",
     requests,
-    async complete(request) {
+    async complete(request: ModelRequest) {
       requests.push(request);
       const next = replies.shift();
       if (next === undefined) throw new Error("no reply queued");

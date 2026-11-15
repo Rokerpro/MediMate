@@ -54,7 +54,7 @@ function scripted(...replies: string[]): LlmProvider & { calls: ModelRequest[] }
   return {
     name: "scripted",
     calls,
-    complete(request) {
+    complete(request: ModelRequest) {
       calls.push(request);
       return Promise.resolve(replies[Math.min(calls.length - 1, replies.length - 1)]!);
     },

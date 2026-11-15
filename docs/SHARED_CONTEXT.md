@@ -48,6 +48,7 @@ Main user flows:
 - Assistant: `/assistant` → `/api/assistant/chat`.
 - Reminders: `/reminders` → `/api/reminders` and `/api/reminders/{id}`.
 - Printable summary: `/summary` combines profile and health-log APIs with pure 14-day trend helpers.
+- AI medicine explainer (owner decision 2026-11-15): signed-in `POST /api/prescriptions/medicine` (contract §3b2, spec §9.2b) shown at the top of `/prescriptions` (`src/components/medicine-lookup.tsx`). General information on what a medicine is for; never doses, timing or start/stop advice; safety rules first; NHS Medicines A to Z link, guidance and disclaimer always shown.
 - Prescription explainer: deterministic endpoint `/api/prescriptions/explain` (no AI, nothing stored; contract §3b), surfaced at `/prescriptions` with a shared-schema client method and accessible result cards.
 - Assistant requests can be rate-limited with HTTP 429 `RATE_LIMITED`; the server returns a `Retry-After` header and does not persist the failed turn.
 - Public landing page: `/` now presents the product story, real features, safety boundaries, workflow, FAQ, and entry CTA; `/dashboard` remains the app workspace.

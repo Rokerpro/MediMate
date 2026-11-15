@@ -33,6 +33,8 @@ import {
   reminderResponseSchema,
   reminderUpdateSchema,
   prescriptionExplainRequestSchema,
+  medicineExplainRequestSchema,
+  medicineExplainResponseSchema,
   prescriptionExplainResponseSchema,
   type ReminderCreateRequest,
   type ReminderListResponse,
@@ -47,6 +49,8 @@ import {
   type ProfileUpdateRequest,
   type PrescriptionExplainRequest,
   type PrescriptionExplainResponse,
+  type MedicineExplainRequest,
+  type MedicineExplainResponse,
 } from "@/lib/validations";
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -490,6 +494,21 @@ export async function explainPrescription(
       body: JSON.stringify(validatedInput),
     },
     prescriptionExplainResponseSchema,
+    200,
+  );
+}
+
+/** POST /api/prescriptions/medicine — general information about one medicine (no doses or advice). */
+export async function explainMedicine(input: MedicineExplainRequest): Promise<MedicineExplainResponse> {
+  const validatedInput = medicineExplainRequestSchema.parse(input);
+  return requestJson(
+    "/api/prescriptions/medicine",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(validatedInput),
+    },
+    medicineExplainResponseSchema,
     200,
   );
 }

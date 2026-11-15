@@ -45,15 +45,11 @@ export function PrescriptionExplainer() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
-        <p className="landing-kicker">Plain-language reference</p>
-        <h1 className="display-font mt-3 text-5xl font-semibold tracking-[-0.05em] text-[#254a38]">
-          Understand a prescription
-        </h1>
-        <p className="mt-3 max-w-2xl text-[#66766b]">
-          See common abbreviation meanings in the exact wording you entered.
-          This does not check a prescription or tell you how to take a medicine.
+        <h2 className="text-xl font-semibold text-[#243b30]">Decode prescription abbreviations</h2>
+        <p className="mt-1 max-w-2xl text-sm leading-6 text-[#5b6b61]">
+          See what shorthand like “tds” or “prn” means in the wording you enter. No AI: meanings come from a fixed reference.
         </p>
       </div>
 
@@ -112,9 +108,9 @@ export function PrescriptionExplainer() {
       {result ? (
         <section aria-labelledby="explanation-heading" className="space-y-6">
           <div>
-            <h2 id="explanation-heading" className="display-font text-3xl tracking-[-0.04em] text-[#254a38]">
+            <h3 id="explanation-heading" className="display-font text-2xl tracking-[-0.04em] text-[#254a38]">
               Common abbreviations
-            </h2>
+            </h3>
             <p className="mt-2 text-sm text-[#66766b]">
               These are reference meanings only. Ask your pharmacist or prescriber if anything is unclear.
             </p>
@@ -145,7 +141,7 @@ export function PrescriptionExplainer() {
           )}
 
           <div className="rounded-2xl border border-[#d6ddcf] bg-[#eef0e5] p-5">
-            <h2 className="font-semibold text-[#254a38]">Guidance</h2>
+            <h3 className="font-semibold text-[#254a38]">Guidance</h3>
             <p className="mt-2 text-sm leading-6 text-[#52655a]">{result.guidance}</p>
             <p className="mt-4 text-sm">
               <span className="font-semibold text-[#254a38]">Source: </span>
